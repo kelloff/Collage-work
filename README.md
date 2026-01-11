@@ -1,2 +1,2 @@
-# Collage-work
-Godot Project
+# godote-new-project
+Godot
