@@ -1,7 +1,15 @@
-[gd_scene load_steps=3 format=4 uid="uid://4i6q1xryk2u0"]
+[gd_scene load_steps=6 format=4 uid="uid://4i6q1xryk2u0"]
 
 [ext_resource type="TileSet" uid="uid://b6imhriycyujj" path="res://resursec/level_1.tres" id="1_rupji"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="2_7cgko"]
+[ext_resource type="Script" uid="uid://xsrlp25vfm6y" path="res://scene/level/canvas_layer.gd" id="3_rupji"]
+[ext_resource type="Shader" uid="uid://oia3rawfbd2x" path="res://scene/level/Level.gdshader" id="4_c31l0"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tmjry"]
+shader = ExtResource("4_c31l0")
+shader_parameter/player_pos = Vector2(0, 0)
+shader_parameter/radius = 200.0
+shader_parameter/softness = 40.0
 
 [node name="level1" type="Node"]
 
@@ -17,3 +25,13 @@ tile_set = ExtResource("1_rupji")
 
 [node name="player" parent="." instance=ExtResource("2_7cgko")]
 position = Vector2(122, -484)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+layer = 10
+script = ExtResource("3_rupji")
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+material = SubResource("ShaderMaterial_tmjry")
+offset_right = 1280.0
+offset_bottom = 920.0
+color = Color(0, 0, 0, 0.6666667)
