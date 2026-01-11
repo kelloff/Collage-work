@@ -14,3 +14,11 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+.__pycache__/
+/user_code_tmp
+/__pycache__
+/addons
+*.import
+*.db
+*.db
