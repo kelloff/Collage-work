@@ -1,0 +1,115 @@
+[gd_scene load_steps=8 format=3 uid="uid://cwiw011pkxys1"]
+
+[ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/level/Computer.gd" id="1_7kpmg"]
+[ext_resource type="Texture2D" uid="uid://1cf7s056au78" path="res://ibm5150-ezgif.com-crop.png" id="1_dvuap"]
+[ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/level/terminal_ui.gd" id="3_donbk"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_7kpmg"]
+size = Vector2(32.635002, 28)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1bm87"]
+bg_color = Color(0, 0, 0, 0.9411765)
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color(0.10130245, 0.96566874, 0.04966394, 1)
+
+[sub_resource type="SystemFont" id="SystemFont_donbk"]
+
+[sub_resource type="SystemFont" id="SystemFont_1bm87"]
+subpixel_positioning = 0
+
+[node name="comp" type="Node2D"]
+position = Vector2(0, -16)
+script = ExtResource("1_7kpmg")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_dvuap")
+
+[node name="InteractionArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+position = Vector2(-0.235, 2)
+shape = SubResource("RectangleShape2D_7kpmg")
+
+[node name="Blocker" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Blocker"]
+position = Vector2(-0.302, 3.81)
+scale = Vector2(0.84, 0.84)
+shape = SubResource("RectangleShape2D_7kpmg")
+
+[node name="HintLabel" type="Label" parent="."]
+offset_left = 19.0
+offset_top = -23.0
+offset_right = 74.0
+scale = Vector2(0.435, 0.435)
+text = "press E"
+
+[node name="TerminalUI" type="CanvasLayer" parent="."]
+visible = false
+script = ExtResource("3_donbk")
+
+[node name="PanelContainer" type="PanelContainer" parent="TerminalUI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_1bm87")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="TerminalUI/PanelContainer"]
+layout_direction = 2
+layout_mode = 2
+size_flags_stretch_ratio = 2.83
+
+[node name="CodeEditor" type="TextEdit" parent="TerminalUI/PanelContainer/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.05
+theme_override_colors/font_color = Color(0.23507845, 0.7327928, 0.25604615, 1)
+theme_override_fonts/font = SubResource("SystemFont_donbk")
+theme_override_font_sizes/font_size = 16
+scroll_v_scroll_speed = 79.99
+
+[node name="VBoxContainer" type="VBoxContainer" parent="TerminalUI/PanelContainer/HBoxContainer"]
+layout_mode = 2
+
+[node name="TaskLabel" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+text = "Введите чтобы 2 переменных сложились
+например a = 2 , b = 4"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="HintLabelSyntax" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="RunButton" type="Button" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+text = "Run Button"
+
+[node name="OutputScroll" type="ScrollContainer" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="OutputLabel" type="RichTextLabel" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer/OutputScroll"]
+modulate = Color(0, 0.7771587, 0.30525118, 1)
+custom_minimum_size = Vector2(297.235, 143.465)
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0)
+theme_override_fonts/normal_font = SubResource("SystemFont_1bm87")
+theme_override_font_sizes/normal_font_size = 12
+text = "ASFASFIGUJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJK"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/icon_max_width = 200
+text = "Press Escape
+to exit"
