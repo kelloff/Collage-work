@@ -22,3 +22,6 @@ mono_crash.*.json
 *.import
 *.db
 *.db
+*.db
+*.tmp
+*.import

@@ -6,8 +6,7 @@ func normalize_code(code: String) -> String:
 		cleaned = cleaned.replace("  ", " ")
 	return cleaned
 
-# теперь принимаем RichTextLabel
-func check_user_solution(user_code: String, task: Dictionary, actual_output: String, output_label: RichTextLabel) -> void:
+func check_user_solution(user_code: String, task: Dictionary, actual_output: String, output_label: RichTextLabel) -> bool:
 	var normalized_code = normalize_code(user_code)
 	var expected_output = task.get("expected_output", "").strip_edges()
 	var result_message = ""
@@ -16,7 +15,7 @@ func check_user_solution(user_code: String, task: Dictionary, actual_output: Str
 	if actual_output.strip_edges() != expected_output:
 		result_message = "❌ Вывод неверный. Ожидалось: %s, получено: %s" % [expected_output, actual_output]
 		output_label.text = result_message
-		return
+		return false
 
 	# 2. Проверка обязательных паттернов
 	var required_patterns = task.get("required_patterns", "")
@@ -27,8 +26,9 @@ func check_user_solution(user_code: String, task: Dictionary, actual_output: Str
 			if normalized_code.find(normalized_pattern) == -1:
 				result_message = "❌ В решении отсутствует обязательный элемент: %s" % p
 				output_label.text = result_message
-				return
+				return false
 
 	# Всё прошло успешно
 	result_message = "✅ Задание выполнено правильно!"
 	output_label.text = result_message
+	return true

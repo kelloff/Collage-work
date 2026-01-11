@@ -23,10 +23,13 @@ func _ready():
         )
 	""")
 
-	# таблица прогресса
+	# таблица прогресса (закреплённые задания для каждого компьютера)
 	db.query("""
         CREATE TABLE IF NOT EXISTS progress (
-            task_id INTEGER UNIQUE
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            level INTEGER,
+            computer_id INTEGER,
+            current_task_id INTEGER
         )
 	""")
 
@@ -35,7 +38,7 @@ func _ready():
 	if db.query_result.size() == 0:
 		_insert_default_tasks()
 
-# --- Вставка дефолтных заданий через insert_row ---
+# --- Вставка дефолтных заданий ---
 func _insert_default_tasks():
 	var tasks = preload("res://db/task_data.gd").new().default_tasks
 	for task in tasks:
@@ -48,18 +51,33 @@ func _insert_default_tasks():
 			"required_patterns": task["required_patterns"]
 		})
 
-# --- Пометить задание как использованное ---
-func mark_task_as_used(task_id: int):
-	db.insert_row("progress", {"task_id": task_id})
-
-# --- Получение случайного задания по уровню ---
-func get_random_task_by_level(level: int) -> Dictionary:
-	db.query("SELECT * FROM tasks WHERE level = %d AND id NOT IN (SELECT task_id FROM progress)" % level)
+# --- Получить текущее закреплённое задание ---
+func get_current_task(level: int, computer_id: int) -> Dictionary:
+	db.query("SELECT current_task_id FROM progress WHERE level = %d AND computer_id = %d" % [level, computer_id])
 	var rows = db.query_result
+	if rows.size() > 0 and rows[0]["current_task_id"] != null:
+		var task_id = int(rows[0]["current_task_id"])
+		db.query("SELECT * FROM tasks WHERE id = %d" % task_id)
+		if db.query_result.size() > 0:
+			return db.query_result[0]
+	return {}
 
+# --- Назначить новое задание и закрепить ---
+func assign_task(level: int, computer_id: int) -> Dictionary:
+	var current = get_current_task(level, computer_id)
+	if not current.is_empty():
+		return current
+
+	db.query("SELECT * FROM tasks WHERE level = %d" % level)
+	var rows = db.query_result
 	if rows.size() > 0:
 		var task = rows[randi() % rows.size()]
-		mark_task_as_used(task["id"])
+		db.query("DELETE FROM progress WHERE level = %d AND computer_id = %d" % [level, computer_id])
+		db.insert_row("progress", {"level": level, "computer_id": computer_id, "current_task_id": task["id"]})
 		return task
 
 	return {}
+
+# --- Открепить задание после выполнения ---
+func unassign_task(level: int, computer_id: int) -> void:
+	db.query("DELETE FROM progress WHERE level = %d AND computer_id = %d" % [level, computer_id])

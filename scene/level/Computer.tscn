@@ -16,6 +16,7 @@ border_width_bottom = 5
 border_color = Color(0.10130245, 0.96566874, 0.04966394, 1)
 
 [sub_resource type="SystemFont" id="SystemFont_donbk"]
+subpixel_positioning = 0
 
 [sub_resource type="SystemFont" id="SystemFont_1bm87"]
 subpixel_positioning = 0
@@ -108,8 +109,7 @@ text = "ASFASFIGUJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKA
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="CloseButton" type="Button" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+[node name="CloseButton" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/icon_max_width = 200
 text = "Press Escape
 to exit"

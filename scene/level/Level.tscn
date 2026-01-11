@@ -12,27 +12,34 @@ tile_map_data = PackedByteArray("AAApABMAAAABAAQAAAApABIAAAABAAQAAAApABEAAAABAAQ
 tile_set = ExtResource("1_rupji")
 
 [node name="player" parent="." instance=ExtResource("2_c31l0")]
-position = Vector2(240, 163)
+position = Vector2(249, 95)
 
-[node name="Computer" parent="." instance=ExtResource("3_tmjry")]
-position = Vector2(276, 135)
-
-[node name="Computer2" parent="." instance=ExtResource("3_tmjry")]
-position = Vector2(500, 137)
-level = 3
-
-[node name="Computer3" parent="." instance=ExtResource("3_tmjry")]
-position = Vector2(339, 132)
+[node name="comp" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(308, 280)
 level = 1
 
-[node name="Computer4" parent="." instance=ExtResource("3_tmjry")]
-position = Vector2(387, 132)
+[node name="comp7" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(64, 36)
+
+[node name="comp8" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(66, 282)
+
+[node name="comp2" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(283, 24)
+level = 1
+
+[node name="comp3" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(452, 287)
 level = 2
 
-[node name="Computer5" parent="." instance=ExtResource("3_tmjry")]
-position = Vector2(455, 134)
+[node name="comp4" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(428, 18)
+level = 2
+
+[node name="comp5" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(633, 276)
 level = 3
 
-[node name="Computer6" parent="." instance=ExtResource("3_tmjry")]
-position = Vector2(334, 193)
-level = 1
+[node name="comp6" parent="." instance=ExtResource("3_tmjry")]
+position = Vector2(612, 20)
+level = 3

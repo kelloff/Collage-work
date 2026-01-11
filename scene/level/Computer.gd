@@ -1,20 +1,26 @@
-# res://scripts/Computer.gd
 extends Node2D
 
 @onready var area: Area2D = $InteractionArea
 @onready var hint_label: Label = $HintLabel
 @onready var terminal_ui: CanvasLayer = $TerminalUI
-const CODE_EDITOR_PATH := "PanelContainer/HBoxContainer/CodeEditor"
 
 var player_in_range: bool = false
 var player_node: Node = null
 
-@export var level: int = 0   # уровень сложности для этого компьютера
+@export var level: int = 0          # уровень сложности
+var computer_id: int = 0            # уникальный ID компьютера (авто)
+
+# статический счётчик для всех компьютеров
+static var id_counter: int = 1
+
+var current_task: Dictionary = {}
 
 func _ready():
-	print("Computer ready. Area node:", area)
+	# авто‑назначение ID при создании узла
+	computer_id = id_counter
+	id_counter += 1
+
 	if area:
-		print("Area monitoring:", area.monitoring, "monitorable:", area.monitorable)
 		if not area.is_connected("body_entered", Callable(self, "_on_body_entered")):
 			area.connect("body_entered", Callable(self, "_on_body_entered"))
 		if not area.is_connected("body_exited", Callable(self, "_on_body_exited")):
@@ -47,11 +53,22 @@ func _process(_delta: float) -> void:
 func open_terminal() -> void:
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(false)
-	# теперь передаём уровень в терминал
-	terminal_ui.call("open_with_level", level)
+
+	# закрепляем задание для конкретного компьютера
+	current_task = DbMeneger.assign_task(level, computer_id)
+
+	# передаём задание сразу в UI
+	terminal_ui.call("open_with_task", level, current_task)
+
 	hint_label.visible = false
 
 func close_terminal() -> void:
 	terminal_ui.call("close")
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(true)
+
+# --- метод для открепления задания после выполнения ---
+func unassign_task_if_completed():
+	if not current_task.is_empty():
+		DbMeneger.unassign_task(current_task["level"], computer_id)
+		current_task = {}
