@@ -2,7 +2,7 @@ extends Node
 
 signal run_finished(result : Dictionary)
 
-@export var python_cmd : String = "C:/Program Files/Python312/python.exe"
+@export var python_cmd : String = "C:/Users/User/AppData/Local/Microsoft/WindowsApps/python.exe"
 @export var tmp_dir : String = "user_code_tmp"
 
 var thread: Thread = null
