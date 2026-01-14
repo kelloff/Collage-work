@@ -17,19 +17,22 @@ func _ready():
             level INTEGER,
             category TEXT,
             description TEXT UNIQUE,
-            expected_code TEXT,
             expected_output TEXT,
-            required_patterns TEXT
+            required_patterns TEXT,
+            check_type TEXT,
+            required_keywords TEXT,
+            allow_direct_print INTEGER
         )
 	""")
 
-	# таблица прогресса (закреплённые задания для каждого компьютера)
+	# таблица прогресса (история + статус)
 	db.query("""
         CREATE TABLE IF NOT EXISTS progress (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             level INTEGER,
             computer_id INTEGER,
-            current_task_id INTEGER
+            task_id INTEGER,
+            status TEXT   -- "assigned" или "done"
         )
 	""")
 
@@ -46,38 +49,67 @@ func _insert_default_tasks():
 			"level": task["level"],
 			"category": task["category"],
 			"description": task["description"],
-			"expected_code": task["expected_code"],
 			"expected_output": task["expected_output"],
-			"required_patterns": task["required_patterns"]
+			"required_patterns": task.get("required_patterns", ""),
+			"check_type": task.get("check_type", "stdout_exact"),
+			"required_keywords": task.get("required_keywords", ""),
+			"allow_direct_print": task.get("allow_direct_print", 0)
 		})
 
-# --- Получить текущее закреплённое задание ---
+# --- Получить текущее задание ---
 func get_current_task(level: int, computer_id: int) -> Dictionary:
-	db.query("SELECT current_task_id FROM progress WHERE level = %d AND computer_id = %d" % [level, computer_id])
+	# проверяем активное задание
+	db.query("SELECT task_id FROM progress WHERE level = %d AND computer_id = %d AND status = 'assigned'" % [level, computer_id])
 	var rows = db.query_result
-	if rows.size() > 0 and rows[0]["current_task_id"] != null:
-		var task_id = int(rows[0]["current_task_id"])
+	if rows.size() > 0:
+		var task_id = int(rows[0]["task_id"])
 		db.query("SELECT * FROM tasks WHERE id = %d" % task_id)
 		if db.query_result.size() > 0:
 			return db.query_result[0]
+
+	# если активного нет, но есть выполненные
+	db.query("SELECT * FROM progress WHERE level = %d AND computer_id = %d AND status = 'done'" % [level, computer_id])
+	if db.query_result.size() > 0:
+		return {"message": "Ты уже выполнил задание, продвигайся дальше"}
+
 	return {}
 
-# --- Назначить новое задание и закрепить ---
+# --- Назначить новое задание ---
 func assign_task(level: int, computer_id: int) -> Dictionary:
 	var current = get_current_task(level, computer_id)
 	if not current.is_empty():
 		return current
 
+	# проверяем, есть ли выполненные задания
+	db.query("SELECT * FROM progress WHERE level = %d AND computer_id = %d AND status = 'done'" % [level, computer_id])
+	if db.query_result.size() > 0:
+		return {"message": "Ты уже выполнил задание, продвигайся дальше"}
+
+	# все задания уровня
 	db.query("SELECT * FROM tasks WHERE level = %d" % level)
 	var rows = db.query_result
-	if rows.size() > 0:
-		var task = rows[randi() % rows.size()]
-		db.query("DELETE FROM progress WHERE level = %d AND computer_id = %d" % [level, computer_id])
-		db.insert_row("progress", {"level": level, "computer_id": computer_id, "current_task_id": task["id"]})
-		return task
+	if rows.size() == 0:
+		return {}
 
-	return {}
+	# исключаем задания, которые уже назначены другим компьютерам
+	db.query("SELECT task_id FROM progress WHERE level = %d AND status = 'assigned'" % level)
+	var busy_ids = []
+	for row in db.query_result:
+		busy_ids.append(int(row["task_id"]))
 
-# --- Открепить задание после выполнения ---
+	var available = []
+	for task in rows:
+		var tid = int(task["id"])
+		if not busy_ids.has(tid):
+			available.append(task)
+
+	if available.size() == 0:
+		return {"message": "Все задания уровня %d уже назначены" % level}
+
+	var task = available[randi() % available.size()]
+	db.insert_row("progress", {"level": level, "computer_id": computer_id, "task_id": task["id"], "status": "assigned"})
+	return task
+
+# --- Завершить задание ---
 func unassign_task(level: int, computer_id: int) -> void:
-	db.query("DELETE FROM progress WHERE level = %d AND computer_id = %d" % [level, computer_id])
+	db.query("UPDATE progress SET status = 'done' WHERE level = %d AND computer_id = %d AND status = 'assigned'" % [level, computer_id])

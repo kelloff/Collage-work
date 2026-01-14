@@ -109,7 +109,7 @@ text = "ASFASFIGUJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKA
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="CloseButton" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+[node name="CloseButton" type="Button" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
 layout_mode = 2
 text = "Press Escape
 to exit"

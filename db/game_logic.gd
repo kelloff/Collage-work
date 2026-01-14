@@ -6,16 +6,16 @@ extends Node
 var current_task: Dictionary = {}
 
 func _ready():
-	if db_manager.open_db():
-		print("База открыта")
+	print("База открыта")  # база открывается внутри db_manager._ready()
 
-func assign_task(level: int) -> Dictionary:
-	current_task = db_manager.get_random_task_by_level(level)
+func assign_task(level: int, computer_id: int) -> Dictionary:
+	current_task = db_manager.assign_task(level, computer_id)
 	if current_task.is_empty():
 		print("Нет доступных заданий для уровня %d" % level)
 	return current_task
 
-func check_solution(user_code: String, actual_output: String) -> Dictionary:
+func check_solution(user_code: String, actual_output: String, output_label: RichTextLabel) -> Dictionary:
 	if current_task.is_empty():
 		return {"success": false, "message": "Нет активного задания"}
-	return task_checker.check_user_solution(user_code, current_task, actual_output)
+	var success = task_checker.check_user_solution(user_code, current_task, actual_output, output_label)
+	return {"success": success, "message": output_label.text}
