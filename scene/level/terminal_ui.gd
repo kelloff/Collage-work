@@ -2,7 +2,7 @@ extends CanvasLayer
 
 @onready var code_edit = get_node_or_null("PanelContainer/HBoxContainer/CodeEditor")
 @onready var run_button = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/RunButton")
-@onready var close_button = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/CloseButton")
+
 @onready var output_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/OutputScroll/OutputLabel")
 @onready var task_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/TaskLabel")
 
@@ -12,8 +12,6 @@ func _ready():
 	CodeRunner.connect("run_finished", Callable(self, "_on_run_finished"))
 	if run_button:
 		run_button.pressed.connect(_on_run_button_pressed)
-	if close_button:
-		close_button.pressed.connect(_on_close_button_pressed)
 	hide()
 
 # открыть терминал и сразу передать задание/сообщение
