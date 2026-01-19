@@ -1,11 +1,15 @@
-[gd_scene load_steps=8 format=3 uid="uid://cwiw011pkxys1"]
+[gd_scene load_steps=9 format=3 uid="uid://cwiw011pkxys1"]
 
 [ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/level/Computer.gd" id="1_7kpmg"]
-[ext_resource type="Texture2D" uid="uid://1cf7s056au78" path="res://ibm5150-ezgif.com-crop.png" id="1_dvuap"]
+[ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
 [ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/level/terminal_ui.gd" id="3_donbk"]
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_1bm87"]
+atlas = ExtResource("2_donbk")
+region = Rect2(0.755, 64.148, 32, 32)
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_7kpmg"]
-size = Vector2(32.635002, 28)
+size = Vector2(35.714287, 38.392857)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1bm87"]
 bg_color = Color(0, 0, 0, 0.9411765)
@@ -26,18 +30,18 @@ position = Vector2(0, -16)
 script = ExtResource("1_7kpmg")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-texture = ExtResource("1_dvuap")
+texture = SubResource("AtlasTexture_1bm87")
 
 [node name="InteractionArea" type="Area2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
-position = Vector2(-0.235, 2)
+position = Vector2(-0.45874918, 0)
 shape = SubResource("RectangleShape2D_7kpmg")
 
 [node name="Blocker" type="StaticBody2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Blocker"]
-position = Vector2(-0.302, 3.81)
+position = Vector2(-1.0000002, 1.125)
 scale = Vector2(0.84, 0.84)
 shape = SubResource("RectangleShape2D_7kpmg")
 
