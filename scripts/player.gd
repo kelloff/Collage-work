@@ -21,56 +21,55 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var is_moving = false
 	if not control_enabled:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		return
+
+	var dir := Vector2.ZERO
+
+	# собираем вектор направления
 	if Input.is_action_pressed("up"):
-		up_move()
-		is_moving = true
-	elif Input.is_action_pressed("down"):
-		down_move()
-		is_moving = true
-	elif Input.is_action_pressed("left"):
-		left_move()
-		is_moving = true
-	elif Input.is_action_pressed("right"):
-		right_move()
-		is_moving = true
+		dir.y -= 1
+	if Input.is_action_pressed("down"):
+		dir.y += 1
+	if Input.is_action_pressed("left"):
+		dir.x -= 1
+	if Input.is_action_pressed("right"):
+		dir.x += 1
+
+	if dir != Vector2.ZERO:
+		dir = dir.normalized()  # нормализация для диагонали
+		velocity = dir * speed
+		idle_time = 0.0
+		update_animation(dir)
 	else:
+		velocity = Vector2.ZERO
 		idle_time += delta
 		idle()
 
-	if is_moving:
-		idle_time = 0.0
 
 	move_and_slide()
-func up_move():
-	animations.play("Idle_up")
-	velocity.x = 0
-	velocity.y = -speed
-	idle_dir = UP
-func down_move():
-	animations.play("Idle_down")
-	velocity.x = 0
-	velocity.y = speed
-	idle_dir = DOWN
 
-func left_move():
-	animations.flip_h = true
-	animations.play("Idle_front")
-	velocity.x = -speed
-	velocity.y = 0
-	idle_dir = LEFT
-	
-func right_move():
-	animations.flip_h = false
-	animations.play("Idle_front")
-	velocity.x = speed
-	velocity.y = 0
-	idle_dir = RIGHT
-	
+
+func update_animation(dir: Vector2) -> void:
+	# приоритет вертикали: если есть вертикальная компонента — показываем up/down
+	if dir.y < 0:
+		animations.play("Idle_up")
+		idle_dir = UP
+	elif dir.y > 0:
+		animations.play("Idle_down")
+		idle_dir = DOWN
+	elif dir.x < 0:
+		animations.flip_h = true
+		animations.play("Idle_front")
+		idle_dir = LEFT
+	elif dir.x > 0:
+		animations.flip_h = false
+		animations.play("Idle_front")
+		idle_dir = RIGHT
+
+
 func idle():
 	velocity = Vector2.ZERO
 
@@ -90,32 +89,8 @@ func idle():
 			animations.flip_h = false
 			animations.play("Idle_front")
 
+
 func set_control_enabled(enabled: bool) -> void:
 	control_enabled = enabled
 	if not enabled:
 		velocity = Vector2.ZERO
-				
-#@export var max_speed: float = 200.0
-
-#
-#func _physics_process(_delta: float) -> void:
-
-#
-	#var dir: Vector2 = movement_vector()
-	#if dir != Vector2.ZERO:
-		#dir = dir.normalized()
-	#velocity = dir * max_speed
-	#move_and_slide()
-#
-#func movement_vector() -> Vector2:
-	#var x := 0
-	#var y := 0
-	#if Input.is_action_pressed("move_right"):
-		#x += 1
-	#if Input.is_action_pressed("move_left"):
-		#x -= 1
-	#if Input.is_action_pressed("move_down"):
-		#y += 1
-	#if Input.is_action_pressed("move_up"):
-		#y -= 1
-	#return Vector2(x, y)

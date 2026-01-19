@@ -32,7 +32,7 @@ func _ready():
             level INTEGER,
             computer_id INTEGER,
             task_id INTEGER,
-            status TEXT   -- "assigned" или "done"
+			status TEXT   -- "assigned" или "done"
         )
 	""")
 
