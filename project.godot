@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="godote_new_project"
-run/main_scene="uid://br3buuofnxgig"
+run/main_scene="uid://dt6awofujhyw6"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
