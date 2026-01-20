@@ -24,3 +24,5 @@ user_code_tmp/1768929421.57_3537152288_user_code.py
 /user_code_tmp
 *.db
 tasks.db
+*.uid
+*.import
