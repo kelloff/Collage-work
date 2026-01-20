@@ -2,118 +2,104 @@ extends CanvasLayer
 
 @onready var code_edit = get_node_or_null("PanelContainer/HBoxContainer/CodeEditor")
 @onready var run_button = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/RunButton")
-
 @onready var output_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/OutputScroll/OutputLabel")
 @onready var task_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/TaskLabel")
 
-var current_task: Dictionary = {}   # сюда Computer.gd передаёт задание
+var current_task: Dictionary = {}
 
-func _ready():
-	CodeRunner.connect("run_finished", Callable(self, "_on_run_finished"))
+func _ready() -> void:
 	if run_button:
 		run_button.pressed.connect(_on_run_button_pressed)
+
+	# Надёжно ищем Autoload CodeRunner в корне (/root/CodeRunner)
+	var root = get_tree().get_root()
+	var cr = root.get_node_or_null("CodeRunner")
+	if cr and cr.has_signal("run_finished"):
+		cr.connect("run_finished", Callable(self, "_on_run_finished"))
+
 	hide()
 
-# открыть терминал и сразу передать задание/сообщение
-func open_with_task(level: int, task: Dictionary):
-	if current_task.is_empty():
-		current_task = task
+func open_with_task(level: int, task: Dictionary) -> void:
+	# Короткий лог — не печатаем весь словарь
+	var tid = task.get("id", -1)
+	var desc = task.get("description", "<no desc>")
+	print("TerminalUI.open_with_task: level=%d id=%s desc=%s" % [level, str(tid), desc])
+
+	current_task = task
 	show()
+
 	if output_label:
 		output_label.text = ""
 
-	# если это сообщение, а не задание
 	if current_task.has("message"):
-		task_label.text = current_task["message"]
+		if task_label:
+			task_label.text = current_task["message"]
 		if code_edit:
 			code_edit.text = "# " + current_task["message"]
 		return
 
-	# иначе это нормальное задание
-	if current_task.has("description"):
-		task_label.text = "Задание: " + current_task["description"]
-	else:
-		task_label.text = "Нет задания"
+	if task_label:
+		task_label.text = "Задание: " + current_task.get("description", "Нет описания")
 
-	if code_edit:
-		if code_edit.text == "":
-			code_edit.text = """# Подсказки по синтаксису Python:
-	# ---------------------------------
-	# Переменные:
-	#   x = 10
-	#   name = "Python"
-	#
-	# Вывод на экран:
-	#   print("текст")
-	#   print(x)
-	#
-	# Условные конструкции:
-	#   if x > 5:
-	#       print("Больше")
-	#   else:
-	#       print("Меньше")
-	#
-	# Проверка чётности:
-	#   if x % 2 == 0:
-	#       print("Even")
-	#   else:
-	#       print("Odd")
-	#
-	# Циклы:
-	#   for i in range(3):
-	#       print(i)
-	#
-	#   for item in [1,2,3]:
-	#       print(item)
-	#
-	# Работа со списками:
-	#   nums = [5,2,9,1]
-	#   nums.sort()
-	#   print(nums)
-	#
-	#   print(len(nums))   # количество элементов
-	#   print(sum(nums))   # сумма элементов
-	#   print(max(nums))   # максимум
-	#   print(min(nums))   # минимум
-	#
-	# Важно:
-	# - Отступы имеют значение! После if/for ставьте 4 пробела.
-	# - Используйте переменные и операции, а не просто готовый ответ.
-	#
-	# ---------------------------------
-    # Решение:
+	if code_edit and code_edit.text.strip_edges() == "":
+		code_edit.text = """# Подсказки по синтаксису Python:
+# ---------------------------------
+# Пример:
+# age = 20
+# print(age)
+#
+# Решение:
 """
 
-func close():
+func close() -> void:
 	hide()
 	current_task = {}
+	if code_edit:
+		code_edit.text = ""
+	if output_label:
+		output_label.text = ""
+	if task_label:
+		task_label.text = ""
 
-func _on_run_button_pressed():
+func _on_run_button_pressed() -> void:
 	if not code_edit:
 		if output_label:
-			output_label.text = "CodeEdit не найден"
+			output_label.text = "❌ Ошибка: CodeEditor не найден"
 		return
 
 	var code_text = code_edit.text
 	if output_label:
-		output_label.text = "Запуск..."
-	CodeRunner.run_code_async(code_text, "user_code.py")
+		output_label.text = "⏳ Запуск..."
 
-func _on_run_finished(result: Dictionary) -> void:
-	var clean_stdout = result.get("stdout", "").replace("\r", "")
-	var checker = preload("res://db/task_checker.gd").new()
-
-	# если это сообщение, проверку не запускаем
-	if current_task.has("message"):
-		output_label.text = current_task["message"]
+	# Получаем CodeRunner из /root
+	var root = get_tree().get_root()
+	var cr = root.get_node_or_null("CodeRunner")
+	if cr == null:
+		if output_label:
+			output_label.text = "❌ Ошибка: CodeRunner не найден"
 		return
 
-	var success = checker.check_user_solution(code_edit.text, current_task, clean_stdout, output_label)
+	cr.run_code_async(code_text, "user_code.py")
 
-	if success:
-		var computer = get_parent()
-		if computer and computer.has_method("unassign_task_if_completed"):
-			computer.unassign_task_if_completed()
+func _on_run_finished(result: Dictionary) -> void:
+	var stdout = result.get("stdout", "").replace("\r", "")
+	var stderr = result.get("stderr", "").replace("\r", "")
+	var exit_code = int(result.get("exit_code", -1))
+	var tmp_path = result.get("tmp_path", "")
 
-func _on_close_button_pressed():
-	close()
+	# Показываем подробный вывод и путь к временному файлу
+	if exit_code != 0:
+		if output_label:
+			output_label.text = "✘ Ошибка выполнения (exit=" + str(exit_code) + ")\n" + stderr + "\n\ntmp_path: " + tmp_path
+	else:
+		if output_label:
+			output_label.text = stdout + "\n\ntmp_path: " + tmp_path
+
+	# Проверяем решение через task_checker (если есть)
+	if ResourceLoader.exists("res://db/task_checker.gd"):
+		var checker = preload("res://db/task_checker.gd").new()
+		var success = checker.check_user_solution(code_edit.text, current_task, stdout, output_label)
+		if success:
+			var computer = get_parent()
+			if computer and computer.has_method("unassign_task_if_completed"):
+				computer.unassign_task_if_completed()

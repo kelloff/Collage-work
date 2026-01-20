@@ -1,11 +1,12 @@
 # Godot 4+ specific ignores
-.godot/
+*.godot/
 .nomedia
 
 # Godot-specific ignores
 .import/
 export.cfg
 export_credentials.cfg
+*.tmp
 
 # Imported translations (automatically generated from CSV files)
 *.translation
@@ -14,15 +15,12 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
-
-.__pycache__/
-/user_code_tmp
-/__pycache__
 /addons
+dynamic.ttf.import
+project.godot
+tasks.db
 *.import
+user_code_tmp/1768929421.57_3537152288_user_code.py
+/user_code_tmp
 *.db
-*.db
-*.db
-*.tmp
-*.import
-scene/player/char_a_p1_0bas_humn_v00.png.import
+tasks.db
