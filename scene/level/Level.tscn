@@ -2,7 +2,7 @@
 
 [ext_resource type="TileSet" uid="uid://b6imhriycyujj" path="res://resursec/level_1.tres" id="1_rupji"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="2_7cgko"]
-[ext_resource type="PackedScene" uid="uid://cwiw011pkxys1" path="res://scene/level/Computer.tscn" id="3_rupji"]
+[ext_resource type="PackedScene" uid="uid://cwiw011pkxys1" path="res://scene/computer/Computer.tscn" id="3_rupji"]
 
 [node name="level1" type="Node"]
 

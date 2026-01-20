@@ -1,8 +1,15 @@
 [gd_scene load_steps=9 format=3 uid="uid://cwiw011pkxys1"]
 
+<<<<<<< Updated upstream:scene/level/Computer.tscn
 [ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/level/Computer.gd" id="1_7kpmg"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
 [ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/level/terminal_ui.gd" id="3_donbk"]
+=======
+[ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/computer/Computer.gd" id="1_7kpmg"]
+[ext_resource type="Shader" uid="uid://lhi1xabskxyg" path="res://shaders/Outline.gdshader" id="2_1bm87"]
+[ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
+[ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/computer/terminal_ui.gd" id="3_donbk"]
+>>>>>>> Stashed changes:scene/computer/Computer.tscn
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1bm87"]
 atlas = ExtResource("2_donbk")

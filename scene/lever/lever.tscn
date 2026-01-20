@@ -1,7 +1,12 @@
 [gd_scene load_steps=24 format=3 uid="uid://b8xwhc8p02y48"]
 
+<<<<<<< Updated upstream
 [ext_resource type="Script" uid="uid://3cetetuku7le" path="res://scripts/lever.gd" id="1_kefql"]
 [ext_resource type="Shader" uid="uid://cvh2jpkanurxa" path="res://shaders/Outline.gdshader" id="2_1nk2d"]
+=======
+[ext_resource type="Script" uid="uid://hkkt7cm3rn38" path="res://scripts/lever.gd" id="1_kefql"]
+[ext_resource type="Shader" uid="uid://lhi1xabskxyg" path="res://shaders/Outline.gdshader" id="2_1nk2d"]
+>>>>>>> Stashed changes
 [ext_resource type="Texture2D" uid="uid://c71ghr8rvgrq6" path="res://assets/Sprite-0001-Sheet.png" id="2_frykj"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_kefql"]
