@@ -1,15 +1,15 @@
 extends Node
 
 # DbMeneger.gd
-# Менеджер БД: таблицы tasks, progress, lever_links, lever_states и утилиты для работы с ними.
-# Совместим с Godot 4: без тернарного оператора ?:, без get(..., default) и с защитой от null db.
+# Менеджер БД: таблицы computers, tasks, progress, lever_links, lever_states, computer_doors и утилиты.
+# Совместим с Godot 4.
 
 var db: SQLite = null
 
 func _ready() -> void:
 	randomize()
 
-	# Инициализируем DB до любых операций с ним
+	# Инициализируем DB
 	db = SQLite.new()
 	db.path = "res://tasks.db"
 	if not db.open_db():
@@ -64,29 +64,28 @@ func _ready() -> void:
 		)
 	""")
 
+	db.query("""
+		CREATE TABLE IF NOT EXISTS computer_doors (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			computer_id INTEGER,
+			door_id INTEGER
+		)
+	""")
+
 	print("DbMeneger: ready, DB path:", db.path)
 
-	# Загружаем дефолтные задания (путь по умолчанию res://db/task_data.gd)
-	
-
-
-# --- backward-compatible alias (если где-то вызывают старое имя) ---
-func debug_dump_tables() -> void:
-	debug_dump_all()
-
-
-# --- tasks helpers ---
+# --- helpers ---
 func _ensure_db() -> bool:
 	if db == null:
 		push_error("DbMeneger: DB is not initialized")
 		return false
 	return true
 
+# --- tasks helpers ---
 func get_current_task(level: int, computer_id: int) -> Dictionary:
 	load_default_tasks_from_file("res://db/task_data.gd")
 	if not _ensure_db():
 		return {}
-
 	# Возвращает полную запись задачи, если уже назначена (status = 'assigned')
 	db.query("SELECT task_id FROM progress WHERE level = %d AND computer_id = %d AND status = 'assigned'" % [level, computer_id])
 	if db.query_result.size() > 0:
@@ -109,7 +108,6 @@ func assign_task(level: int, computer_id: int) -> Dictionary:
 	# Логирование для отладки
 	print("DbMeneger.assign_task called: level=", level, "computer_id=", computer_id)
 	db.query("SELECT * FROM tasks WHERE level = %d" % level)
-	print("  tasks for level:", db.query_result)
 
 	var current = get_current_task(level, computer_id)
 	if not current.is_empty():
@@ -149,7 +147,6 @@ func unassign_task(level: int, computer_id: int) -> void:
 	# Помечаем назначенное задание как done для данного компьютера и уровня
 	db.query("UPDATE progress SET status = 'done' WHERE level = %d AND computer_id = %d AND status = 'assigned'" % [level, computer_id])
 
-
 # --- lever links and states ---
 func link_lever_to_computer(lever_id: int, computer_id: int) -> void:
 	if not _ensure_db():
@@ -175,7 +172,6 @@ func set_lever_state(lever_id: int, is_down: bool) -> void:
 
 func is_computer_accessible(computer_id: int) -> bool:
 	if not _ensure_db():
-		# Если DB не инициализирована, безопаснее вернуть false (или true по желанию)
 		push_error("DbMeneger: is_computer_accessible called but DB not initialized")
 		return false
 
@@ -200,8 +196,49 @@ func is_computer_accessible(computer_id: int) -> bool:
 	print("DbMeneger: all linked levers are down -> accessible")
 	return true
 
+# --- computer <-> door links ---
+func link_computer_to_door(computer_id: int, door_id: int) -> void:
+	if not _ensure_db():
+		return
+	db.query("SELECT * FROM computer_doors WHERE computer_id = %d AND door_id = %d" % [computer_id, door_id])
+	if db.query_result.size() == 0:
+		db.insert_row("computer_doors", {"computer_id": computer_id, "door_id": door_id})
+		print("DbMeneger: linked computer %d -> door %d" % [computer_id, door_id])
+	else:
+		print("DbMeneger: computer->door link already exists %d -> %d" % [computer_id, door_id])
 
-# --- debug helpers (safe, non-destructive) ---
+func clear_computer_door_links() -> void:
+	if not _ensure_db():
+		return
+	db.query("DELETE FROM computer_doors")
+	print("DbMeneger: cleared computer_doors")
+
+func get_doors_for_computer(computer_id: int) -> Array:
+	if not _ensure_db():
+		return []
+	db.query("SELECT door_id FROM computer_doors WHERE computer_id = %d" % computer_id)
+	var doors: Array = []
+	for row in db.query_result:
+		doors.append(int(row["door_id"]))
+	return doors
+
+func is_door_accessible(door_id: int) -> bool:
+	if not _ensure_db():
+		return false
+	db.query("SELECT computer_id FROM computer_doors WHERE door_id = %d" % door_id)
+	if db.query_result.size() == 0:
+		# Если дверь не привязана к компьютерам — доступна по умолчанию
+		return true
+	for row in db.query_result:
+		var cid = int(row["computer_id"])
+		db.query("SELECT status FROM progress WHERE computer_id = %d AND status = 'done'" % cid)
+		if db.query_result.size() > 0:
+			# хотя бы один связанный компьютер завершён — дверь доступна
+			return true
+	# ни один связанный компьютер не завершён — дверь заблокирована
+	return false
+
+# --- debug helpers ---
 func debug_dump_all() -> void:
 	if not _ensure_db():
 		return
@@ -213,6 +250,8 @@ func debug_dump_all() -> void:
 	print("DEBUG lever_links:", db.query_result)
 	db.query("SELECT * FROM lever_states")
 	print("DEBUG lever_states:", db.query_result)
+	db.query("SELECT * FROM computer_doors")
+	print("DEBUG computer_doors:", db.query_result)
 
 func debug_insert_sample_tasks() -> void:
 	if not _ensure_db():
@@ -235,7 +274,6 @@ func debug_clear_progress() -> void:
 	db.query("DELETE FROM progress")
 	print("DbMeneger: cleared progress")
 
-
 # --- load default tasks from task_data.gd ---
 func load_default_tasks_from_file(path: String = "res://db/task_data.gd") -> void:
 	if not _ensure_db():
@@ -246,7 +284,6 @@ func load_default_tasks_from_file(path: String = "res://db/task_data.gd") -> voi
 		print("DbMeneger: cannot load task data script at", path)
 		return
 
-	# Создаём экземпляр скрипта, если это Script, иначе используем ресурс как есть
 	var td = null
 	if script_res is Script:
 		td = script_res.new()
@@ -257,13 +294,10 @@ func load_default_tasks_from_file(path: String = "res://db/task_data.gd") -> voi
 		print("DbMeneger: failed to instantiate task data")
 		return
 
-	# Получаем default_tasks безопасно
 	var tasks_arr = null
-	# Если td — Dictionary или Object с полем, попытка прямого доступа
 	if "default_tasks" in td:
 		tasks_arr = td.default_tasks
 	elif td.has_method("get"):
-		# на случай, если td — не Node, но поддерживает get
 		tasks_arr = td.get("default_tasks")
 	else:
 		tasks_arr = null
@@ -272,7 +306,7 @@ func load_default_tasks_from_file(path: String = "res://db/task_data.gd") -> voi
 		print("DbMeneger: default_tasks not found or not an Array in", path)
 		return
 
-	var inserted = 0
+	var _inserted = 0
 	for t in tasks_arr:
 		if typeof(t) != TYPE_DICTIONARY:
 			continue
@@ -292,6 +326,4 @@ func load_default_tasks_from_file(path: String = "res://db/task_data.gd") -> voi
 				"allow_direct_print": int(t.get("allow_direct_print", 0))
 			}
 			db.insert_row("tasks", row)
-			inserted += 1
-
-	#print("DbMeneger: load_default_tasks_from_file finished, inserted:", inserted)
+			_inserted += 1

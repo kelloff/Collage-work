@@ -10,11 +10,9 @@ var outline_material: ShaderMaterial
 
 @export var door_id: int = 0
 
-
 func _enter_tree() -> void:
 	if not is_in_group("doors"):
 		add_to_group("doors")
-
 
 func _ready() -> void:
 	if area:
@@ -40,18 +38,20 @@ func _ready() -> void:
 	if door_id == 0:
 		push_warning("Door '%s' has door_id = 0 — установи в инспекторе" % name)
 
-
 func _process(_delta: float) -> void:
 	if player_in_range and Input.is_action_just_pressed("interact"):
 		toggle()
 
-
 func toggle() -> void:
+	# Проверяем доступность через DbMeneger (связан с компьютерами)
+	if not DbMeneger.is_door_accessible(door_id):
+		print("❌ Дверь заблокирована (door_id=", door_id, ")")
+		return
+
 	if is_open:
 		close()
 	else:
 		open()
-
 
 func open() -> void:
 	if is_open:
@@ -65,7 +65,6 @@ func open() -> void:
 
 	print("Door opened:", name, "door_id =", door_id)
 
-
 func close() -> void:
 	if not is_open:
 		return
@@ -78,13 +77,11 @@ func close() -> void:
 
 	print("Door closed:", name, "door_id =", door_id)
 
-
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = true
 		set_outline(true)
 		set_highlight(true)
-
 
 func _on_body_exited(body: Node) -> void:
 	if body.is_in_group("player"):
@@ -92,11 +89,9 @@ func _on_body_exited(body: Node) -> void:
 		set_outline(false)
 		set_highlight(false)
 
-
 func set_outline(enabled: bool) -> void:
 	if outline_material:
 		outline_material.set_shader_parameter("enabled", enabled)
-
 
 func set_highlight(enabled: bool) -> void:
 	if outline_material:
