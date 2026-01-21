@@ -1,12 +1,21 @@
-[gd_scene load_steps=9 format=3 uid="uid://cwiw011pkxys1"]
+[gd_scene load_steps=11 format=3 uid="uid://cwiw011pkxys1"]
 
 [ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/level/Computer.gd" id="1_7kpmg"]
+[ext_resource type="Shader" uid="uid://lhi1xabskxyg" path="res://shaders/Outline.gdshader" id="2_1bm87"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
 [ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/level/terminal_ui.gd" id="3_donbk"]
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_donbk"]
+shader = ExtResource("2_1bm87")
+shader_parameter/enabled = false
+shader_parameter/outline_color = Color(1, 1, 1, 1)
+shader_parameter/outline_size = 1.0
+shader_parameter/highlight = false
+shader_parameter/highlight_color = Color(0.5, 0.5, 0.5, 0.5)
+
 [sub_resource type="AtlasTexture" id="AtlasTexture_1bm87"]
 atlas = ExtResource("2_donbk")
-region = Rect2(0.755, 64.148, 32, 32)
+region = Rect2(0, 64, 32, 32)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_7kpmg"]
 size = Vector2(35.714287, 38.392857)
@@ -30,6 +39,7 @@ position = Vector2(0, -16)
 script = ExtResource("1_7kpmg")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_donbk")
 texture = SubResource("AtlasTexture_1bm87")
 
 [node name="InteractionArea" type="Area2D" parent="."]
@@ -40,17 +50,11 @@ shape = SubResource("RectangleShape2D_7kpmg")
 
 [node name="Blocker" type="StaticBody2D" parent="."]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Blocker"]
+[node name="CollisionShape2D" type="CollisionPolygon2D" parent="Blocker"]
+visible = false
 position = Vector2(-1.0000002, 1.125)
 scale = Vector2(0.84, 0.84)
-shape = SubResource("RectangleShape2D_7kpmg")
-
-[node name="HintLabel" type="Label" parent="."]
-offset_left = 19.0
-offset_top = -23.0
-offset_right = 74.0
-scale = Vector2(0.435, 0.435)
-text = "press E"
+polygon = PackedVector2Array(-15.47619, -19.196428, -9.523809, -19.196428, -9.523809, -18.005953, -8.333333, -18.005953, -8.333333, -14.434523, -7.1428566, -14.434523, -7.1428566, -19.196428, 13.095239, -19.196428, 13.095239, -4.910713, 17.857143, -4.910713, 17.857143, -2.5297604, 19.047619, -2.5297604, 19.047619, 9.375001, 17.857143, 9.375001, 17.857143, 17.708334, 15.476191, 17.708334, -15.47619, 17.708334, -15.47619, 9.375001, -16.666668, 9.375001, -16.666668, -18.005953, -15.47619, -18.005953)
 
 [node name="TerminalUI" type="CanvasLayer" parent="."]
 visible = false

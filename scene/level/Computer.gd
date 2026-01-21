@@ -1,90 +1,94 @@
 extends Node2D
 
 @onready var area: Area2D = $InteractionArea
-@onready var hint_label: Label = $HintLabel
 @onready var terminal_ui: CanvasLayer = $TerminalUI
+@onready var sprite: Sprite2D = $Sprite2D
 
 var player_in_range: bool = false
 var player_node: Node = null
 
 @export var level: int = 0
-var computer_id: int = 0
-
-static var id_counter: int = 1
+@export var computer_id: int = 0
 
 var current_task: Dictionary = {}
+var outline_material: ShaderMaterial
 
-func _ready():
-	# авто‑назначение ID при создании узла
-	computer_id = id_counter
-	id_counter += 1
+func _enter_tree() -> void:
+	if not is_in_group("computers"):
+		add_to_group("computers")
+
+func _ready() -> void:
+	if computer_id == 0:
+		push_warning("Computer '%s' has computer_id = 0. Set it in inspector." % name)
 
 	if area:
-		if not area.is_connected("body_entered", Callable(self, "_on_body_entered")):
-			area.connect("body_entered", Callable(self, "_on_body_entered"))
-		if not area.is_connected("body_exited", Callable(self, "_on_body_exited")):
-			area.connect("body_exited", Callable(self, "_on_body_exited"))
+		area.body_entered.connect(_on_body_entered)
+		area.body_exited.connect(_on_body_exited)
 	else:
-		push_error("InteractionArea not found")
-		return
+		push_error("InteractionArea not found in Computer '%s'" % name)
 
-	hint_label.visible = false
 	terminal_ui.visible = false
+
+	outline_material = ShaderMaterial.new()
+	if ResourceLoader.exists("res://shaders/outline.gdshader"):
+		outline_material.shader = load("res://shaders/outline.gdshader")
+		sprite.material = outline_material
+
+	set_outline(false)
+	set_highlight(false)
 
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = true
 		player_node = body
-		hint_label.visible = true
+		set_outline(true)
+		set_highlight(true)
 
 func _on_body_exited(body: Node) -> void:
 	if body == player_node:
 		player_in_range = false
 		player_node = null
-		hint_label.visible = false
+		set_outline(false)
+		set_highlight(false)
 
 func _process(_delta: float) -> void:
-	# если терминал открыт — обрабатываем только закрытие
 	if terminal_ui.visible:
 		if Input.is_action_just_pressed("ui_cancel"):
 			close_terminal()
 		return
 
-	# безопасно получаем текущий узел с фокусом (поддержка Godot 3 и 4)
-	var focus = null
-	if get_tree().has_method("get_focus_owner"):
-		focus = get_tree().get_focus_owner()
-	elif get_viewport().has_method("get_focus_owner"):
-		focus = get_viewport().get_focus_owner()
-
-	# если фокус на UI — не открываем терминал
-	if focus and focus is Control:
-		return
-
-	# открываем терминал только если игрок в зоне и терминал сейчас НЕ открыт
 	if Input.is_action_just_pressed("interact") and player_in_range:
 		open_terminal()
 
 func open_terminal() -> void:
+	if computer_id == 0:
+		print("Computer '%s' has computer_id = 0 — set it in inspector" % name)
+		return
+
+	if not DbMeneger.is_computer_accessible(computer_id):
+		print("❌ Терминал заблокирован: не все рычаги опущены (computer_id=", computer_id, ")")
+		return
+
+	print("✅ Терминал доступен, открываем (computer_id=", computer_id, ")")
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(false)
 
-	# Если задание уже закреплено за этим компьютером — не запрашиваем новое
 	if current_task.is_empty():
 		current_task = DbMeneger.assign_task(level, computer_id)
 
-	# Передаём задание в UI (UI сам не перезапишет текущее, если оно уже есть)
-	terminal_ui.call("open_with_task", level, current_task)
-
-	hint_label.visible = false
+	if terminal_ui and terminal_ui.has_method("open_with_task"):
+		terminal_ui.call("open_with_task", level, current_task)
 
 func close_terminal() -> void:
-	terminal_ui.call("close")
+	if terminal_ui and terminal_ui.has_method("close"):
+		terminal_ui.call("close")
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(true)
 
-# --- метод для открепления задания после выполнения ---
-func unassign_task_if_completed():
-	if not current_task.is_empty():
-		DbMeneger.unassign_task(current_task["level"], computer_id)
-		current_task = {}
+func set_outline(enabled: bool) -> void:
+	if outline_material:
+		outline_material.set_shader_parameter("enabled", enabled)
+
+func set_highlight(enabled: bool) -> void:
+	if outline_material:
+		outline_material.set_shader_parameter("highlight", enabled)
