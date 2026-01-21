@@ -67,7 +67,7 @@ func _ready() -> void:
 	print("DbMeneger: ready, DB path:", db.path)
 
 	# Загружаем дефолтные задания (путь по умолчанию res://db/task_data.gd)
-	load_default_tasks_from_file("res://db/task_data.gd")
+	
 
 
 # --- backward-compatible alias (если где-то вызывают старое имя) ---
@@ -83,6 +83,7 @@ func _ensure_db() -> bool:
 	return true
 
 func get_current_task(level: int, computer_id: int) -> Dictionary:
+	load_default_tasks_from_file("res://db/task_data.gd")
 	if not _ensure_db():
 		return {}
 

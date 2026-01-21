@@ -1,8 +1,8 @@
 [gd_scene load_steps=11 format=3 uid="uid://cwiw011pkxys1"]
 
 [ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/level/Computer.gd" id="1_7kpmg"]
-[ext_resource type="Shader" uid="uid://cvh2jpkanurxa" path="res://shaders/Outline.gdshader" id="2_1bm87"]
-[ext_resource type="Texture2D" uid="uid://c3cq4ey845hyv" path="res://assets/текст.png" id="2_donbk"]
+[ext_resource type="Shader" uid="uid://lhi1xabskxyg" path="res://shaders/Outline.gdshader" id="2_1bm87"]
+[ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
 [ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/level/terminal_ui.gd" id="3_donbk"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_donbk"]
