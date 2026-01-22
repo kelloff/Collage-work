@@ -1,7 +1,7 @@
 extends Control
 
-@onready var volume_slider = $ColorRect/VBoxContainer/HSlider
-@onready var resolution_box = $ColorRect/VBoxContainer/OptionButton
+@onready var volume_slider: HSlider = $TextureRect/VBoxContainer/HSlider
+@onready var resolution_box: OptionButton = $TextureRect/VBoxContainer/OptionButton
 
 func _ready():
 	# Заполняем список разрешений
