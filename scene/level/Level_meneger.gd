@@ -1,5 +1,11 @@
 extends Node2D
 
+@onready var pause_menu = $PauseMenu
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause_menu"):
+		pause_menu.toggle_menu()
+
 @export var clear_existing: bool = true
 @export var verbose: bool = true
 @export var wait_frames: int = 2

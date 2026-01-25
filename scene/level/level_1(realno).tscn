@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=4 uid="uid://dt6awofujhyw6"]
+[gd_scene load_steps=10 format=4 uid="uid://dt6awofujhyw6"]
 
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="1_5hd4p"]
 [ext_resource type="Script" uid="uid://beqe2dv8n5dx2" path="res://scene/level/Level_meneger.gd" id="1_miadu"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="4_miadu"]
 [ext_resource type="PackedScene" uid="uid://cwiw011pkxys1" path="res://scene/level/Computer.tscn" id="5_miadu"]
 [ext_resource type="PackedScene" uid="uid://d31jyji8yvnem" path="res://scene/door/door.tscn" id="6_jhscy"]
+[ext_resource type="PackedScene" uid="uid://hlw167ul14s1" path="res://scene/PauseMenu.tscn" id="7_njpfi"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5hd4p"]
 texture = ExtResource("1_5hd4p")
@@ -462,4 +463,6 @@ position = Vector2(756, 168)
 door_id = 6
 
 [node name="player" parent="." instance=ExtResource("4_miadu")]
-position = Vector2(2993, -52)
+position = Vector2(2956, -34)
+
+[node name="PauseMenu" parent="." instance=ExtResource("7_njpfi")]

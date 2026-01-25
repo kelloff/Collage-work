@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3 uid="uid://bl5d51ig3ig1y"]
+[gd_scene load_steps=6 format=3 uid="uid://bl5d51ig3ig1y"]
 
 [ext_resource type="Script" uid="uid://37s8ekdjc6st" path="res://scene/main_menu.gd" id="1_afsif"]
 [ext_resource type="Texture2D" uid="uid://217y242wgosg" path="res://assets/меню.png" id="2_6l0qi"]
+[ext_resource type="PackedScene" uid="uid://d2716w4i5d1dc" path="res://scene/SettingsMenu.tscn" id="2_xpixl"]
 
 [sub_resource type="FontFile" id="FontFile_j3jwc"]
 cache/0/16/0/ascent = 0.0
@@ -94,6 +95,10 @@ theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxFlat_mue8r")
 text = "Выход
 "
+
+[node name="SettingsMenu" parent="." instance=ExtResource("2_xpixl")]
+visible = false
+layout_mode = 1
 
 [connection signal="pressed" from="TextureRect/VBoxContainer/play" to="." method="_on_play_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/settings" to="." method="_on_settings_pressed"]
