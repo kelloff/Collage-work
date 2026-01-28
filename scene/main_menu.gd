@@ -3,14 +3,27 @@ extends Control
 @onready var main_panel: Control = $TextureRect/VBoxContainer
 @onready var settings_menu: Control = $SettingsMenu
 
+@onready var play_btn: Button = $TextureRect/VBoxContainer/play
+@onready var settings_btn: Button = $TextureRect/VBoxContainer/settings
+@onready var exit_btn: Button = $TextureRect/VBoxContainer/exit
+
+const LEVEL_SCENE := "res://scene/level/level_1(realno).tscn"
+
 func _ready() -> void:
 	settings_menu.visible = false
+
+	# кнопки основного меню
+	play_btn.pressed.connect(_on_play_pressed)
+	settings_btn.pressed.connect(_on_settings_pressed)
+	exit_btn.pressed.connect(_on_exit_pressed)
+
 	# когда нажмут "назад" в настройках — вернёмся в главное меню
 	if settings_menu.has_signal("back_pressed"):
 		settings_menu.back_pressed.connect(_on_settings_back)
 
 func _on_play_pressed() -> void:
-	get_tree().change_scene_to_file("res://scene/level/level_1(realno).tscn")
+	get_tree().change_scene_to_file(LEVEL_SCENE)
+	
 
 func _on_settings_pressed() -> void:
 	main_panel.visible = false

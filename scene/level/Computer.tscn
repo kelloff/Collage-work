@@ -1,7 +1,7 @@
-[gd_scene load_steps=11 format=3 uid="uid://cwiw011pkxys1"]
+[gd_scene format=3 uid="uid://cwiw011pkxys1"]
 
 [ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/level/Computer.gd" id="1_7kpmg"]
-[ext_resource type="Shader" uid="uid://lhi1xabskxyg" path="res://shaders/Outline.gdshader" id="2_1bm87"]
+[ext_resource type="Shader" uid="uid://b3t5qomxrwob2" path="res://shaders/Outline.gdshader" id="2_1bm87"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
 [ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/level/terminal_ui.gd" id="3_donbk"]
 
@@ -34,33 +34,33 @@ subpixel_positioning = 0
 [sub_resource type="SystemFont" id="SystemFont_1bm87"]
 subpixel_positioning = 0
 
-[node name="comp" type="Node2D"]
+[sub_resource type="LabelSettings" id="LabelSettings_1bm87"]
+
+[node name="comp" type="Node2D" unique_id=842160167]
 position = Vector2(0, -16)
 script = ExtResource("1_7kpmg")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1286125325]
 material = SubResource("ShaderMaterial_donbk")
 texture = SubResource("AtlasTexture_1bm87")
 
-[node name="InteractionArea" type="Area2D" parent="."]
+[node name="InteractionArea" type="Area2D" parent="." unique_id=1207741251]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea" unique_id=705053643]
 position = Vector2(-0.45874918, 0)
 shape = SubResource("RectangleShape2D_7kpmg")
 
-[node name="Blocker" type="StaticBody2D" parent="."]
+[node name="Blocker" type="StaticBody2D" parent="." unique_id=1407624397]
 
-[node name="CollisionShape2D" type="CollisionPolygon2D" parent="Blocker"]
-visible = false
+[node name="CollisionShape2D" type="CollisionPolygon2D" parent="Blocker" unique_id=83127527]
 position = Vector2(-1.0000002, 1.125)
 scale = Vector2(0.84, 0.84)
 polygon = PackedVector2Array(-15.47619, -19.196428, -9.523809, -19.196428, -9.523809, -18.005953, -8.333333, -18.005953, -8.333333, -14.434523, -7.1428566, -14.434523, -7.1428566, -19.196428, 13.095239, -19.196428, 13.095239, -4.910713, 17.857143, -4.910713, 17.857143, -2.5297604, 19.047619, -2.5297604, 19.047619, 9.375001, 17.857143, 9.375001, 17.857143, 17.708334, 15.476191, 17.708334, -15.47619, 17.708334, -15.47619, 9.375001, -16.666668, 9.375001, -16.666668, -18.005953, -15.47619, -18.005953)
 
-[node name="TerminalUI" type="CanvasLayer" parent="."]
-visible = false
+[node name="TerminalUI" type="CanvasLayer" parent="." unique_id=1291964428]
 script = ExtResource("3_donbk")
 
-[node name="PanelContainer" type="PanelContainer" parent="TerminalUI"]
+[node name="PanelContainer" type="PanelContainer" parent="TerminalUI" unique_id=1685113713]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -68,12 +68,12 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_1bm87")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="TerminalUI/PanelContainer"]
+[node name="HBoxContainer" type="HBoxContainer" parent="TerminalUI/PanelContainer" unique_id=1650272842]
 layout_direction = 2
 layout_mode = 2
 size_flags_stretch_ratio = 2.83
 
-[node name="CodeEditor" type="TextEdit" parent="TerminalUI/PanelContainer/HBoxContainer"]
+[node name="CodeEditor" type="TextEdit" parent="TerminalUI/PanelContainer/HBoxContainer" unique_id=1909947500]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_stretch_ratio = 1.05
@@ -82,10 +82,10 @@ theme_override_fonts/font = SubResource("SystemFont_donbk")
 theme_override_font_sizes/font_size = 16
 scroll_v_scroll_speed = 79.99
 
-[node name="VBoxContainer" type="VBoxContainer" parent="TerminalUI/PanelContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="TerminalUI/PanelContainer/HBoxContainer" unique_id=1062935141]
 layout_mode = 2
 
-[node name="TaskLabel" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+[node name="TaskLabel" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer" unique_id=1108001593]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 text = "Введите чтобы 2 переменных сложились
@@ -94,30 +94,32 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="HintLabelSyntax" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+[node name="HintLabelSyntax" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer" unique_id=1898634854]
 layout_mode = 2
 
-[node name="RunButton" type="Button" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+[node name="RunButton" type="Button" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer" unique_id=283106607]
 layout_mode = 2
 text = "Run Button"
 
-[node name="OutputScroll" type="ScrollContainer" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+[node name="OutputScroll" type="ScrollContainer" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer" unique_id=1957928009]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="OutputLabel" type="RichTextLabel" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer/OutputScroll"]
+[node name="OutputLabel" type="RichTextLabel" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer/OutputScroll" unique_id=602504096]
 modulate = Color(0, 0.7771587, 0.30525118, 1)
 custom_minimum_size = Vector2(297.235, 143.465)
 layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 0)
 theme_override_fonts/normal_font = SubResource("SystemFont_1bm87")
-theme_override_font_sizes/normal_font_size = 12
-text = "ASFASFIGUJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJKASFGJK"
+theme_override_font_sizes/bold_italics_font_size = 32
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="CloseButton" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer"]
+[node name="CloseButton" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer" unique_id=318846310]
 layout_mode = 2
-text = "Press Escape
-to exit"
+theme_override_font_sizes/font_size = 28
+text = "Press F10 to exit"
+label_settings = SubResource("LabelSettings_1bm87")
+horizontal_alignment = 1
+autowrap_mode = 3

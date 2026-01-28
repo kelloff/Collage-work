@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3 uid="uid://citeclg2uef4a"]
+[gd_scene format=3 uid="uid://citeclg2uef4a"]
 
 [ext_resource type="Script" uid="uid://cpkjuij4cblwl" path="res://scripts/player.gd" id="1_cm2cf"]
 [ext_resource type="Texture2D" uid="uid://dc4aj8mhwqd23" path="res://assets/никита перед.png" id="3_qt1gw"]
@@ -283,23 +283,22 @@ animations = [{
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_c12fn"]
-size = Vector2(25, 44)
+size = Vector2(20, 32)
 
-[node name="player" type="CharacterBody2D"]
+[node name="player" type="CharacterBody2D" unique_id=1876163064]
 script = ExtResource("1_cm2cf")
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-position = Vector2(1, -25)
-scale = Vector2(1.5625, 1.59375)
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=622483022]
+position = Vector2(0, -16)
 sprite_frames = SubResource("SpriteFrames_oypl4")
-animation = &"Idle_down"
+animation = &"idle"
 autoplay = "idle"
-frame_progress = 0.84027123
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(1.5, -24)
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1258360069]
+position = Vector2(0, -16)
 shape = SubResource("RectangleShape2D_c12fn")
 
-[node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(1.865, 1.865)
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1973450002]
+offset = Vector2(0, -10.17)
+zoom = Vector2(3.285, 3.285)
 script = ExtResource("6_co054")

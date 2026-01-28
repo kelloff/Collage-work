@@ -13,6 +13,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _ready() -> void:
 	call_deferred("_init_links")
 
+	if Engine.has_singleton("SaveMeneger"):
+		SaveMeneger.load_game()
+		print("-------------------------------------")
+
 func _find_dbmeneger() -> Node:
 	var root = get_tree().get_root()
 	var cr = root.get_node_or_null("DbMeneger")
