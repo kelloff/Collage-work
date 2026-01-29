@@ -283,7 +283,7 @@ animations = [{
 }]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_c12fn"]
-size = Vector2(20, 32)
+size = Vector2(20, 28)
 
 [node name="player" type="CharacterBody2D" unique_id=1876163064]
 script = ExtResource("1_cm2cf")
@@ -295,10 +295,11 @@ animation = &"idle"
 autoplay = "idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1258360069]
-position = Vector2(0, -16)
+position = Vector2(0, -14)
 shape = SubResource("RectangleShape2D_c12fn")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1973450002]
+scale = Vector2(1.1023195, 1.1441388)
 offset = Vector2(0, -10.17)
 zoom = Vector2(3.285, 3.285)
 script = ExtResource("6_co054")
