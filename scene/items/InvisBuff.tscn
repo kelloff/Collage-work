@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://c512sgbpqjvl5"]
+
+[ext_resource type="Script" uid="uid://d08v1yg6qy7os" path="res://scene/items/invis_buff.gd" id="1_34gvl"]
+[ext_resource type="Texture2D" uid="uid://bxw6ckc6d0nq0" path="res://assets/невид.png" id="2_0c626"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_3ga00"]
+custom_solver_bias = 1.0
+radius = 12.0
+
+[node name="InvisBuff" type="Node2D" unique_id=928907218]
+
+[node name="InvisBuff" type="Area2D" parent="." unique_id=1388804370]
+script = ExtResource("1_34gvl")
+
+[node name="Sprite2D" type="Sprite2D" parent="InvisBuff" unique_id=1734897022]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_0c626")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InvisBuff" unique_id=191644763]
+shape = SubResource("CircleShape2D_3ga00")

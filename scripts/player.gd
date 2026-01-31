@@ -20,9 +20,27 @@ var idle_time := 0.0
 const IDLE_DELAY := 0.25
 var control_enabled: bool = true
 
+# --- BUFFS ---
+var _base_speed: float
+var _speed_buff_timer: Timer
+var _invis_timer: Timer
+var _saved_modulate: Color
 
 func _ready() -> void:
 	add_to_group("player")
+
+	_base_speed = float(speed)
+	_saved_modulate = modulate
+
+	_speed_buff_timer = Timer.new()
+	_speed_buff_timer.one_shot = true
+	add_child(_speed_buff_timer)
+	_speed_buff_timer.timeout.connect(_on_speed_buff_end)
+
+	_invis_timer = Timer.new()
+	_invis_timer.one_shot = true
+	add_child(_invis_timer)
+	_invis_timer.timeout.connect(_on_invis_end)
 
 	# Гарантируем, что активна именно камера игрока
 	if is_instance_valid(cam):
@@ -122,3 +140,17 @@ func _update_camera_zoom() -> void:
 	# Чтобы на большом экране (fullscreen) камера НЕ была "слишком далеко",
 	# мы увеличиваем zoom => камера приближается.
 	cam.zoom = Vector2(scale, scale) * 2
+func apply_speed_buff(multiplier: float, duration: float) -> void:
+	speed = int(_base_speed * multiplier)
+	_speed_buff_timer.start(duration)
+
+func _on_speed_buff_end() -> void:
+	speed = int(_base_speed)
+
+func apply_invisibility(duration: float) -> void:
+	_saved_modulate = modulate
+	modulate.a = 0.25  # 0.0 если хочешь полностью исчезать
+	_invis_timer.start(duration)
+
+func _on_invis_end() -> void:
+	modulate = _saved_modulate
