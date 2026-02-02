@@ -1,10 +1,27 @@
 extends Node2D
 
 @onready var pause_menu = $PauseMenu
+@onready var journal = $Journal
+
 
 func _unhandled_input(event: InputEvent) -> void:
+	var pause_open: bool = pause_menu != null and pause_menu.is_open()
+	var journal_open: bool = journal != null and journal.is_open()
+
 	if event.is_action_pressed("pause_menu"):
+		if journal_open:
+			return
 		pause_menu.toggle_menu()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed("journal"):
+		if pause_open:
+			return
+		journal.toggle()
+		get_viewport().set_input_as_handled()
+		return
+
 
 @export var clear_existing: bool = true
 @export var verbose: bool = true

@@ -1,0 +1,22 @@
+PYTHON — БАЗА
+
+Вывод:
+print("Hello")
+
+Переменные:
+x = 10
+name = "Alex"
+
+Условия:
+if x > 5:
+    print("ok")
+else:
+    print("no")
+
+Цикл:
+for i in range(3):
+    print(i)
+
+Функции:
+def add(a, b):
+    return a + b

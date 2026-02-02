@@ -4,12 +4,14 @@
 [ext_resource type="Script" uid="uid://beqe2dv8n5dx2" path="res://scene/level/Level_meneger.gd" id="1_miadu"]
 [ext_resource type="PackedScene" uid="uid://b8xwhc8p02y48" path="res://scene/lever/lever.tscn" id="3_7rdi5"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="4_miadu"]
+[ext_resource type="PackedScene" uid="uid://bof3ot03dx556" path="res://scene/notes/Note.tscn" id="4_qh8un"]
 [ext_resource type="PackedScene" uid="uid://cwiw011pkxys1" path="res://scene/level/Computer.tscn" id="5_miadu"]
 [ext_resource type="PackedScene" uid="uid://d31jyji8yvnem" path="res://scene/door/door.tscn" id="6_jhscy"]
 [ext_resource type="PackedScene" uid="uid://hlw167ul14s1" path="res://scene/PauseMenu.tscn" id="7_njpfi"]
 [ext_resource type="PackedScene" uid="uid://drjnnphq06xw4" path="res://scene/props/Chest.tscn" id="8_75ofm"]
 [ext_resource type="PackedScene" uid="uid://chdys3qi8nbbr" path="res://scene/items/SpeedBuff.tscn" id="9_xd2xi"]
 [ext_resource type="PackedScene" uid="uid://c512sgbpqjvl5" path="res://scene/items/InvisBuff.tscn" id="10_qh8un"]
+[ext_resource type="PackedScene" uid="uid://bmiyv1x5pfemx" path="res://scene/ui/Journal.tscn" id="11_xd2xi"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5hd4p"]
 texture = ExtResource("1_5hd4p")
@@ -200,6 +202,9 @@ sources/0 = SubResource("TileSetAtlasSource_5hd4p")
 [node name="Level1(realno)" type="Node2D" unique_id=971411670]
 position = Vector2(-841, -2418)
 script = ExtResource("1_miadu")
+clear_existing = null
+verbose = null
+wait_frames = null
 
 [node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=1128019219]
 visible = false
@@ -221,7 +226,7 @@ tile_map_data = PackedByteArray("AAA9ABgAAAABAAEAAQA9ABcAAAAAAAAAAAA9ABYAAAAAAAA
 tile_set = SubResource("TileSet_wrffm")
 
 [node name="player" parent="." unique_id=2121775425 groups=["player"] instance=ExtResource("4_miadu")]
-position = Vector2(3898.0002, -1262.9998)
+position = Vector2(3880.0002, -1262.0002)
 scale = Vector2(0.994, 1)
 
 [node name="Node2D" parent="." unique_id=153882367 instance=ExtResource("6_jhscy")]
@@ -532,3 +537,23 @@ invis_buff_scene = ExtResource("10_qh8un")
 position = Vector2(3750, -1468)
 speed_buff_scene = ExtResource("9_xd2xi")
 invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Journal" parent="." unique_id=610940585 instance=ExtResource("11_xd2xi")]
+
+[node name="Note" parent="." unique_id=373593171 instance=ExtResource("4_qh8un")]
+position = Vector2(3703, -1165)
+
+[node name="Note2" parent="." unique_id=1883166796 instance=ExtResource("4_qh8un")]
+position = Vector2(3756, -1165)
+note_id = "note_02"
+text_path = "res://docs/notes/note_02.txt"
+
+[node name="Note3" parent="." unique_id=1461224615 instance=ExtResource("4_qh8un")]
+position = Vector2(3808, -1163)
+note_id = "note_03"
+text_path = "res://docs/notes/note_03.txt"
+
+[node name="Note4" parent="." unique_id=2013723134 instance=ExtResource("4_qh8un")]
+position = Vector2(3858, -1159)
+note_id = "note_04"
+text_path = "res://docs/notes/note_04.txt"

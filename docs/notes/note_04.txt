@@ -1,0 +1,14 @@
+ЗАПИСКА 3 — Циклы for/while
+
+for:
+for i in range(5):
+    print(i)
+
+while:
+i = 0
+while i < 5:
+    print(i)
+    i += 1
+
+break — выйти из цикла
+continue — пропустить итерацию

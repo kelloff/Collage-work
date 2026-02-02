@@ -37,10 +37,6 @@ func _ready() -> void:
 		print("PauseMenu: SaveMeneger НЕ доступен — проверь Autoload")
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause_menu"): # pause_menu = Esc
-		toggle_menu()
-
 func show_pause() -> void:
 	root.visible = true
 	pause_panel.visible = true
@@ -87,3 +83,6 @@ func _on_exit_pressed() -> void:
 		print("lox")
 	get_tree().paused = false
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+func is_open() -> bool:
+	return root.is_visible_in_tree()

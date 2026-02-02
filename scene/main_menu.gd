@@ -35,3 +35,24 @@ func _on_settings_back() -> void:
 
 func _on_exit_pressed() -> void:
 	get_tree().quit()
+	
+var _open := false
+
+func toggle_menu():
+	if _open:
+		hide_menu()
+	else:
+		show_menu()
+
+func show_menu():
+	_open = true
+	visible = true
+	get_tree().paused = true
+
+func hide_menu():
+	_open = false
+	visible = false
+	get_tree().paused = false
+
+func is_open() -> bool:
+	return _open
