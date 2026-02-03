@@ -3,6 +3,7 @@ extends Node
 # Autoload: DbMeneger.gd
 # Monolithic core that initializes DB and delegates to modules.
 
+var save = null
 var db: SQLite = null
 var tasks = null
 var levers = null
@@ -44,6 +45,9 @@ func _load_modules() -> void:
 		doors.init(self)
 	if debug and debug.has_method("init"):
 		debug.init(self)
+	save = preload("res://db/db_save.gd").new()
+	if save and save.has_method("init"):
+		save.init(self)
 
 # -----------------------
 # Общие помощники
@@ -120,3 +124,51 @@ func debug_dump_all() -> void:
 func debug_insert_sample_tasks() -> void:
 	if debug and debug.has_method("debug_insert_sample_tasks"):
 		debug.debug_insert_sample_tasks()
+		
+# Save
+func has_save() -> bool:
+	if save and save.has_method("has_save"):
+		return save.has_save()
+	return false
+
+func set_save(scene_path: String, pos: Vector2) -> void:
+	if save and save.has_method("set_save"):
+		save.set_save(scene_path, pos)
+
+func get_save() -> Dictionary:
+	if save and save.has_method("get_save"):
+		return save.get_save()
+	return {}
+
+func clear_save() -> void:
+	if save and save.has_method("clear_save"):
+		save.clear_save()
+		
+func reset_all() -> void:
+	if not _ensure_db():
+		return
+
+	print("DbMeneger: FULL RESET")
+
+	# Удаляем данные
+	db.query("DELETE FROM tasks")
+	db.query("DELETE FROM lever_states")
+	db.query("DELETE FROM door_states")
+	db.query("DELETE FROM lever_to_computer")
+	db.query("DELETE FROM lever_to_door")
+	db.query("DELETE FROM save")
+
+	# Сброс автоинкремента (на всякий случай)
+	db.query("VACUUM")
+
+	print("DbMeneger: reset complete")
+	
+# Doors state (нужно, чтобы двери сохранялись)
+func set_door_state(door_id: int, opened: bool) -> void:
+	if doors and doors.has_method("set_door_state"):
+		doors.set_door_state(door_id, opened)
+
+func get_door_state(door_id: int) -> Variant:
+	if doors and doors.has_method("get_door_state"):
+		return doors.get_door_state(door_id)
+	return null

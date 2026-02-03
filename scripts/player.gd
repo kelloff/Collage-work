@@ -7,11 +7,10 @@ enum {
 	LEFT,
 	RIGHT
 }
-
+@onready var hint: Label = $Label
 @onready var animations: AnimatedSprite2D = $AnimatedSprite2D
 @onready var cam: Camera2D = $Camera2D
 
-# База — то разрешение, в котором камера "правильная" (у тебя это 1280x720)
 const BASE_RESOLUTION := Vector2(1280, 720)
 
 var speed := 140.0
@@ -26,12 +25,26 @@ var _speed_buff_timer: Timer
 var _invis_timer: Timer
 var _saved_modulate: Color
 
+# --- HINT ---
+var _hint_timer: Timer
+
 func _ready() -> void:
 	add_to_group("player")
 
 	_base_speed = float(speed)
 	_saved_modulate = modulate
 
+	# --- Hint ---
+	hint.visible = false
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+	_hint_timer = Timer.new()
+	_hint_timer.one_shot = true
+	_hint_timer.wait_time = 1.5
+	add_child(_hint_timer)
+	_hint_timer.timeout.connect(_hide_hint)
+
+	# --- Buff timers ---
 	_speed_buff_timer = Timer.new()
 	_speed_buff_timer.one_shot = true
 	add_child(_speed_buff_timer)
@@ -42,14 +55,25 @@ func _ready() -> void:
 	add_child(_invis_timer)
 	_invis_timer.timeout.connect(_on_invis_end)
 
-	# Гарантируем, что активна именно камера игрока
-	if is_instance_valid(cam):
+	if cam:
 		cam.make_current()
 		_update_camera_zoom()
-		# будет вызываться при смене размера окна / разрешения / fullscreen
 		get_viewport().size_changed.connect(_update_camera_zoom)
 
+# =========================
+# ПОДСКАЗКИ
+# =========================
+func show_hint(text: String) -> void:
+	hint.text = text
+	hint.visible = true
+	_hint_timer.start()
 
+func _hide_hint() -> void:
+	hint.visible = false
+
+# =========================
+# ДВИЖЕНИЕ
+# =========================
 func _physics_process(delta: float) -> void:
 	if not control_enabled:
 		velocity = Vector2.ZERO
@@ -79,7 +103,6 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-
 func update_animation(dir: Vector2) -> void:
 	if dir.y < 0:
 		animations.play("Idle_up")
@@ -96,19 +119,14 @@ func update_animation(dir: Vector2) -> void:
 		animations.play("Idle_front")
 		idle_dir = RIGHT
 
-
 func idle() -> void:
-	velocity = Vector2.ZERO
-
 	if idle_time >= IDLE_DELAY:
 		animations.play("idle")
 		return
 
 	match idle_dir:
-		DOWN:
-			animations.play("Idle_down")
-		UP:
-			animations.play("Idle_up")
+		DOWN: animations.play("Idle_down")
+		UP: animations.play("Idle_up")
 		LEFT:
 			animations.flip_h = true
 			animations.play("Idle_front")
@@ -116,30 +134,20 @@ func idle() -> void:
 			animations.flip_h = false
 			animations.play("Idle_front")
 
-
-func set_control_enabled(enabled: bool) -> void:
-	control_enabled = enabled
-	if not enabled:
-		velocity = Vector2.ZERO
-
-
-# --- Камера: адаптация под разрешение ---
+# =========================
+# КАМЕРА
+# =========================
 func _update_camera_zoom() -> void:
-	if not is_instance_valid(cam):
-		return
-
-	# Реальный видимый размер экрана (учитывает fullscreen/окно)
 	var s: Vector2 = get_viewport().get_visible_rect().size
+	var scale: float = min(
+		s.x / BASE_RESOLUTION.x,
+		s.y / BASE_RESOLUTION.y
+	)
+	cam.zoom = Vector2(scale, scale) * 2 
 
-	# Насколько текущий экран больше/меньше базового
-	var scale_x := s.x / BASE_RESOLUTION.x
-	var scale_y := s.y / BASE_RESOLUTION.y
-	var scale: float = min(scale_x, scale_y)
-
-	# КЛЮЧЕВОЕ:
-	# Чтобы на большом экране (fullscreen) камера НЕ была "слишком далеко",
-	# мы увеличиваем zoom => камера приближается.
-	cam.zoom = Vector2(scale, scale) * 2
+# =========================
+# BUFFS
+# =========================
 func apply_speed_buff(multiplier: float, duration: float) -> void:
 	speed = int(_base_speed * multiplier)
 	_speed_buff_timer.start(duration)
@@ -149,7 +157,7 @@ func _on_speed_buff_end() -> void:
 
 func apply_invisibility(duration: float) -> void:
 	_saved_modulate = modulate
-	modulate.a = 0.25  # 0.0 если хочешь полностью исчезать
+	modulate.a = 0.25
 	_invis_timer.start(duration)
 
 func _on_invis_end() -> void:

@@ -2,15 +2,22 @@ extends Node2D
 
 @onready var area: Area2D = $InteractionArea
 
-# Вариант 1: если Sprite2D
-@onready var sprite: Sprite2D = $Sprite2D
-# Вариант 2: если AnimatedSprite2D (тогда закомментируй строку выше и раскомментируй ниже)
-#@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+# --- Выбор узла со спрайтом через инспектор (лучше, чем жестко $Sprite2D) ---
+@export var sprite_path: NodePath = NodePath("Sprite2D")
+@onready var sprite_node: CanvasItem = get_node_or_null(sprite_path) as CanvasItem
 
 @export var drop_chance: float = 0.10
 @export var speed_buff_scene: PackedScene
 @export var invis_buff_scene: PackedScene
 @export var drop_offset: Vector2 = Vector2(0, 16)
+
+# --- Визуальные фиксы для пиксель-арта ---
+@export var force_nearest_filter: bool = true
+@export var snap_to_pixel_grid: bool = true
+
+# Если добавишь uniform float alpha_cutoff в outline.gdshader — это поможет PNG с “мягкими” краями
+@export var set_alpha_cutoff: bool = false
+@export var alpha_cutoff_value: float = 0.9
 
 var player_in_range: bool = false
 var opened: bool = false
@@ -23,14 +30,36 @@ func _ready() -> void:
 	area.body_entered.connect(_on_body_entered)
 	area.body_exited.connect(_on_body_exited)
 
-	# --- Outline как у рычага ---
-	outline_material = ShaderMaterial.new()
-	if ResourceLoader.exists("res://shaders/outline.gdshader"):
-		outline_material.shader = load("res://shaders/outline.gdshader")
-		sprite.material = outline_material
+	# 1) прибиваем позицию к целым пикселям (если надо)
+	if snap_to_pixel_grid:
+		_snap_tree_to_pixels(self)
+
+	# 2) шейдер обводки
+	_setup_outline()
 
 	set_outline(false)
 	set_highlight(false)
+
+func _setup_outline() -> void:
+	if sprite_node == null:
+		push_warning("Chest: sprite_node is null. Проверь sprite_path в инспекторе (например 'Sprite2D').")
+		return
+
+	# Пиксельный фильтр (важно для PNG)
+	if force_nearest_filter:
+		sprite_node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+	outline_material = ShaderMaterial.new()
+	if ResourceLoader.exists("res://shaders/outline.gdshader"):
+		outline_material.shader = load("res://shaders/outline.gdshader")
+		sprite_node.material = outline_material
+
+		# опционально: задаём порог альфы (если есть в шейдере)
+		if set_alpha_cutoff:
+			# если параметра нет — Godot просто выдаст предупреждение в Output, критичного нет
+			outline_material.set_shader_parameter("alpha_cutoff", alpha_cutoff_value)
+	else:
+		push_warning("Chest: outline shader not found: res://shaders/outline.gdshader")
 
 func _process(_delta: float) -> void:
 	if opened:
@@ -77,3 +106,13 @@ func set_outline(enabled: bool) -> void:
 func set_highlight(enabled: bool) -> void:
 	if outline_material:
 		outline_material.set_shader_parameter("highlight", enabled)
+
+# --- полезно для пиксельной сетки ---
+func _snap_tree_to_pixels(n: Node) -> void:
+	# Прибиваем позиции Node2D и всех потомков к целым пикселям
+	if n is Node2D:
+		var nd := n as Node2D
+		nd.position = Vector2(round(nd.position.x), round(nd.position.y))
+
+	for ch in n.get_children():
+		_snap_tree_to_pixels(ch)

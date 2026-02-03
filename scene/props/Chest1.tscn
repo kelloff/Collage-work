@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://dkqkhe8oaphk5"]
+
+[ext_resource type="Script" uid="uid://nenwxj8lbr8h" path="res://scene/props/chest.gd" id="1_yyib3"]
+[ext_resource type="Texture2D" uid="uid://dts7cm4cop6qu" path="res://assets/New Piskel.png" id="2_yyib3"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_xd5so"]
+size = Vector2(13, 32)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_n3k6u"]
+radius = 17.0
+
+[node name="Chest" type="Node2D" unique_id=155880828]
+script = ExtResource("1_yyib3")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1931216808]
+texture = ExtResource("2_yyib3")
+region_rect = Rect2(0, 0, 32, 32)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=939453732]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=1185582925]
+position = Vector2(0.5, 0)
+shape = SubResource("RectangleShape2D_xd5so")
+
+[node name="InteractionArea" type="Area2D" parent="." unique_id=2114232653]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea" unique_id=869372787]
+shape = SubResource("CircleShape2D_n3k6u")

@@ -3,27 +3,55 @@ extends Control
 @onready var main_panel: Control = $TextureRect/VBoxContainer
 @onready var settings_menu: Control = $SettingsMenu
 
-@onready var play_btn: Button = $TextureRect/VBoxContainer/play
-@onready var settings_btn: Button = $TextureRect/VBoxContainer/settings
-@onready var exit_btn: Button = $TextureRect/VBoxContainer/exit
+@onready var play_btn: Button = get_node_or_null("TextureRect/VBoxContainer/play")
+@onready var continue_btn: Button = get_node_or_null("TextureRect/VBoxContainer/continue")
+@onready var settings_btn: Button = get_node_or_null("TextureRect/VBoxContainer/settings")
+@onready var exit_btn: Button = get_node_or_null("TextureRect/VBoxContainer/exit")
 
 const LEVEL_SCENE := "res://scene/level/level_1(realno).tscn"
 
 func _ready() -> void:
-	settings_menu.visible = false
+	if settings_menu:
+		settings_menu.visible = false
 
-	# кнопки основного меню
-	play_btn.pressed.connect(_on_play_pressed)
-	settings_btn.pressed.connect(_on_settings_pressed)
-	exit_btn.pressed.connect(_on_exit_pressed)
+	# --- кнопки ---
+	if continue_btn:
+		continue_btn.pressed.connect(_on_continue_pressed)
+		# Continue активна только если есть сейв
+		continue_btn.disabled = not savemanager.has_save()
+	else:
+		push_warning("MainMenu: button 'continue' not found (TextureRect/VBoxContainer/continue)")
 
-	# когда нажмут "назад" в настройках — вернёмся в главное меню
-	if settings_menu.has_signal("back_pressed"):
+	if play_btn:
+		play_btn.pressed.connect(_on_play_pressed)
+	else:
+		push_warning("MainMenu: button 'play' not found")
+
+	if settings_btn:
+		settings_btn.pressed.connect(_on_settings_pressed)
+	else:
+		push_warning("MainMenu: button 'settings' not found")
+
+	if exit_btn:
+		exit_btn.pressed.connect(_on_exit_pressed)
+	else:
+		push_warning("MainMenu: button 'exit' not found")
+
+	# назад из настроек
+	if settings_menu and settings_menu.has_signal("back_pressed"):
 		settings_menu.back_pressed.connect(_on_settings_back)
 
+func _on_continue_pressed() -> void:
+	savemanager.continue_game()
+
 func _on_play_pressed() -> void:
+	print("MainMenu: New Game")
+
+	# 1. полный сброс
+	savemanager.reset_save()
+
+	# 2. загружаем первый уровень
 	get_tree().change_scene_to_file(LEVEL_SCENE)
-	
 
 func _on_settings_pressed() -> void:
 	main_panel.visible = false
@@ -35,24 +63,3 @@ func _on_settings_back() -> void:
 
 func _on_exit_pressed() -> void:
 	get_tree().quit()
-	
-var _open := false
-
-func toggle_menu():
-	if _open:
-		hide_menu()
-	else:
-		show_menu()
-
-func show_menu():
-	_open = true
-	visible = true
-	get_tree().paused = true
-
-func hide_menu():
-	_open = false
-	visible = false
-	get_tree().paused = false
-
-func is_open() -> bool:
-	return _open
