@@ -2,6 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="1_5hd4p"]
 [ext_resource type="Script" uid="uid://beqe2dv8n5dx2" path="res://scene/level/Level_meneger.gd" id="1_miadu"]
+[ext_resource type="PackedScene" uid="uid://dufreb1dpm6jk" path="res://scene/Inventory/inventory.tscn" id="2_xd2xi"]
 [ext_resource type="PackedScene" uid="uid://b8xwhc8p02y48" path="res://scene/lever/lever.tscn" id="3_7rdi5"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="4_miadu"]
 [ext_resource type="PackedScene" uid="uid://cwiw011pkxys1" path="res://scene/level/Computer.tscn" id="5_miadu"]
@@ -200,6 +201,8 @@ sources/0 = SubResource("TileSetAtlasSource_5hd4p")
 [node name="Level1(realno)" type="Node2D" unique_id=971411670]
 position = Vector2(-841, -2418)
 script = ExtResource("1_miadu")
+
+[node name="Inventory" parent="." unique_id=1930867651 instance=ExtResource("2_xd2xi")]
 
 [node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=1128019219]
 visible = false
@@ -530,5 +533,65 @@ invis_buff_scene = ExtResource("10_qh8un")
 
 [node name="Chest6" parent="." unique_id=591468138 instance=ExtResource("8_75ofm")]
 position = Vector2(3750, -1468)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest7" parent="." unique_id=190823083 instance=ExtResource("8_75ofm")]
+position = Vector2(3964, -1134)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest8" parent="." unique_id=829341171 instance=ExtResource("8_75ofm")]
+position = Vector2(3872, -1136)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest9" parent="." unique_id=252119309 instance=ExtResource("8_75ofm")]
+position = Vector2(3804, -1138)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest10" parent="." unique_id=1647970591 instance=ExtResource("8_75ofm")]
+position = Vector2(3741, -1136)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest11" parent="." unique_id=896991135 instance=ExtResource("8_75ofm")]
+position = Vector2(3684, -1134)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest12" parent="." unique_id=1463099243 instance=ExtResource("8_75ofm")]
+position = Vector2(3637, -1133)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest" parent="Chest12" unique_id=435291497 instance=ExtResource("8_75ofm")]
+position = Vector2(419, -219)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest2" parent="Chest12" unique_id=2089711344 instance=ExtResource("8_75ofm")]
+position = Vector2(327, -221)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest3" parent="Chest12" unique_id=416672022 instance=ExtResource("8_75ofm")]
+position = Vector2(259, -223)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest4" parent="Chest12" unique_id=252245410 instance=ExtResource("8_75ofm")]
+position = Vector2(196, -221)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest5" parent="Chest12" unique_id=2034435001 instance=ExtResource("8_75ofm")]
+position = Vector2(139, -219)
+speed_buff_scene = ExtResource("9_xd2xi")
+invis_buff_scene = ExtResource("10_qh8un")
+
+[node name="Chest6" parent="Chest12" unique_id=758901140 instance=ExtResource("8_75ofm")]
+position = Vector2(92, -218)
 speed_buff_scene = ExtResource("9_xd2xi")
 invis_buff_scene = ExtResource("10_qh8un")

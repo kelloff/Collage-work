@@ -10,6 +10,7 @@ enum {
 
 @onready var animations: AnimatedSprite2D = $AnimatedSprite2D
 @onready var cam: Camera2D = $Camera2D
+@onready var inventory := get_tree().current_scene.get_node("Inventory")
 
 # База — то разрешение, в котором камера "правильная" (у тебя это 1280x720)
 const BASE_RESOLUTION := Vector2(1280, 720)
@@ -19,6 +20,8 @@ var idle_dir := DOWN
 var idle_time := 0.0
 const IDLE_DELAY := 0.25
 var control_enabled: bool = true
+var is_busy: bool = false
+
 
 # --- BUFFS ---
 var _base_speed: float
@@ -28,7 +31,7 @@ var _saved_modulate: Color
 
 func _ready() -> void:
 	add_to_group("player")
-
+	
 	_base_speed = float(speed)
 	_saved_modulate = modulate
 
@@ -154,3 +157,13 @@ func apply_invisibility(duration: float) -> void:
 
 func _on_invis_end() -> void:
 	modulate = _saved_modulate
+	
+func _process(_delta: float) -> void:
+	# Если мы заняты (например, в ПК), кнопка Tab просто не будет срабатывать
+	if is_busy:
+		return
+
+	if Input.is_action_just_pressed("inventory"):
+		if inventory:
+			inventory.toggle()
+			set_control_enabled(not inventory.is_open)

@@ -1,6 +1,10 @@
+#invis_buff
 extends Area2D
 
 @onready var sprite: Sprite2D = $Sprite2D
+
+@export var item_data: BuffItem
+@export var inventory_path: NodePath
 
 @export var duration: float = 4.0
 
@@ -21,10 +25,16 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if player_in_range and Input.is_action_just_pressed("interact"):
-		var player := _get_player()
-		if player and player.has_method("apply_invisibility"):
-			player.apply_invisibility(duration)
-		queue_free()
+		var inventory = get_node(inventory_path)
+		if inventory:
+			inventory.add_item(
+				"invis",
+				sprite.texture,
+				duration
+			)
+			queue_free()
+
+
 
 func _get_player() -> Node:
 	for b in get_overlapping_bodies():

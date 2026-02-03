@@ -2,6 +2,9 @@ extends Area2D
 
 @onready var sprite: Sprite2D = $Sprite2D
 
+@export var item_data: BuffItem
+@export var inventory_path: NodePath
+
 @export var duration: float = 5.0
 @export var speed_multiplier: float = 1.5
 
@@ -23,10 +26,17 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if player_in_range and Input.is_action_just_pressed("interact"):
-		var player := _get_player()
-		if player and player.has_method("apply_speed_buff"):
-			player.apply_speed_buff(speed_multiplier, duration)
-		queue_free()
+		var inventory = get_node(inventory_path)
+		if inventory:
+			inventory.add_item(
+				"speed",
+				sprite.texture,
+				duration,
+				speed_multiplier
+			)
+			queue_free()
+
+
 
 func _get_player() -> Node:
 	for b in get_overlapping_bodies():

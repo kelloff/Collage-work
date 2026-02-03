@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://chdys3qi8nbbr"]
 
-[ext_resource type="Script" uid="uid://bnegtcjinn8ww" path="res://scene/items/speed_buff.gd" id="1_raw18"]
+[ext_resource type="Script" uid="uid://csiu6wo1rpbt" path="res://scene/items/speed_buff.gd" id="1_raw18"]
 [ext_resource type="Texture2D" uid="uid://gy0p2uw11ags" path="res://assets/скорость.png" id="2_verr2"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_aw47k"]
@@ -10,6 +10,7 @@ radius = 12.0
 
 [node name="SpeedBuff" type="Area2D" parent="." unique_id=337890335]
 script = ExtResource("1_raw18")
+inventory_path = NodePath("..")
 
 [node name="Sprite2D" type="Sprite2D" parent="SpeedBuff" unique_id=2116167214]
 scale = Vector2(0.5, 0.5)

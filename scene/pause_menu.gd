@@ -37,8 +37,8 @@ func _ready() -> void:
 		print("PauseMenu: SaveMeneger НЕ доступен — проверь Autoload")
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause_menu"): # pause_menu = Esc
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause_menu"): # Esc
 		toggle_menu()
 
 func show_pause() -> void:
@@ -86,4 +86,11 @@ func _on_exit_pressed() -> void:
 	else:
 		print("lox")
 	get_tree().paused = false
-	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE) 
+	
+	
+func _process(_delta: float) -> void:
+	# Если меню паузы видно — мышь ОБЯЗАНА быть видимой.
+	if root.visible:
+		if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)

@@ -1,10 +1,11 @@
 [gd_scene format=3 uid="uid://hlw167ul14s1"]
 
-[ext_resource type="Script" uid="uid://cp0uepn3h0wlx" path="res://scene/pause_menu.gd" id="1_57h85"]
+[ext_resource type="Script" uid="uid://wq5f4mbcytc1" path="res://scene/pause_menu.gd" id="1_57h85"]
 [ext_resource type="PackedScene" uid="uid://d2716w4i5d1dc" path="res://scene/SettingsMenu.tscn" id="2_3mybc"]
 
 [node name="PauseMenu_tscn" type="CanvasLayer" unique_id=1908492342]
 process_mode = 3
+layer = 10
 script = ExtResource("1_57h85")
 
 [node name="Control" type="Control" parent="." unique_id=597252051]
