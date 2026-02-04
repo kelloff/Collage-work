@@ -19,6 +19,10 @@ run/main_scene="uid://bl5d51ig3ig1y"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="uid://53fbbn6l3ab0"
+
 [autoload]
 
 CodeRunner="*res://scripts/code_runner.gd"
@@ -26,6 +30,7 @@ DbMeneger="*res://db/db_meneger.gd"
 SaveMeneger="*uid://dnusgq5r55usl"
 JournalData="*uid://hsfeuhjma84g"
 savemanager="*uid://b7xgn18dyrrqm"
+audio_manager="*uid://qhyr73bgtfcu"
 
 [display]
 

@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" uid="uid://dkqkhe8oaphk5" path="res://scene/props/Chest1.tscn" id="13_ll8hu"]
 [ext_resource type="PackedScene" uid="uid://c5kt8o8safml4" path="res://scene/props/Chest2.tscn" id="14_rhfjy"]
 [ext_resource type="PackedScene" uid="uid://br3674q8a2lkc" path="res://scene/props/Chest3.tscn" id="15_b6wb6"]
+[ext_resource type="AudioStream" uid="uid://y340f2ilrmwv" path="res://audio/music/main_theme.ogg" id="17_b6wb6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b6wb6"]
 bg_color = Color(0, 0, 0, 0.827451)
@@ -264,7 +265,7 @@ position = Vector2(2751, 2679)
 scale = Vector2(0.994, 1)
 
 [node name="Node2D" parent="." unique_id=153882367 instance=ExtResource("6_jhscy")]
-position = Vector2(2714, 2759)
+position = Vector2(2713, 2761)
 door_id = 3
 
 [node name="None" parent="." unique_id=1650047621 instance=ExtResource("3_7rdi5")]
@@ -307,7 +308,7 @@ position = Vector2(3097, 2954)
 door_id = 1
 
 [node name="Node2D3" parent="." unique_id=709821199 instance=ExtResource("6_jhscy")]
-position = Vector2(3287, 2723)
+position = Vector2(3289, 2729)
 door_id = 2
 
 [node name="comp" parent="." unique_id=842160167 instance=ExtResource("5_miadu")]
@@ -360,7 +361,7 @@ linked_doors = null
 open_doors_on_down = null
 
 [node name="Node2D5" parent="." unique_id=1984385498 instance=ExtResource("6_jhscy")]
-position = Vector2(3738, 2887)
+position = Vector2(3738, 2889)
 door_id = 4
 
 [node name="comp3" parent="." unique_id=399447096 instance=ExtResource("5_miadu")]
@@ -369,7 +370,7 @@ computer_id = 3
 linked_doors = [5]
 
 [node name="Node2D6" parent="." unique_id=1197342315 instance=ExtResource("6_jhscy")]
-position = Vector2(4055, 2763)
+position = Vector2(4057, 2761)
 door_id = 5
 
 [node name="Nothing" parent="." unique_id=616625893 instance=ExtResource("6_jhscy")]
@@ -383,7 +384,7 @@ computer_id = 4
 linked_doors = [6]
 
 [node name="Node2D4" parent="." unique_id=272162679 instance=ExtResource("6_jhscy")]
-position = Vector2(4183, 3178)
+position = Vector2(4185, 3177)
 door_id = 6
 
 [node name="comp5" parent="." unique_id=821267620 instance=ExtResource("5_miadu")]
@@ -397,7 +398,7 @@ computer_id = 6
 linked_doors = [7]
 
 [node name="Node2D7" parent="." unique_id=473269623 instance=ExtResource("6_jhscy")]
-position = Vector2(4056, 3498)
+position = Vector2(4057, 3497)
 door_id = 7
 
 [node name="Node2D8" parent="." unique_id=1586000919 instance=ExtResource("6_jhscy")]
@@ -440,7 +441,7 @@ linked_doors = null
 open_doors_on_down = null
 
 [node name="Node2D9" parent="." unique_id=1915847406 instance=ExtResource("6_jhscy")]
-position = Vector2(5206, 3495)
+position = Vector2(5209, 3497)
 door_id = 9
 
 [node name="comp7" parent="." unique_id=1894273988 instance=ExtResource("5_miadu")]
@@ -450,7 +451,7 @@ computer_id = 7
 linked_doors = [10]
 
 [node name="Node2D10" parent="." unique_id=12403545 instance=ExtResource("6_jhscy")]
-position = Vector2(5529, 3333)
+position = Vector2(5529, 3337)
 door_id = 10
 
 [node name="Nothing3" parent="." unique_id=79209170 instance=ExtResource("6_jhscy")]
@@ -486,7 +487,7 @@ linked_doors = Array[int]([11])
 open_doors_on_down = null
 
 [node name="Node2D11" parent="." unique_id=1000582174 instance=ExtResource("6_jhscy")]
-position = Vector2(3286, 3593)
+position = Vector2(3289, 3593)
 door_id = 11
 
 [node name="comp8" parent="." unique_id=1920424685 instance=ExtResource("5_miadu")]
@@ -500,11 +501,11 @@ position = Vector2(3795, 3724)
 door_id = 12
 
 [node name="Nothing4" parent="." unique_id=244254508 instance=ExtResource("6_jhscy")]
-position = Vector2(3701, 3432)
+position = Vector2(3705, 3433)
 door_id = null
 
 [node name="Node2D13" parent="." unique_id=839561155 instance=ExtResource("6_jhscy")]
-position = Vector2(3768, 3240)
+position = Vector2(3769, 3241)
 door_id = 13
 
 [node name="comp9" parent="." unique_id=410170984 instance=ExtResource("5_miadu")]
@@ -539,7 +540,7 @@ position = Vector2(2777, 3272)
 door_id = null
 
 [node name="Node2D16" parent="." unique_id=1252279505 instance=ExtResource("6_jhscy")]
-position = Vector2(3066, 3432)
+position = Vector2(3065, 3433)
 door_id = 16
 
 [node name="comp11" parent="." unique_id=659203490 instance=ExtResource("5_miadu")]
@@ -556,7 +557,7 @@ linked_doors = Array[int]([17])
 open_doors_on_down = null
 
 [node name="Node2D17" parent="." unique_id=486501645 instance=ExtResource("6_jhscy")]
-position = Vector2(2714, 3654)
+position = Vector2(2713, 3657)
 door_id = 17
 
 [node name="none4" parent="." unique_id=1123615801 instance=ExtResource("3_7rdi5")]
@@ -588,7 +589,7 @@ linked_doors = Array[int]([18])
 open_doors_on_down = null
 
 [node name="Node2D18" parent="." unique_id=1300373126 instance=ExtResource("6_jhscy")]
-position = Vector2(3120, 3745)
+position = Vector2(3129, 3753)
 door_id = 18
 
 [node name="comp12" parent="." unique_id=84910495 instance=ExtResource("5_miadu")]
@@ -598,11 +599,11 @@ computer_id = 12
 linked_doors = [19]
 
 [node name="Node2D19" parent="." unique_id=13529343 instance=ExtResource("6_jhscy")]
-position = Vector2(954, 4359)
+position = Vector2(954, 4361)
 door_id = 19
 
 [node name="Node2D20" parent="." unique_id=60050625 instance=ExtResource("6_jhscy")]
-position = Vector2(2231, 3432)
+position = Vector2(2233, 3433)
 door_id = 20
 
 [node name="Lever" parent="." unique_id=1614666806 instance=ExtResource("3_7rdi5")]
@@ -693,3 +694,8 @@ position = Vector2(4160, -1477)
 
 [node name="Chest9" parent="." unique_id=525757073 instance=ExtResource("15_b6wb6")]
 position = Vector2(4221, -1469)
+
+[node name="music_player" type="AudioStreamPlayer" parent="." unique_id=1135165994]
+stream = ExtResource("17_b6wb6")
+autoplay = true
+bus = &"Music"

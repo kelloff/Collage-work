@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const SETTINGS_SCENE := preload("res://scene/SettingsMenu.tscn") # путь проверь
+
 @onready var pause_panel: Control = get_node_or_null("PausePanel")
 @onready var settings_menu: Control = get_node_or_null("SettingsMenu")
 
@@ -42,6 +44,17 @@ func _ready() -> void:
 	# Назад из настроек (если сигнал есть)
 	if settings_menu and settings_menu.has_signal("back_pressed"):
 		settings_menu.back_pressed.connect(_on_settings_back)
+	# Если SettingsMenu не найден — инстансим SettingsMenu.tscn и добавляем
+	if settings_menu == null:
+		settings_menu = SETTINGS_SCENE.instantiate()
+		settings_menu.name = "SettingsMenu"
+		add_child(settings_menu)
+		settings_menu.visible = false
+
+	# Назад из настроек (если сигнал есть)
+	if settings_menu and settings_menu.has_signal("back_pressed"):
+		if not settings_menu.back_pressed.is_connected(_on_settings_back):
+			settings_menu.back_pressed.connect(_on_settings_back)
 
 
 func _hide_all_panels() -> void:
@@ -79,7 +92,6 @@ func toggle_menu() -> void:
 func is_open() -> bool:
 	return _open
 
-
 func _on_resume_pressed() -> void:
 	hide_pause()
 
@@ -87,8 +99,10 @@ func _on_resume_pressed() -> void:
 func _on_settings_pressed() -> void:
 	if pause_panel:
 		pause_panel.visible = false
+
 	if settings_menu:
 		settings_menu.visible = true
+		settings_menu.process_mode = Node.PROCESS_MODE_WHEN_PAUSED  # важно для UI на паузе
 
 
 func _on_settings_back() -> void:

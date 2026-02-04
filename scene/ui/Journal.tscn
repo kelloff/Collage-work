@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bmiyv1x5pfemx"]
 
 [ext_resource type="Script" uid="uid://bp6nihwdftsjp" path="res://scene/ui/journal.gd" id="1_b5x0n"]
+[ext_resource type="AudioStream" uid="uid://y340f2ilrmwv" path="res://audio/music/main_theme.ogg" id="2_51hwe"]
 
 [node name="Journal" type="CanvasLayer" unique_id=889379067]
 script = ExtResource("1_b5x0n")
@@ -48,3 +49,8 @@ layout_mode = 2
 size_flags_vertical = 0
 text = "выйти
 "
+
+[node name="music_player" type="AudioStreamPlayer" parent="." unique_id=2043621693]
+stream = ExtResource("2_51hwe")
+autoplay = true
+bus = &"Music"
