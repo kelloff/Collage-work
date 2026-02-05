@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="1_5hd4p"]
 [ext_resource type="Script" uid="uid://beqe2dv8n5dx2" path="res://scene/level/Level_meneger.gd" id="1_miadu"]
-[ext_resource type="Script" uid="uid://bf1onbgmsbybw" path="res://scene/level/hudui.gd" id="2_rhfjy"]
+[ext_resource type="Script" uid="uid://cqpyoohrff68t" path="res://scene/level/hudui.gd" id="2_rhfjy"]
 [ext_resource type="PackedScene" uid="uid://b8xwhc8p02y48" path="res://scene/lever/lever.tscn" id="3_7rdi5"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="4_miadu"]
 [ext_resource type="PackedScene" uid="uid://bof3ot03dx556" path="res://scene/notes/Note.tscn" id="4_qh8un"]
@@ -214,9 +214,6 @@ sources/0 = SubResource("TileSetAtlasSource_5hd4p")
 [node name="Level1(realno)" type="Node2D" unique_id=971411670]
 position = Vector2(-841, -2418)
 script = ExtResource("1_miadu")
-clear_existing = null
-verbose = null
-wait_frames = null
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=638338476]
 script = ExtResource("2_rhfjy")

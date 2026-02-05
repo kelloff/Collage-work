@@ -28,9 +28,9 @@ buses/default_bus_layout="uid://53fbbn6l3ab0"
 CodeRunner="*res://scripts/code_runner.gd"
 DbMeneger="*res://db/db_meneger.gd"
 SaveMeneger="*uid://dnusgq5r55usl"
-JournalData="*uid://hsfeuhjma84g"
-savemanager="*uid://b7xgn18dyrrqm"
-audio_manager="*uid://qhyr73bgtfcu"
+JournalData="*uid://bbcymcxuj8j65"
+savemanager="*uid://cgt7c0og0houh"
+audio_manager="*uid://dak4bu54k65p5"
 
 [display]
 
