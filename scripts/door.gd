@@ -52,9 +52,9 @@ func _process(_delta: float) -> void:
 
 # ---------- SAVE/LOAD ----------
 func _restore_from_db() -> void:
-	# если у DbMeneger есть get_door_state — применяем
-	if door_id > 0 and DbMeneger.has_method("get_door_state"):
-		var st = DbMeneger.get_door_state(door_id) # ожидаем true/false или 1/0
+	# если у DbManager есть get_door_state — применяем
+	if door_id > 0 and DbManager.has_method("get_door_state"):
+		var st = DbManager.get_door_state(door_id) # ожидаем true/false или 1/0
 		if st != null:
 			is_open = bool(st)
 			_apply_visuals()
@@ -65,8 +65,8 @@ func _restore_from_db() -> void:
 		_apply_visuals()
 
 func _write_state_to_db() -> void:
-	if door_id > 0 and DbMeneger.has_method("set_door_state"):
-		DbMeneger.set_door_state(door_id, is_open)
+	if door_id > 0 and DbManager.has_method("set_door_state"):
+		DbManager.set_door_state(door_id, is_open)
 # ------------------------------
 
 func _apply_visuals() -> void:
@@ -95,20 +95,20 @@ func _hide_hint() -> void:
 func _update_hint_for_state() -> void:
 	if not player_in_range:
 		return
-	if DbMeneger.is_door_accessible(door_id):
+	if DbManager.is_door_accessible(door_id):
 		_show_hint("E — открыть/закрыть дверь")
 	else:
 		_show_hint("❌ Дверь заблокирована")
 # --------------------------------------------
 
 func try_toggle_by_player() -> void:
-	if not DbMeneger.is_door_accessible(door_id):
+	if not DbManager.is_door_accessible(door_id):
 		_show_hint("❌ Дверь заблокирована", 1.5)
 		return
 	toggle(false)
 
 func toggle(by_system: bool = false) -> void:
-	if not DbMeneger.is_door_accessible(door_id):
+	if not DbManager.is_door_accessible(door_id):
 		_show_hint("❌ Дверь заблокирована", 1.5)
 		return
 

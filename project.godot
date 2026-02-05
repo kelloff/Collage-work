@@ -25,12 +25,12 @@ buses/default_bus_layout="uid://53fbbn6l3ab0"
 
 [autoload]
 
+DbManager="*res://db/db_meneger.gd"
 CodeRunner="*res://scripts/code_runner.gd"
-DbMeneger="*res://db/db_meneger.gd"
 audio_manager="*uid://dak4bu54k65p5"
-savemanager="*uid://cgt7c0og0houh"
+GameState="*uid://d4lv4fol71u7q"
 JournalData="*uid://bbcymcxuj8j65"
-SaveMeneger="*uid://cgt7c0og0houh"
+Savemeneger="*uid://cgt7c0og0houh"
 
 [display]
 

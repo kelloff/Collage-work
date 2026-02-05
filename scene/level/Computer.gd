@@ -55,7 +55,7 @@ func _hide_hint() -> void:
 func _update_hint_for_state() -> void:
 	if not player_in_range:
 		return
-	if DbMeneger.is_computer_accessible(computer_id):
+	if DbManager.is_computer_accessible(computer_id):
 		_show_hint("E — открыть терминал")
 	else:
 		_show_hint("❌ Терминал заблокирован")
@@ -91,7 +91,7 @@ func open_terminal() -> void:
 	if computer_id == 0:
 		return
 
-	if not DbMeneger.is_computer_accessible(computer_id):
+	if not DbManager.is_computer_accessible(computer_id):
 		_show_hint("❌ Терминал заблокирован", 1.5)
 		return
 
@@ -101,7 +101,7 @@ func open_terminal() -> void:
 		player_node.set_control_enabled(false)
 
 	if current_task.is_empty():
-		current_task = DbMeneger.assign_task(level, computer_id)
+		current_task = DbManager.assign_task(level, computer_id)
 
 	if terminal_ui and terminal_ui.has_method("open_with_task"):
 		terminal_ui.call("open_with_task", level, current_task)
@@ -127,10 +127,10 @@ func unassign_task_if_completed() -> void:
 	if computer_id == 0:
 		return
 
-	DbMeneger.unassign_task(level, computer_id)
+	DbManager.unassign_task(level, computer_id)
 	current_task = {}
 
-	var door_ids = DbMeneger.get_doors_for_computer(computer_id)
+	var door_ids = DbManager.get_doors_for_computer(computer_id)
 	if door_ids.size() == 0:
 		if linked_doors.size() > 0:
 			door_ids = linked_doors.duplicate()
@@ -147,4 +147,4 @@ func unassign_task_if_completed() -> void:
 func refresh_current_task() -> void:
 	if computer_id == 0:
 		return
-	current_task = DbMeneger.get_current_task(level, computer_id)
+	current_task = DbManager.get_current_task(level, computer_id)

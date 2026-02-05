@@ -18,7 +18,7 @@ func _ready() -> void:
 	if continue_btn:
 		continue_btn.pressed.connect(_on_continue_pressed)
 		# Continue активна только если есть сейв
-		continue_btn.disabled = not savemanager.has_save()
+		continue_btn.disabled = not Savemeneger.has_save()
 	else:
 		push_warning("MainMenu: button 'continue' not found (TextureRect/VBoxContainer/continue)")
 
@@ -42,13 +42,13 @@ func _ready() -> void:
 		settings_menu.back_pressed.connect(_on_settings_back)
 
 func _on_continue_pressed() -> void:
-	savemanager.continue_game()
+	Savemeneger.continue_game()
 
 func _on_play_pressed() -> void:
 	print("MainMenu: New Game")
 
 	# 1. полный сброс
-	savemanager.reset_save()
+	Savemeneger.reset_save()
 
 	# 2. загружаем первый уровень
 	get_tree().change_scene_to_file(LEVEL_SCENE)

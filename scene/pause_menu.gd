@@ -113,11 +113,11 @@ func _on_settings_back() -> void:
 
 
 func _on_save_pressed() -> void:
-	# Autoload у тебя называется savemanager
-	if Engine.has_singleton("savemanager") or (typeof(savemanager) != TYPE_NIL):
-		savemanager.save_now()
+	# Autoload у тебя называется Savemeneger
+	if Engine.has_singleton("Savemeneger") or (typeof(Savemeneger) != TYPE_NIL):
+		Savemeneger.save_now()
 	else:
-		push_warning("PauseMenu: autoload 'savemanager' not found")
+		push_warning("PauseMenu: autoload 'Savemeneger' not found")
 
 
 func _on_exit_pressed() -> void:

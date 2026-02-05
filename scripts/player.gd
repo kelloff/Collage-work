@@ -1,5 +1,7 @@
-# res://scripts/Player.gd
 extends CharacterBody2D
+
+signal became_invisible
+signal became_visible
 
 enum {
 	DOWN,
@@ -19,17 +21,34 @@ var idle_time := 0.0
 const IDLE_DELAY := 0.25
 var control_enabled: bool = true
 
+# --- HP / DAMAGE ---
+@export var max_hp: int = 3
+var hp: int
+var invuln_time: float = 0.8
+var _invuln_timer: Timer
+var _is_invulnerable: bool = false
+
 # --- BUFFS ---
 var _base_speed: float
 var _speed_buff_timer: Timer
 var _invis_timer: Timer
 var _saved_modulate: Color
 
+# invisibility flag
+var is_invisible: bool = false
+
 # --- HINT ---
 var _hint_timer: Timer
 
 func _ready() -> void:
 	add_to_group("player")
+
+	# HP init
+	hp = max_hp
+	_invuln_timer = Timer.new()
+	_invuln_timer.one_shot = true
+	add_child(_invuln_timer)
+	_invuln_timer.timeout.connect(_on_invuln_end)
 
 	_base_speed = float(speed)
 	_saved_modulate = modulate
@@ -143,7 +162,7 @@ func _update_camera_zoom() -> void:
 		s.x / BASE_RESOLUTION.x,
 		s.y / BASE_RESOLUTION.y
 	)
-	cam.zoom = Vector2(scale, scale) * 2 
+	cam.zoom = Vector2(scale, scale) * 2
 
 # =========================
 # BUFFS
@@ -158,7 +177,76 @@ func _on_speed_buff_end() -> void:
 func apply_invisibility(duration: float) -> void:
 	_saved_modulate = modulate
 	modulate.a = 0.25
+	is_invisible = true
+	add_to_group("invisible")
+	emit_signal("became_invisible")
 	_invis_timer.start(duration)
 
 func _on_invis_end() -> void:
 	modulate = _saved_modulate
+	is_invisible = false
+	if is_in_group("invisible"):
+		remove_from_group("invisible")
+	emit_signal("became_visible")
+	_notify_nearby_maniacs_on_reveal(160.0)
+
+func _notify_nearby_maniacs_on_reveal(radius: float) -> void:
+	for m in get_tree().get_nodes_in_group("maniac"):
+		if not m:
+			continue
+		if not m.has_method("on_player_revealed"):
+			continue
+		if global_position.distance_to(m.global_position) <= radius:
+			# вызов напрямую; маньяк сам проверит видимость/дистанцию
+			m.on_player_revealed(self)
+
+# =========================
+# DAMAGE API
+# =========================
+func take_damage(amount: int = 1) -> void:
+	if _is_invulnerable:
+		return
+	hp -= amount
+	if hp <= 0:
+		die()
+		return
+	_become_invulnerable()
+	_flash_on_damage()
+
+func _become_invulnerable() -> void:
+	_is_invulnerable = true
+	_invuln_timer.start(invuln_time)
+
+func _on_invuln_end() -> void:
+	_is_invulnerable = false
+	modulate = _saved_modulate
+
+func get_hp() -> int:
+	return hp
+
+func set_hp(value: int) -> void:
+	hp = int(clamp(value, 0, max_hp))
+
+func _flash_on_damage() -> void:
+	modulate = Color(1, 0.6, 0.6, 1)
+
+func die() -> void:
+	control_enabled = false
+	# Безопасный перезапуск сцены: проверяем get_tree() перед созданием таймера
+	var tree = get_tree()
+	if tree:
+		# даём короткую паузу, чтобы завершить корутины/таймеры, затем перезагружаем сцену
+		await tree.create_timer(0.05).timeout
+		# ещё раз проверим
+		var tree2 = get_tree()
+		if tree2:
+			tree2.reload_current_scene()
+	else:
+		# если дерева нет — ничего не делаем (узел уже удаляется)
+		pass
+
+# =========================
+# Утилиты
+# =========================
+func get_speed() -> float:
+	return speed

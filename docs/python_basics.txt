@@ -9,14 +9,14 @@ name = "Alex"
 
 Условия:
 if x > 5:
-    print("ok")
+	print("ok")
 else:
-    print("no")
+	print("no")
 
 Цикл:
 for i in range(3):
-    print(i)
+	print(i)
 
 Функции:
 def add(a, b):
-    return a + b
+	return a + b

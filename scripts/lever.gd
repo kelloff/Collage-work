@@ -51,15 +51,15 @@ func _process(_delta: float) -> void:
 # ---------- SAVE/LOAD ----------
 func _restore_from_db() -> void:
 	is_on = true
-	if lever_id > 0 and DbMeneger.has_method("get_lever_state"):
-		var state = DbMeneger.get_lever_state(lever_id) # 1 = down, 0 = up
+	if lever_id > 0 and DbManager.has_method("get_lever_state"):
+		var state = DbManager.get_lever_state(lever_id) # 1 = down, 0 = up
 		if state != null:
 			is_on = (int(state) == 0) # up => on
 # ------------------------------
 
 func _write_state_to_db() -> void:
-	if lever_id > 0 and DbMeneger.has_method("set_lever_state"):
-		DbMeneger.set_lever_state(lever_id, not is_on) # is_down
+	if lever_id > 0 and DbManager.has_method("set_lever_state"):
+		DbManager.set_lever_state(lever_id, not is_on) # is_down
 
 func _update_visual() -> void:
 	if not sprite:
@@ -84,13 +84,13 @@ func register_links() -> void:
 
 	for comp_id in linked_computers:
 		if typeof(comp_id) == TYPE_INT and comp_id > 0:
-			if DbMeneger.has_method("link_lever_to_computer"):
-				DbMeneger.link_lever_to_computer(lever_id, comp_id)
+			if DbManager.has_method("link_lever_to_computer"):
+				DbManager.link_lever_to_computer(lever_id, comp_id)
 
 	for did in linked_doors:
 		if typeof(did) == TYPE_INT and did > 0:
-			if DbMeneger.has_method("link_lever_to_door"):
-				DbMeneger.link_lever_to_door(lever_id, did)
+			if DbManager.has_method("link_lever_to_door"):
+				DbManager.link_lever_to_door(lever_id, did)
 
 func _apply_linked_doors() -> void:
 	var should_open := ((not is_on) if open_doors_on_down else is_on)

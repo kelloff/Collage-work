@@ -64,9 +64,16 @@ func _setup_outline() -> void:
 func _process(_delta: float) -> void:
 	if opened:
 		return
-	if player_in_range and Input.is_action_just_pressed("interact"):
-		open_chest()
-
+	if player_in_range:
+		set_outline(true)
+		
+		_show_hint("E - открыть сундук")
+		if Input.is_action_just_pressed("interact"):
+			_hide_hint()
+			open_chest()
+	else:
+		_hide_hint()
+		
 func open_chest() -> void:
 	opened = true
 	set_outline(false)
@@ -116,3 +123,17 @@ func _snap_tree_to_pixels(n: Node) -> void:
 
 	for ch in n.get_children():
 		_snap_tree_to_pixels(ch)
+		
+# ---------------- HUD helpers ----------------
+func _hud() -> Node:
+	return get_tree().current_scene.get_node_or_null("HUD")
+
+func _show_hint(text: String, duration: float = 0.0) -> void:
+	var hud = _hud()
+	if hud and hud.has_method("show_hint"):
+		hud.show_hint(text, duration, self)
+
+func _hide_hint() -> void:
+	var hud = _hud()
+	if hud and hud.has_method("hide_hint"):
+		hud.hide_hint(self)

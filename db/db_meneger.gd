@@ -131,14 +131,36 @@ func has_save() -> bool:
 		return save.has_save()
 	return false
 
-func set_save(scene_path: String, pos: Vector2) -> void:
-	if save and save.has_method("set_save"):
-		save.set_save(scene_path, pos)
+# set_save: поддерживает старую сигнатуру и новый словарь
+func set_save(a, b = null) -> void:
+	# debug: лог входящих аргументов
+	print("DbMeneger.set_save called with:", a, b)
+	if save == null or not save.has_method("set_save"):
+		print("DbMeneger.set_save: save module missing")
+		return
+	if typeof(a) == TYPE_DICTIONARY:
+		print("DbMeneger.set_save: passing dictionary to save.set_save")
+		save.set_save(a)
+		return
+	if typeof(a) == TYPE_STRING and (b == null or typeof(b) == TYPE_VECTOR2):
+		var scene_path: String = a
+		var pos: Vector2 = b if b != null else Vector2.ZERO
+		var payload := {
+			"scene_path": scene_path,
+			"player_pos": pos,
+			"player_hp": null,
+			"maniacs": []
+		}
+		print("DbMeneger.set_save: converted legacy args ->", payload)
+		save.set_save(payload)
+		return
+	print("DbMeneger.set_save: unsupported args, ignoring")
 
 func get_save() -> Dictionary:
-	if save and save.has_method("get_save"):
-		return save.get_save()
-	return {}
+	var s = save.get_save()
+	print("DbMeneger.get_save: proxy ->", s)
+	return s
+	
 
 func clear_save() -> void:
 	if save and save.has_method("clear_save"):

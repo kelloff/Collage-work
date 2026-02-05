@@ -1,8 +1,12 @@
 extends Node2D
+class_name LevelManager
 
 @onready var pause_menu = $PauseMenu
 @onready var journal = $Journal
 
+@export var clear_existing: bool = true
+@export var verbose: bool = true
+@export var wait_frames: int = 2
 
 func _unhandled_input(event: InputEvent) -> void:
 	var pause_open: bool = pause_menu != null and pause_menu.is_open()
@@ -22,32 +26,56 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
-
-@export var clear_existing: bool = true
-@export var verbose: bool = true
-@export var wait_frames: int = 2
-
 func _ready() -> void:
 	call_deferred("_init_links")
 
-	if Engine.has_singleton("SaveMeneger"):
-		SaveMeneger.load_game()
-		print("-------------------------------------")
+	# Попробуем вызвать загрузку через SaveManager (поддерживаем старые/новые имена)
+	var save_singleton = _find_save_singleton()
+	if save_singleton != null and save_singleton.has_method("load_game"):
+		save_singleton.load_game()
+		if verbose:
+			print("-------------------------------------")
+	else:
+		if verbose:
+			print("LevelManager: Save singleton not found or has no load_game()")
 
-func _find_dbmeneger() -> Node:
+# --- Поиск singleton SaveManager (поддерживает SaveManager и SaveMeneger) ---
+func _find_save_singleton() -> Object:
+	if Engine.has_singleton("SaveManager"):
+		return Engine.get_singleton("SaveManager")
+	if Engine.has_singleton("SaveMeneger"):
+		return Engine.get_singleton("SaveMeneger")
+	# также попробуем получить через root node (если автoload добавлен как node)
 	var root = get_tree().get_root()
-	var cr = root.get_node_or_null("DbMeneger")
-	if cr:
-		return cr
+	if root.has_node("SaveManager"):
+		return root.get_node("SaveManager")
+	if root.has_node("SaveMeneger"):
+		return root.get_node("SaveMeneger")
+	return null
+
+# --- Поиск DB singleton / менеджера базы данных ---
+func _find_db_manager() -> Node:
+	# 1) Попробуем автолоады с разными именами
+	if Engine.has_singleton("DbManager"):
+		return Engine.get_singleton("DbManager")
+	if Engine.has_singleton("DbMeneger"):
+		return Engine.get_singleton("DbMeneger")
+	# 2) Попробуем root node по имени
+	var root = get_tree().get_root()
+	if root.has_node("DbManager"):
+		return root.get_node("DbManager")
+	if root.has_node("DbMeneger"):
+		return root.get_node("DbMeneger")
+	# 3) Группа db_managers (если менеджеры добавлены в группу)
 	var nodes = get_tree().get_nodes_in_group("db_managers")
 	if nodes.size() > 0:
 		return nodes[0]
 	return null
 
 func _init_links() -> void:
-	var db = _find_dbmeneger()
+	var db = _find_db_manager()
 	if db == null:
-		push_error("LevelManager: DbMeneger not found.")
+		push_error("LevelManager: DbManager/DbMeneger not found.")
 		return
 
 	# Очистка существующих связей (рычаги и двери) при необходимости

@@ -1,7 +1,17 @@
 [gd_scene format=3 uid="uid://c5kt8o8safml4"]
 
-[ext_resource type="Script" uid="uid://nenwxj8lbr8h" path="res://scene/props/chest.gd" id="1_a55aq"]
+[ext_resource type="Script" uid="uid://cf3s4v08r6vpk" path="res://scene/props/chest.gd" id="1_a55aq"]
 [ext_resource type="Texture2D" uid="uid://hpwrroxyuib1" path="res://assets/New Piskel2.png" id="2_a55aq"]
+[ext_resource type="Shader" uid="uid://ch4ltdhfjxbbp" path="res://shaders/Outline.gdshader" id="2_f7xy4"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_l5mkp"]
+shader = ExtResource("2_f7xy4")
+shader_parameter/enabled = false
+shader_parameter/outline_color = Color(1, 1, 1, 1)
+shader_parameter/outline_size = 1.0
+shader_parameter/highlight = false
+shader_parameter/highlight_color = Color(0.6, 0.6, 0.6, 0.3)
+shader_parameter/alpha_cutoff = 0.5
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_xd5so"]
 size = Vector2(13, 32)
@@ -13,6 +23,7 @@ radius = 18.0
 script = ExtResource("1_a55aq")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1931216808]
+material = SubResource("ShaderMaterial_l5mkp")
 texture = ExtResource("2_a55aq")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=939453732]
