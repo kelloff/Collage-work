@@ -1,3 +1,4 @@
+# invis_buff.gd
 extends Area2D
 
 @onready var sprite: Sprite2D = $Sprite2D
@@ -21,10 +22,21 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if player_in_range and Input.is_action_just_pressed("interact"):
-		var player := _get_player()
-		if player and player.has_method("apply_invisibility"):
-			player.apply_invisibility(duration)
-		queue_free()
+		var inventory := get_tree().get_first_node_in_group("inventory")
+		if inventory == null:
+			push_error("invis_buff: inventory not found (add Inventory to group 'inventory')")
+			return
+
+		var icon: Texture2D = sprite.texture
+		# кладём в инвентарь: type=invis, duration, value=0
+		if inventory.add_item("invis", icon, duration, 0.0):
+			queue_free() # удаляем предмет с карты (подобран)
+		# else: инвентарь полный — оставляем лежать
+
+# Вызывается из инвентаря/слота при использовании
+func use(player: Node) -> void:
+	if player and player.has_method("apply_invisibility"):
+		player.apply_invisibility(duration)
 
 func _get_player() -> Node:
 	for b in get_overlapping_bodies():

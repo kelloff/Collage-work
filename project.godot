@@ -27,10 +27,10 @@ buses/default_bus_layout="uid://53fbbn6l3ab0"
 
 CodeRunner="*res://scripts/code_runner.gd"
 DbMeneger="*res://db/db_meneger.gd"
-SaveMeneger="*uid://dnusgq5r55usl"
-JournalData="*uid://hsfeuhjma84g"
-savemanager="*uid://b7xgn18dyrrqm"
-audio_manager="*uid://qhyr73bgtfcu"
+audio_manager="*uid://dak4bu54k65p5"
+savemanager="*uid://cgt7c0og0houh"
+JournalData="*uid://bbcymcxuj8j65"
+SaveMeneger="*uid://cgt7c0og0houh"
 
 [display]
 
@@ -42,11 +42,12 @@ window/size/window_height_override=920
 
 [editor_plugins]
 
-enabled=PackedStringArray()
+enabled=PackedStringArray("res://addons/godot-sqlite/plugin.cfg")
 
 [global_group]
 
 player=""
+inventory=""
 
 [input]
 
@@ -88,6 +89,11 @@ close_terminal={
 journal={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":66,"key_label":0,"unicode":98,"location":0,"echo":false,"script":null)
+]
+}
+inventory={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194306,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
 ]
 }
 
