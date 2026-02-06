@@ -550,25 +550,25 @@ speed_buff_scene = ExtResource("9_xd2xi")
 invis_buff_scene = ExtResource("10_qh8un")
 
 [node name="Chest3" parent="." unique_id=1487513604 instance=ExtResource("8_75ofm")]
-position = Vector2(3917, -1473)
+position = Vector2(2642, 2610)
 drop_chance = 0.7
 speed_buff_scene = ExtResource("9_xd2xi")
 invis_buff_scene = ExtResource("10_qh8un")
 
 [node name="Chest4" parent="." unique_id=1078313448 instance=ExtResource("8_75ofm")]
-position = Vector2(3854, -1471)
+position = Vector2(2579, 2612)
 drop_chance = 0.7
 speed_buff_scene = ExtResource("9_xd2xi")
 invis_buff_scene = ExtResource("10_qh8un")
 
 [node name="Chest5" parent="." unique_id=317716210 instance=ExtResource("8_75ofm")]
-position = Vector2(3797, -1469)
+position = Vector2(2522, 2614)
 drop_chance = 0.7
 speed_buff_scene = ExtResource("9_xd2xi")
 invis_buff_scene = ExtResource("10_qh8un")
 
 [node name="Chest6" parent="." unique_id=591468138 instance=ExtResource("8_75ofm")]
-position = Vector2(3750, -1468)
+position = Vector2(2475, 2615)
 drop_chance = 0.7
 speed_buff_scene = ExtResource("9_xd2xi")
 invis_buff_scene = ExtResource("10_qh8un")
@@ -658,12 +658,11 @@ position = Vector2(2325, 4677)
 sprite_path = NodePath("../Chest9/Sprite2D")
 
 [node name="player" parent="." unique_id=2121775425 groups=["player"] instance=ExtResource("4_miadu")]
-position = Vector2(2220, 2618)
+position = Vector2(2230.0002, 2657)
 scale = Vector2(0.994, 1)
 
 [node name="Maniac" parent="." unique_id=1295065501 instance=ExtResource("18_e7axt")]
-position = Vector2(4196, 2702)
+position = Vector2(2464, 3093)
 chase_speed = 100.0
 attack_hit_frame = 11
 chase_speed_multiplier_vs_player = 0.9
-stop_distance_to_player = 40.0

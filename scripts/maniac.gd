@@ -18,7 +18,7 @@ extends CharacterBody2D
 @export var chase_speed_multiplier_vs_player: float = 0.92
 @export var min_chase_speed: float = 40.0
 
-@export var stop_distance_to_player: float = 28.0
+@export var stop_distance_to_player: float = 10.0
 @export var wall_check_distance: float = 24.0
 @export var attack_distance_margin: float = 2.0
 
@@ -232,6 +232,7 @@ func _chase(delta: float) -> void:
 		_lose_timer.start(lose_sight_delay)
 		return
 
+
 	velocity = to_player.normalized() * _current_chase_speed
 	_move_and_collide_safe(delta)
 
@@ -383,7 +384,9 @@ func _on_vision_body_entered(body: Node) -> void:
 		if debug_logs:
 			print("vision: ignored invisible player on enter")
 		return
-	_vision_check_timer.start()
+	if _vision_check_timer and _vision_check_timer.is_stopped():
+		_vision_check_timer.start()
+
 	if _can_see_player(body):
 		_set_player(body)
 		state = State.ALERT
@@ -397,7 +400,7 @@ func _on_vision_body_entered(body: Node) -> void:
 func _on_vision_body_exited(body: Node) -> void:
 	if not body or not body.is_in_group("player"):
 		return
-	_vision_check_timer.stop()
+	_stop_vision_check_timer()
 	if body == _player:
 		_last_known_pos = body.global_position
 		_has_last_known_pos = true
@@ -491,6 +494,7 @@ func _set_player(p: Node) -> void:
 			_player.connect("became_visible", Callable(self, "_on_player_became_visible"))
 
 func _clear_player() -> void:
+	_stop_vision_check_timer()
 	if _player:
 		# отключаем сигналы безопасно
 		if _player.has_signal("became_invisible") and _player.is_connected("became_invisible", Callable(self, "_on_player_became_invisible")):
@@ -500,7 +504,7 @@ func _clear_player() -> void:
 	_player = null
 
 func _on_player_became_invisible() -> void:
-	# если текущая цель стала невидимой — сбрасываем цель и начинаем потерю
+	_stop_vision_check_timer()
 	if _player and _player.is_in_group("invisible"):
 		if debug_logs:
 			print("player became invisible — dropping target")
@@ -582,3 +586,7 @@ func _play_idle_animation() -> void:
 			else:
 				if sprite.animation != "idle_down":
 					sprite.play("idle_down")
+
+func _stop_vision_check_timer() -> void:
+	if _vision_check_timer and not _vision_check_timer.is_stopped():
+		_vision_check_timer.stop()

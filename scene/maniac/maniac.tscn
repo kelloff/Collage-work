@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dt6m0hh2rax60"]
 
 [ext_resource type="Texture2D" uid="uid://bp52wxeknjjv8" path="res://assets/артеартем бьетt.png" id="1_21hg5"]
-[ext_resource type="Script" uid="uid://b4lxbt0dhpxyf" path="res://scripts/maniac.gd" id="1_bpof2"]
+[ext_resource type="Script" uid="uid://dq3hmrv1d2n6c" path="res://scripts/maniac.gd" id="1_bpof2"]
 [ext_resource type="Texture2D" uid="uid://ma0ll886v2s7" path="res://assets/артем натурал.png" id="2_bpof2"]
 [ext_resource type="Texture2D" uid="uid://wqug6upvd3wm" path="res://assets/артем натурал сзади.png" id="3_8tm0s"]
 [ext_resource type="Texture2D" uid="uid://i7fpp5smna28" path="res://assets/артем натурал-Sheet бокt.png" id="4_q2kl1"]
@@ -388,10 +388,10 @@ animations = [{
 height = 46.0
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8tm0s"]
-radius = 121.0661
+radius = 174.00287
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_q2kl1"]
-radius = 47.010635
+radius = 40.112343
 
 [node name="Maniac" type="CharacterBody2D" unique_id=1295065501]
 script = ExtResource("1_bpof2")
