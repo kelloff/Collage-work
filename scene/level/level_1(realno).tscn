@@ -608,7 +608,6 @@ autoplay = true
 bus = &"Music"
 
 [node name="Inventory" parent="." unique_id=1589718433 groups=["inventory"] instance=ExtResource("18_leimv")]
-visible = false
 
 [node name="Chest10" parent="." unique_id=966056658 instance=ExtResource("8_75ofm")]
 position = Vector2(2181, 4677)

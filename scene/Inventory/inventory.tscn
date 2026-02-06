@@ -16,19 +16,23 @@ animations = [{
 "speed": 5.0
 }]
 
-[sub_resource type="LabelSettings" id="LabelSettings_xqm7c"]
-font_size = 46
-
 [node name="Inventory" type="CanvasLayer" unique_id=1589718433]
 script = ExtResource("1_vk266")
 
 [node name="InventoryRoot" type="Control" parent="." unique_id=1506872480]
+custom_minimum_size = Vector2(1080, 720)
 layout_mode = 3
-anchors_preset = 0
-offset_left = 429.0
-offset_top = 226.0
-offset_right = 1491.0
-offset_bottom = 932.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -531.0
+offset_top = -353.0
+offset_right = 549.0
+offset_bottom = 367.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Background" type="TextureRect" parent="InventoryRoot" unique_id=1210089621]
 custom_minimum_size = Vector2(1080, 720)
@@ -67,6 +71,7 @@ offset_top = 4.0
 offset_right = 155.58572
 offset_bottom = 131.0
 mouse_filter = 2
+stretch_mode = 5
 
 [node name="Slot_2" type="Control" parent="InventoryRoot/Slots" unique_id=1958892079]
 custom_minimum_size = Vector2(160, 130)
@@ -221,26 +226,3 @@ offset_top = 4.0
 offset_right = 155.58572
 offset_bottom = 131.0
 mouse_filter = 2
-
-[node name="Slot_13" type="Control" parent="InventoryRoot/Slots" unique_id=1649043668]
-custom_minimum_size = Vector2(160, 130)
-layout_mode = 2
-script = ExtResource("4_xqm7c")
-
-[node name="ItemIcon" type="TextureRect" parent="InventoryRoot/Slots/Slot_13" unique_id=1434400800]
-visible = false
-layout_mode = 0
-offset_left = 5.0
-offset_top = 4.0
-offset_right = 155.58572
-offset_bottom = 131.0
-mouse_filter = 2
-
-[node name="Label" type="Label" parent="InventoryRoot" unique_id=413038231]
-layout_mode = 0
-offset_left = 405.0
-offset_top = 197.0
-offset_right = 994.0
-offset_bottom = 368.0
-text = "нет активных заданий!"
-label_settings = SubResource("LabelSettings_xqm7c")

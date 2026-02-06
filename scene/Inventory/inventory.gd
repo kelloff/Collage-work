@@ -6,14 +6,34 @@ extends CanvasLayer
 
 var is_open := false
 
+const BASE_RESOLUTION := Vector2(1080, 720)
+
 func _ready() -> void:
+	add_to_group("inventory")
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	root.visible = false
 
-	# аватар (анимированный)
+	# аватар
 	if avatar and avatar.sprite_frames:
 		if avatar.sprite_frames.has_animation("idle"):
 			avatar.play("idle")
+
+	# 🔥 ВАЖНО: подписываемся на изменение viewport
+	get_viewport().size_changed.connect(_apply_scale)
+
+	# первый расчёт
+	call_deferred("_apply_scale")
+
+func _apply_scale() -> void:
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+
+	var scale_factor: float = min(
+		viewport_size.x / BASE_RESOLUTION.x,
+		viewport_size.y / BASE_RESOLUTION.y
+	)
+
+	root.scale = Vector2(scale_factor, scale_factor)
+	root.position = (viewport_size - root.size * scale_factor) * 0.5
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("inventory"):
