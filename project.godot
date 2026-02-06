@@ -27,10 +27,10 @@ buses/default_bus_layout="uid://53fbbn6l3ab0"
 
 CodeRunner="*res://scripts/code_runner.gd"
 DbMeneger="*res://db/db_meneger.gd"
-audio_manager="*uid://dak4bu54k65p5"
-savemanager="*uid://cgt7c0og0houh"
-JournalData="*uid://bbcymcxuj8j65"
-SaveMeneger="*uid://cgt7c0og0houh"
+savemanager="*uid://b7xgn18dyrrqm"
+audio_manager="*uid://qhyr73bgtfcu"
+SaveMeneger="*uid://b7xgn18dyrrqm"
+JournalData="*uid://hsfeuhjma84g"
 
 [display]
 

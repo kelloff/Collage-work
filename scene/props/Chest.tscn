@@ -3,12 +3,12 @@
 [ext_resource type="Script" uid="uid://nenwxj8lbr8h" path="res://scene/props/chest.gd" id="1_d0g14"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_ttm6p"]
 
-[sub_resource type="AtlasTexture" id="AtlasTexture_ysjwe"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_d0g14"]
 atlas = ExtResource("2_ttm6p")
-region = Rect2(64.92449, 69.59269, 30.62703, 28.093819)
+region = Rect2(66.59911, 66.969604, 27.914558, 28.47348)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_xd5so"]
-size = Vector2(18, 20)
+size = Vector2(17, 20)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_n3k6u"]
 radius = 15.0
@@ -17,15 +17,17 @@ radius = 15.0
 script = ExtResource("1_d0g14")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1931216808]
-texture = SubResource("AtlasTexture_ysjwe")
+position = Vector2(0, -1)
+texture = SubResource("AtlasTexture_d0g14")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=939453732]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=1185582925]
-position = Vector2(0, -2)
+position = Vector2(0.5, -1)
 shape = SubResource("RectangleShape2D_xd5so")
 
 [node name="InteractionArea" type="Area2D" parent="." unique_id=2114232653]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea" unique_id=869372787]
+position = Vector2(0, -1)
 shape = SubResource("CircleShape2D_n3k6u")
