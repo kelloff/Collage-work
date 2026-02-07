@@ -5,26 +5,50 @@ const MUSIC_BUS := "Music"
 const MIN_DB := -40.0
 const MAX_DB := 0.0
 
+const SETTINGS_PATH := "user://settings.cfg"
+const SECTION := "audio"
+
 var music_player: AudioStreamPlayer
 var volume_db: float = -6.0
 var muted: bool = false
 
 func _ready() -> void:
-	# ВАЖНО: чтобы музыка играла даже когда игра на паузе (журнал/пауза)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-	# создаём плеер
 	music_player = AudioStreamPlayer.new()
 	music_player.bus = MUSIC_BUS
 	music_player.autoplay = false
 	music_player.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(music_player)
 
-	# на всякий: если вдруг bus не найден — упадёт громкость в Master
 	if AudioServer.get_bus_index(MUSIC_BUS) == -1:
 		push_warning("AudioManager: Bus '%s' not found. Create it in Audio panel." % MUSIC_BUS)
 
+	# ✅ 1) Загружаем настройки
+	_load_settings()
+
+	# ✅ 2) Применяем (после загрузки!)
 	set_volume_db(volume_db)
+	set_muted(muted)
+
+# ---------------- SETTINGS ----------------
+func _load_settings() -> void:
+	var cfg := ConfigFile.new()
+	var err := cfg.load(SETTINGS_PATH)
+	if err != OK:
+		return # файла нет — это нормально при первом запуске
+
+	volume_db = float(cfg.get_value(SECTION, "music_volume_db", volume_db))
+	muted = bool(cfg.get_value(SECTION, "music_muted", muted))
+
+	volume_db = clamp(volume_db, MIN_DB, MAX_DB)
+
+func _save_settings() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(SETTINGS_PATH) # если файла нет — ок, создастся
+	cfg.set_value(SECTION, "music_volume_db", volume_db)
+	cfg.set_value(SECTION, "music_muted", muted)
+	cfg.save(SETTINGS_PATH)
 
 # ---------------- MUSIC ----------------
 func play_music(stream: AudioStream, loop: bool = true, restart_if_same: bool = false) -> void:
@@ -32,7 +56,6 @@ func play_music(stream: AudioStream, loop: bool = true, restart_if_same: bool = 
 		push_warning("AudioManager: play_music got null stream")
 		return
 
-	# если тот же трек уже стоит
 	if music_player.stream == stream:
 		if restart_if_same:
 			music_player.stop()
@@ -51,12 +74,9 @@ func stop_music() -> void:
 func is_playing() -> bool:
 	return music_player != null and music_player.playing
 
-# Godot 4: loop задаётся на самом stream (у ogg/wav)
 func _apply_loop(stream: AudioStream, loop: bool) -> void:
-	# У AudioStreamOggVorbis есть loop
 	if stream is AudioStreamOggVorbis:
 		(stream as AudioStreamOggVorbis).loop = loop
-	# У AudioStreamWAV тоже есть loop_mode
 	elif stream is AudioStreamWAV:
 		var wav := stream as AudioStreamWAV
 		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD if loop else AudioStreamWAV.LOOP_DISABLED
@@ -75,6 +95,9 @@ func set_volume_db(db: float) -> void:
 		AudioServer.set_bus_mute(idx, false)
 		AudioServer.set_bus_volume_db(idx, volume_db)
 
+	# ✅ сохраняем при изменении
+	_save_settings()
+
 func get_volume_db() -> float:
 	var idx := AudioServer.get_bus_index(MUSIC_BUS)
 	if idx == -1:
@@ -87,6 +110,9 @@ func set_muted(value: bool) -> void:
 	if idx == -1:
 		return
 	AudioServer.set_bus_mute(idx, muted)
+
+	# ✅ сохраняем при изменении
+	_save_settings()
 
 func toggle_mute() -> void:
 	set_muted(not muted)

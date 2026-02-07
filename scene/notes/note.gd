@@ -17,11 +17,7 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 
-	# белый контур
-	outline_material = ShaderMaterial.new()
-	if ResourceLoader.exists("res://shaders/outline.gdshader"):
-		outline_material.shader = load("res://shaders/outline.gdshader")
-		rect.material = outline_material
+
 
 	set_outline(false)
 	set_highlight(false)

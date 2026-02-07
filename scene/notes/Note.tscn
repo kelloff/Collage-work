@@ -1,17 +1,23 @@
 [gd_scene format=3 uid="uid://bof3ot03dx556"]
 
-[ext_resource type="Script" uid="uid://bjwmsedgt41tb" path="res://scene/notes/note.gd" id="1_ka2qx"]
+[ext_resource type="Script" uid="uid://dp8v5ewfwwlve" path="res://scene/notes/note.gd" id="1_ka2qx"]
+[ext_resource type="Texture2D" uid="uid://bm85xvycrm014" path="res://assets/спрайт.png" id="2_s1r0b"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rky14"]
+atlas = ExtResource("2_s1r0b")
+region = Rect2(191.71394, 31.98322, 32.34172, 32.265446)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_s1r0b"]
-radius = 10.198039
+radius = 29.0
 
 [node name="Note" type="Area2D" unique_id=373593171]
 script = ExtResource("1_ka2qx")
 
-[node name="ColorRect" type="ColorRect" parent="." unique_id=1004113468]
-offset_right = 12.0
-offset_bottom = 12.0
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1019072223]
+offset_right = 33.0
+offset_bottom = 32.0
+texture = SubResource("AtlasTexture_rky14")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1248965338]
-position = Vector2(6, 6)
+position = Vector2(16, 15)
 shape = SubResource("CircleShape2D_s1r0b")

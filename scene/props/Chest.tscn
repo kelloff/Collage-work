@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://drjnnphq06xw4"]
 
-[ext_resource type="Script" uid="uid://cf3s4v08r6vpk" path="res://scene/props/chest.gd" id="1_d0g14"]
+[ext_resource type="Script" uid="uid://dyw5n5eo6m8n1" path="res://scene/props/chest.gd" id="1_d0g14"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_ttm6p"]
 [ext_resource type="Shader" uid="uid://ch4ltdhfjxbbp" path="res://shaders/Outline.gdshader" id="2_ysjwe"]
 

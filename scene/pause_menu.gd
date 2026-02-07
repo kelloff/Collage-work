@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const SETTINGS_SCENE := preload("res://scene/SettingsMenu.tscn") # путь проверь
+const MAIN_MENU_SCENE := "res://scene/main-menu.tscn" # проверь путь
 
 @onready var pause_panel: Control = get_node_or_null("PausePanel")
 @onready var settings_menu: Control = get_node_or_null("SettingsMenu")
@@ -113,12 +114,20 @@ func _on_settings_back() -> void:
 
 
 func _on_save_pressed() -> void:
-	# Autoload у тебя называется Savemeneger
+	# Autoload у тебя называется savemanager
 	if Engine.has_singleton("Savemeneger") or (typeof(Savemeneger) != TYPE_NIL):
 		Savemeneger.save_now()
 	else:
-		push_warning("PauseMenu: autoload 'Savemeneger' not found")
+		push_warning("PauseMenu: autoload 'savemanager' not found")
 
 
 func _on_exit_pressed() -> void:
-	get_tree().quit()
+	# снимаем паузу ОБЯЗАТЕЛЬНО
+	get_tree().paused = false
+
+	# закрываем пауз-меню
+	_open = false
+	visible = false
+
+	# переходим в главное меню
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE)

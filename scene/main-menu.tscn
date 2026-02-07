@@ -125,5 +125,6 @@ autoplay = true
 bus = &"Music"
 
 [connection signal="pressed" from="TextureRect/VBoxContainer/play" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="TextureRect/VBoxContainer/continue" to="." method="_on_continue_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/settings" to="." method="_on_settings_pressed"]
 [connection signal="pressed" from="TextureRect/VBoxContainer/exit" to="." method="_on_exit_pressed"]
