@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="1_5hd4p"]
 [ext_resource type="Script" uid="uid://beqe2dv8n5dx2" path="res://scene/level/Level_meneger.gd" id="1_miadu"]
-[ext_resource type="Script" uid="uid://cqpyoohrff68t" path="res://scene/level/hudui.gd" id="2_rhfjy"]
+[ext_resource type="Script" uid="uid://ck3fr66q5kww6" path="res://scene/level/hudui.gd" id="2_rhfjy"]
 [ext_resource type="PackedScene" uid="uid://vmxnpuvnmx2a" path="res://scene/finish/WinUI.tscn" id="3_5n6ds"]
 [ext_resource type="PackedScene" uid="uid://b8xwhc8p02y48" path="res://scene/lever/lever.tscn" id="3_7rdi5"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="4_miadu"]
@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" uid="uid://dt6m0hh2rax60" path="res://scene/maniac/maniac.tscn" id="18_e7axt"]
 [ext_resource type="PackedScene" uid="uid://d1manbnphqr2v" path="res://scene/Inventory/inventory.tscn" id="18_leimv"]
 [ext_resource type="PackedScene" uid="uid://brs4xh0ftqr4u" path="res://scene/finish/FinishTrigger.tscn" id="21_3nars"]
+[ext_resource type="AudioStream" uid="uid://pbpc68fufe3f" path="res://audio/music/door.mp3" id="22_3nars"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b6wb6"]
 bg_color = Color(0, 0, 0, 0.827451)
@@ -297,6 +298,8 @@ position = Vector2(2749, 2600)
 [node name="Node2D2" parent="." unique_id=74510169 instance=ExtResource("6_jhscy")]
 position = Vector2(3097, 2954)
 door_id = 1
+sfx_open = ExtResource("22_3nars")
+sfx_close = ExtResource("22_3nars")
 
 [node name="Node2D3" parent="." unique_id=709821199 instance=ExtResource("6_jhscy")]
 position = Vector2(3289, 2729)
@@ -672,7 +675,7 @@ position = Vector2(2325, 4677)
 sprite_path = NodePath("../Chest9/Sprite2D")
 
 [node name="player" parent="." unique_id=2121775425 groups=["player"] instance=ExtResource("4_miadu")]
-position = Vector2(2595.0002, 2733)
+position = Vector2(2586.0002, 2769)
 scale = Vector2(0.994, 1)
 
 [node name="Maniac" parent="." unique_id=1295065501 instance=ExtResource("18_e7axt")]

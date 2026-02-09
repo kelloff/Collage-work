@@ -27,7 +27,7 @@ buses/default_bus_layout="uid://53fbbn6l3ab0"
 
 DbManager="*res://db/db_meneger.gd"
 CodeRunner="*res://scripts/code_runner.gd"
-audio_manager="*uid://dak4bu54k65p5"
+audio_manager="*uid://b8gfvuu0ytv5"
 JournalData="*uid://bbcymcxuj8j65"
 SaveMeneger="*uid://cg3sd0qe1vgdn"
 GameState="*uid://dygiqou1xy76e"
@@ -43,7 +43,7 @@ window/size/window_height_override=920
 
 [editor_plugins]
 
-enabled=PackedStringArray()
+enabled=PackedStringArray("res://addons/godot-sqlite/plugin.cfg")
 
 [global_group]
 
