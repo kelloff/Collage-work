@@ -27,7 +27,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 func _ready() -> void:
-	call_deferred("_init_links")
+	RunStats.start_level()
+	call_deferred("_init_links")	
 
 	# Попробуем вызвать загрузку через SaveManager (поддерживаем старые/новые имена)
 	var save_singleton = _find_save_singleton()

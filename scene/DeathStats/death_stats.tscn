@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://cd8eimynxq2go"]
+
+[ext_resource type="Script" uid="uid://d1joxgbms5jd8" path="res://death_stats.gd" id="1_3sqd6"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_swfyk"]
+
+[node name="DeathStats" type="Control" unique_id=48622363]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_3sqd6")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1608319325]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.101960786, 0.101960786, 0.101960786, 0.6392157)
+
+[node name="Panel" type="Panel" parent="." unique_id=436253765]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -278.0
+offset_top = -154.0
+offset_right = 278.0
+offset_bottom = 156.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=856778080]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="Panel/VBoxContainer" unique_id=149319868]
+layout_mode = 2
+text = "YOU DIED"
+label_settings = SubResource("LabelSettings_swfyk")
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="Panel/VBoxContainer" unique_id=968255918]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=846314989]
+layout_mode = 2
+
+[node name="RetryBtn" type="Button" parent="Panel/VBoxContainer/HBoxContainer" unique_id=1579227309]
+custom_minimum_size = Vector2(230, 0)
+layout_mode = 2
+size_flags_horizontal = 0
+text = "Заново"
+
+[node name="MenuBtn" type="Button" parent="Panel/VBoxContainer/HBoxContainer" unique_id=60913951]
+custom_minimum_size = Vector2(230, 0)
+layout_mode = 2
+size_flags_horizontal = 10
+text = "Главное меню"

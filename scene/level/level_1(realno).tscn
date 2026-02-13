@@ -2,7 +2,7 @@
 
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="1_5hd4p"]
 [ext_resource type="Script" uid="uid://beqe2dv8n5dx2" path="res://scene/level/Level_meneger.gd" id="1_miadu"]
-[ext_resource type="Script" uid="uid://ck3fr66q5kww6" path="res://scene/level/hudui.gd" id="2_rhfjy"]
+[ext_resource type="Script" uid="uid://cqpyoohrff68t" path="res://scene/level/hudui.gd" id="2_rhfjy"]
 [ext_resource type="PackedScene" uid="uid://vmxnpuvnmx2a" path="res://scene/finish/WinUI.tscn" id="3_5n6ds"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="4_miadu"]
 [ext_resource type="PackedScene" uid="uid://hlw167ul14s1" path="res://scene/PauseMenu.tscn" id="7_njpfi"]
@@ -281,6 +281,7 @@ bus = &"Music"
 [node name="player" parent="." unique_id=2121775425 groups=["player"] instance=ExtResource("4_miadu")]
 position = Vector2(2595.0002, 2733)
 scale = Vector2(0.994, 1)
+max_hp = 3
 
 [node name="Maniac" parent="." unique_id=1295065501 instance=ExtResource("18_e7axt")]
 position = Vector2(2464, 3093)
@@ -292,6 +293,7 @@ chase_speed_multiplier_vs_player = 0.9
 position = Vector2(751, 4450)
 
 [node name="NavigationRegion2D" type="NavigationRegion2D" parent="." unique_id=970775543]
+visible = false
 navigation_polygon = SubResource("NavigationPolygon_xd2xi")
 
 [node name="Chest" parent="." unique_id=155880828 instance=ExtResource("12_ll8hu")]

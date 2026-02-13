@@ -203,13 +203,16 @@ func _notify_nearby_maniacs_on_reveal(radius: float) -> void:
 # =========================
 # DAMAGE API
 # =========================
-func take_damage(amount: int = 1) -> void:
+func take_damage(amount: int = 1, from_maniac: bool = false) -> void:
 	if _is_invulnerable:
 		return
+
 	hp -= amount
+
 	if hp <= 0:
-		die()
+		die(from_maniac)
 		return
+
 	_become_invulnerable()
 	_flash_on_damage()
 
@@ -230,20 +233,21 @@ func set_hp(value: int) -> void:
 func _flash_on_damage() -> void:
 	modulate = Color(1, 0.6, 0.6, 1)
 
-func die() -> void:
+func die(killed_by_maniac: bool = false) -> void:
 	control_enabled = false
-	# Безопасный перезапуск сцены: проверяем get_tree() перед созданием таймера
-	var tree = get_tree()
-	if tree:
-		# даём короткую паузу, чтобы завершить корутины/таймеры, затем перезагружаем сцену
-		await tree.create_timer(0.05).timeout
-		# ещё раз проверим
-		var tree2 = get_tree()
-		if tree2:
-			tree2.reload_current_scene()
-	else:
-		# если дерева нет — ничего не делаем (узел уже удаляется)
-		pass
+
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+
+	var level_path: String = tree.current_scene.scene_file_path
+
+	var cause: int = DeathFlow.DeathCause.MANIAC if killed_by_maniac else DeathFlow.DeathCause.OTHER
+	DeathFlow.start_death_flow(level_path, cause)
+
+	queue_free()
+
+
 
 # =========================
 # Утилиты

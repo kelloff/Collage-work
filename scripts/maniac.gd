@@ -354,7 +354,7 @@ func _apply_attack_damage_to_overlaps() -> void:
 				continue
 			if debug_logs:
 				print("HIT ->", b)
-			b.take_damage(attack_damage)
+			b.take_damage(attack_damage, true)
 			if Engine.has_singleton("GameState"):
 				var gs = Engine.get_singleton("GameState")
 				if gs and gs.has_method("record_hit"):
