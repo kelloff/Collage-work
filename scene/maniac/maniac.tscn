@@ -1,12 +1,12 @@
 [gd_scene format=3 uid="uid://dt6m0hh2rax60"]
 
-[ext_resource type="Texture2D" uid="uid://bp52wxeknjjv8" path="res://assets/артеартем бьетt.png" id="1_21hg5"]
+[ext_resource type="Texture2D" uid="uid://bp52wxeknjjv8" path="res://assets/персы/артеартем бьетt.png" id="1_21hg5"]
 [ext_resource type="Script" uid="uid://dq3hmrv1d2n6c" path="res://scripts/maniac.gd" id="1_bpof2"]
-[ext_resource type="Texture2D" uid="uid://ma0ll886v2s7" path="res://assets/артем натурал.png" id="2_bpof2"]
-[ext_resource type="Texture2D" uid="uid://wqug6upvd3wm" path="res://assets/артем натурал сзади.png" id="3_8tm0s"]
-[ext_resource type="Texture2D" uid="uid://i7fpp5smna28" path="res://assets/артем натурал-Sheet бокt.png" id="4_q2kl1"]
-[ext_resource type="Texture2D" uid="uid://daj004mklk1ve" path="res://assets/Артем ходит.png" id="5_51b7r"]
-[ext_resource type="Texture2D" uid="uid://d0rtdu64tntyr" path="res://assets/Артем ходит сзади.png" id="6_rgtjv"]
+[ext_resource type="Texture2D" uid="uid://ma0ll886v2s7" path="res://assets/персы/артем натурал.png" id="2_bpof2"]
+[ext_resource type="Texture2D" uid="uid://wqug6upvd3wm" path="res://assets/персы/артем натурал сзади.png" id="3_8tm0s"]
+[ext_resource type="Texture2D" uid="uid://i7fpp5smna28" path="res://assets/персы/артем натурал-Sheet бокt.png" id="4_q2kl1"]
+[ext_resource type="Texture2D" uid="uid://daj004mklk1ve" path="res://assets/персы/Артем ходит.png" id="5_51b7r"]
+[ext_resource type="Texture2D" uid="uid://d0rtdu64tntyr" path="res://assets/персы/Артем ходит сзади.png" id="6_rgtjv"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_lafpl"]
 atlas = ExtResource("1_21hg5")

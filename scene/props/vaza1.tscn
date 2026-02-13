@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://df7lt5kkshwn5"]
+
+[ext_resource type="Texture2D" uid="uid://bm7dxb1bnf548" path="res://assets/ваза.png" id="1_knola"]
+
+[node name="Vaza1" type="Node2D" unique_id=1032219073]
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1154589241]
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("1_knola")
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="." unique_id=331327344]
+position = Vector2(20, 25)
+polygon = PackedVector2Array(-6, -6, -8, -5, -8, 5, -4, 10, 4, 10, 7, 7, 8, 4, 8, 0, 8, -5, 6, -7, 6, -9, 4, -10, 6, -12, 5, -15, 0, -12, -1, -10, -3, -11, -7, -10)
