@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://hlw167ul14s1"]
 
-[ext_resource type="Script" uid="uid://dxoesaa7oqqbs" path="res://scene/pause_menu.gd" id="1_57h85"]
+[ext_resource type="Script" uid="uid://d21svwrqtakgx" path="res://scene/pause_menu.gd" id="1_57h85"]
 [ext_resource type="PackedScene" uid="uid://d2716w4i5d1dc" path="res://scene/SettingsMenu.tscn" id="2_3mybc"]
 
 [node name="PauseMenu" type="CanvasLayer" unique_id=1904104538]

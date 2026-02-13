@@ -2,11 +2,15 @@
 
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="1_5hd4p"]
 [ext_resource type="Script" uid="uid://beqe2dv8n5dx2" path="res://scene/level/Level_meneger.gd" id="1_miadu"]
-[ext_resource type="Script" uid="uid://cqpyoohrff68t" path="res://scene/level/hudui.gd" id="2_rhfjy"]
+[ext_resource type="Script" uid="uid://ck3fr66q5kww6" path="res://scene/level/hudui.gd" id="2_rhfjy"]
 [ext_resource type="PackedScene" uid="uid://vmxnpuvnmx2a" path="res://scene/finish/WinUI.tscn" id="3_5n6ds"]
 [ext_resource type="PackedScene" uid="uid://citeclg2uef4a" path="res://scene/player/Player.tscn" id="4_miadu"]
 [ext_resource type="PackedScene" uid="uid://hlw167ul14s1" path="res://scene/PauseMenu.tscn" id="7_njpfi"]
 [ext_resource type="PackedScene" uid="uid://bmiyv1x5pfemx" path="res://scene/ui/Journal.tscn" id="11_xd2xi"]
+[ext_resource type="PackedScene" uid="uid://dkqkhe8oaphk5" path="res://scene/props/Chest1.tscn" id="12_ll8hu"]
+[ext_resource type="PackedScene" uid="uid://c512sgbpqjvl5" path="res://scene/items/InvisBuff.tscn" id="13_rhfjy"]
+[ext_resource type="PackedScene" uid="uid://chdys3qi8nbbr" path="res://scene/items/SpeedBuff.tscn" id="14_b6wb6"]
+[ext_resource type="PackedScene" uid="uid://drjnnphq06xw4" path="res://scene/props/Chest.tscn" id="15_leimv"]
 [ext_resource type="AudioStream" uid="uid://y340f2ilrmwv" path="res://audio/music/main_theme.ogg" id="17_b6wb6"]
 [ext_resource type="PackedScene" uid="uid://dt6m0hh2rax60" path="res://scene/maniac/maniac.tscn" id="18_e7axt"]
 [ext_resource type="PackedScene" uid="uid://d1manbnphqr2v" path="res://scene/Inventory/inventory.tscn" id="18_leimv"]
@@ -289,3 +293,15 @@ position = Vector2(751, 4450)
 
 [node name="NavigationRegion2D" type="NavigationRegion2D" parent="." unique_id=970775543]
 navigation_polygon = SubResource("NavigationPolygon_xd2xi")
+
+[node name="Chest" parent="." unique_id=155880828 instance=ExtResource("12_ll8hu")]
+position = Vector2(2350, 2724)
+drop_chance = 0.25
+speed_buff_scene = ExtResource("13_rhfjy")
+invis_buff_scene = ExtResource("14_b6wb6")
+
+[node name="Chest2" parent="." unique_id=254384027 instance=ExtResource("15_leimv")]
+position = Vector2(2347, 2787)
+drop_chance = 0.25
+speed_buff_scene = ExtResource("14_b6wb6")
+invis_buff_scene = ExtResource("13_rhfjy")

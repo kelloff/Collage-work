@@ -15,6 +15,8 @@ var base_pages := {
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	set_process_unhandled_input(true)
+
 	panel.visible = false
 
 	close_btn.pressed.connect(hide_journal)
@@ -77,3 +79,8 @@ func _load_text(path: String) -> String:
 
 func is_open() -> bool:
 	return _open
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("journal"):
+		toggle()
+		get_viewport().set_input_as_handled()

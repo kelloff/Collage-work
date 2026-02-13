@@ -14,10 +14,8 @@ const MAIN_MENU_SCENE := "res://scene/main-menu.tscn" # проверь путь
 var _open: bool = false
 
 func _ready() -> void:
-	# Чтобы UI работал, когда игра на паузе
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-
-	# Прячем меню при старте
+	set_process_unhandled_input(true)
 	visible = false
 	_hide_all_panels()
 
@@ -131,3 +129,8 @@ func _on_exit_pressed() -> void:
 
 	# переходим в главное меню
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		toggle_menu()
+		get_viewport().set_input_as_handled()
