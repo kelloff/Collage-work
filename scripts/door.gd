@@ -8,6 +8,14 @@ signal closed_by_system
 @onready var door_collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
 @onready var area: Area2D = get_node_or_null("Area2D")
 
+# --- NEW: navigation link support ---
+@onready var nav_link: NavigationLink2D = get_node_or_null("NavigationLink2D")
+@onready var nav_a: Marker2D = get_node_or_null("A")
+@onready var nav_b: Marker2D = get_node_or_null("B")
+# Если у тебя навигация на другом слое — поменяй (1 = слой 1)
+@export var navigation_layers_mask: int = 1
+# -----------------------------------
+
 @export var door_id: int = 0
 
 var is_open: bool = false
@@ -46,6 +54,9 @@ func _ready() -> void:
 	if door_id == 0:
 		push_warning("Door '%s' has door_id = 0 — установи в инспекторе" % name)
 
+	# NEW: обновим навигацию на старте (после загрузки из БД)
+	_apply_navigation_link()
+
 func _process(_delta: float) -> void:
 	if player_in_range and Input.is_action_just_pressed("interact"):
 		try_toggle_by_player()
@@ -77,6 +88,9 @@ func _apply_visuals() -> void:
 		sprite.stop()
 	if door_collision:
 		door_collision.disabled = is_open
+
+	# NEW: синхронизируем навигацию с состоянием двери
+	_apply_navigation_link()
 
 # ---------------- HUD helpers ----------------
 func _hud() -> Node:
@@ -165,3 +179,32 @@ func set_outline(enabled: bool) -> void:
 func set_highlight(enabled: bool) -> void:
 	if outline_material:
 		outline_material.set_shader_parameter("highlight", enabled)
+
+# ==========================================================
+# NEW: NavigationLink2D logic (ничего старого не ломаем)
+# ==========================================================
+func _apply_navigation_link() -> void:
+	if nav_link == null:
+		return
+
+	# Включаем/выключаем соединение только когда дверь открыта
+	nav_link.enabled = is_open
+
+	# Слои навигации должны совпадать с NavigationRegion2D и агентом маньяка
+	nav_link.navigation_layers = navigation_layers_mask
+
+	# Если есть маркеры — обновляем точки
+	if nav_a and nav_b:
+		nav_link.start_position = nav_a.global_position
+		nav_link.end_position = nav_b.global_position
+
+	# Полезно, если дверь двигается/анимируется — обновляем ещё раз в конце кадра
+	# (на случай если маркеры тоже двигаются)
+	call_deferred("_apply_navigation_link_deferred")
+
+func _apply_navigation_link_deferred() -> void:
+	if nav_link == null:
+		return
+	if nav_a and nav_b:
+		nav_link.start_position = nav_a.global_position
+		nav_link.end_position = nav_b.global_position

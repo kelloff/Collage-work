@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cwiw011pkxys1"]
 
 [ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scene/level/Computer.gd" id="1_7kpmg"]
-[ext_resource type="Shader" uid="uid://b3t5qomxrwob2" path="res://shaders/Outline.gdshader" id="2_1bm87"]
+[ext_resource type="Shader" uid="uid://ch4ltdhfjxbbp" path="res://shaders/Outline.gdshader" id="2_1bm87"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
 [ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scene/level/terminal_ui.gd" id="3_donbk"]
 
@@ -12,6 +12,7 @@ shader_parameter/outline_color = Color(1, 1, 1, 1)
 shader_parameter/outline_size = 1.0
 shader_parameter/highlight = false
 shader_parameter/highlight_color = Color(0.5, 0.5, 0.5, 0.5)
+shader_parameter/alpha_cutoff = 0.5
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1bm87"]
 atlas = ExtResource("2_donbk")
@@ -33,8 +34,6 @@ subpixel_positioning = 0
 
 [sub_resource type="SystemFont" id="SystemFont_1bm87"]
 subpixel_positioning = 0
-
-[sub_resource type="LabelSettings" id="LabelSettings_1bm87"]
 
 [node name="comp" type="Node2D" unique_id=842160167]
 position = Vector2(0, -16)
@@ -116,10 +115,8 @@ theme_override_font_sizes/bold_italics_font_size = 32
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="CloseButton" type="Label" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer" unique_id=318846310]
+[node name="CloseButton" type="Button" parent="TerminalUI/PanelContainer/HBoxContainer/VBoxContainer" unique_id=213285316]
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "Press F10 to exit"
-label_settings = SubResource("LabelSettings_1bm87")
-horizontal_alignment = 1
 autowrap_mode = 3
