@@ -10,6 +10,7 @@ var levers = null
 var doors = null
 var debug = null
 var _completed_computers := {} # key: "%d:%d" % [level, computer_id] -> true
+var _assigned_tasks := {} # key: "%d:%d" % [level, computer_id] -> Dictionary task
 
 func _ready() -> void:
 	randomize()
@@ -61,6 +62,21 @@ func mark_computer_done(level: int, computer_id: int) -> void:
 func is_computer_done(level: int, computer_id: int) -> bool:
 	var key := "%d:%d" % [level, computer_id]
 	return _completed_computers.has(key)
+
+func set_assigned_task(level: int, computer_id: int, task: Dictionary) -> void:
+	if task.is_empty():
+		return
+	var key := "%d:%d" % [level, computer_id]
+	_assigned_tasks[key] = task
+
+func get_assigned_task(level: int, computer_id: int) -> Dictionary:
+	var key := "%d:%d" % [level, computer_id]
+	if not _assigned_tasks.has(key):
+		return {}
+	var t: Variant = _assigned_tasks[key]
+	if typeof(t) != TYPE_DICTIONARY:
+		return {}
+	return t as Dictionary
 
 # -----------------------
 # Общие помощники

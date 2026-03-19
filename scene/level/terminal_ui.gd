@@ -11,18 +11,13 @@ const SAVE_PATH := "user://terminal_last_code.txt"
 
 var current_task: Dictionary = {}
 var _running := false
+var _use_ai_checker: bool = true
 
 func _ready() -> void:
 	if run_button:
 		run_button.pressed.connect(_on_run_button_pressed)
 	if close_button:
 		close_button.pressed.connect(close)
-
-	# Подключаемся к CodeRunner один раз
-	var cr = get_tree().get_root().get_node_or_null("CodeRunner")
-	if cr and cr.has_signal("run_finished"):
-		if not cr.is_connected("run_finished", Callable(self, "_on_run_finished")):
-			cr.connect("run_finished", Callable(self, "_on_run_finished"))
 
 	hide()
 
@@ -101,27 +96,24 @@ func _on_run_button_pressed() -> void:
 
 	var code_text: String = code_edit.text as String
 
+	if _use_ai_checker:
+		_run_with_ai_checker(code_text)
+	else:
+		if output_label:
+			output_label.text = "❌ AI-проверка выключена и CodeRunner не настроен"
+
+func _run_with_ai_checker(code_text: String) -> void:
 	if output_label:
-		output_label.text = "⏳ Запуск..."
+		output_label.text = "🤖 Проверка решения ИИ..."
 	if run_button:
 		run_button.disabled = true
-
 	_running = true
 
-	var cr = get_tree().get_root().get_node_or_null("CodeRunner")
-	if cr == null:
-		_running = false
-		if run_button:
-			run_button.disabled = false
-		if output_label:
-			output_label.text = "❌ Ошибка: CodeRunner не найден"
-		return
+	_run_with_ai_checker_async(code_text)
 
-	# ВАЖНО: просим CodeRunner запускать в "песочнице" (tmp_dir)
-	# Код-раннер сам добавит защиту от файлов (см. патч ниже)
-	cr.run_code_async(code_text, "user_code.py")
+func _run_with_ai_checker_async(code_text: String) -> void:
+	var result: Dictionary = await AiCheckerSingleton.check_task_async(current_task, code_text)
 
-func _on_run_finished(result: Dictionary) -> void:
 	_running = false
 	if run_button:
 		run_button.disabled = false
@@ -129,32 +121,13 @@ func _on_run_finished(result: Dictionary) -> void:
 	if not output_label:
 		return
 
-	var stdout := str(result.get("stdout", "")).replace("\r", "")
-	var stderr := str(result.get("stderr", "")).replace("\r", "")
-	var exit_code := int(result.get("exit_code", -1))
-	var tmp_path := str(result.get("tmp_path", ""))
-	var timed_out := bool(result.get("timed_out", false))
+	var success: bool = bool(result.get("success", false))
+	var feedback: String = str(result.get("feedback", ""))
 
-	var text := ""
-
-	if timed_out:
-		text += "⏱ Таймаут: код выполнялся слишком долго\n\n"
-	if stdout.strip_edges() != "":
-		text += "✅ STDOUT:\n" + stdout.strip_edges() + "\n\n"
-	if stderr.strip_edges() != "":
-		text += "⚠️ STDERR:\n" + stderr.strip_edges() + "\n\n"
-
-	text += "exit=" + str(exit_code) + "\n"
-	text += "tmp_path: " + tmp_path
-
-	output_label.text = text
-
-	# task_checker
-	if ResourceLoader.exists("res://db/task_checker.gd"):
-		var checker = preload("res://db/task_checker.gd").new()
-		var success = checker.check_user_solution(code_edit.text, current_task, stdout, output_label)
-		if success:
-			output_label.text = "🎉 Задание выполнено!\n\n" + output_label.text
-			var computer = get_parent()
-			if computer and computer.has_method("unassign_task_if_completed"):
-				computer.unassign_task_if_completed()
+	if success:
+		output_label.text = "🎉 Задание выполнено!\n" + feedback
+		var computer = get_parent()
+		if computer and computer.has_method("unassign_task_if_completed"):
+			computer.unassign_task_if_completed()
+	else:
+		output_label.text = feedback

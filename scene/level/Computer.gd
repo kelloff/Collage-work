@@ -100,10 +100,24 @@ func open_terminal() -> void:
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(false)
 
-	# Получаем текущую задачу/статус из БД.
-	refresh_current_task()
-	if current_task.is_empty():
-		current_task = DbManager.assign_task(level, computer_id)
+	# 1) Если компьютер уже выполнен — показываем сообщение и
+	#    НЕ выдаём новую задачу.
+	if DbManager.is_computer_done(level, computer_id):
+		current_task = {"message": "Ты уже выполнил это задание, продвигайся дальше"}
+	else:
+		# 2) Иначе если задача была закреплена ранее — используем её,
+		#    даже если БД/таблицы временно ведут себя нестабильно.
+		var cached: Dictionary = DbManager.get_assigned_task(level, computer_id)
+		if not cached.is_empty():
+			current_task = cached
+		else:
+			# 3) Пытаемся взять задачу из БД; если пусто — назначаем новую.
+			refresh_current_task()
+			if current_task.is_empty():
+				current_task = DbManager.assign_task(level, computer_id)
+			# Закрепляем задачу в памяти на время сессии, чтобы она не
+			# повторялась при повторном заходе.
+			DbManager.set_assigned_task(level, computer_id, current_task)
 
 	if terminal_ui and terminal_ui.has_method("open_with_task"):
 		terminal_ui.call("open_with_task", level, current_task)
@@ -130,7 +144,12 @@ func unassign_task_if_completed() -> void:
 		return
 
 	print("Computer.unassign_task_if_completed: level=%d computer_id=%d" % [level, computer_id])
+	var finished_task: Dictionary = current_task
 	DbManager.unassign_task(level, computer_id)
+	DbManager.mark_computer_done(level, computer_id)
+	# Сохраняем последнюю задачу как закреплённую (на будущее сообщение/контекст).
+	if not finished_task.is_empty():
+		DbManager.set_assigned_task(level, computer_id, finished_task)
 	current_task = {}
 
 	var door_ids = DbManager.get_doors_for_computer(computer_id)

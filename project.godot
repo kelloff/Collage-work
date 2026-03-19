@@ -34,6 +34,7 @@ GameState="*uid://dygiqou1xy76e"
 Savemeneger="*uid://31i6j70qj2jg"
 RunStats="*uid://cj0smsq1p7c3p"
 DeathFlow="*uid://ccnmcobyohqyu"
+AiCheckerSingleton="*uid://b6f55nu8v67gn"
 
 [display]
 
