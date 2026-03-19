@@ -100,6 +100,8 @@ func open_terminal() -> void:
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(false)
 
+	# Получаем текущую задачу/статус из БД.
+	refresh_current_task()
 	if current_task.is_empty():
 		current_task = DbManager.assign_task(level, computer_id)
 
@@ -127,6 +129,7 @@ func unassign_task_if_completed() -> void:
 	if computer_id == 0:
 		return
 
+	print("Computer.unassign_task_if_completed: level=%d computer_id=%d" % [level, computer_id])
 	DbManager.unassign_task(level, computer_id)
 	current_task = {}
 

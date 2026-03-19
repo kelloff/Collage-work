@@ -51,6 +51,7 @@ enabled=PackedStringArray()
 
 player=""
 inventory=""
+rooms=""
 
 [input]
 

@@ -1,12 +1,15 @@
 [gd_scene format=3 uid="uid://dt6m0hh2rax60"]
 
 [ext_resource type="Texture2D" uid="uid://cgxmtu0o85x0v" path="res://assets/персы/артеартем бьетt.png" id="1_21hg5"]
-[ext_resource type="Script" uid="uid://dew7ykcrr0oev" path="res://scripts/maniac.gd" id="1_bpof2"]
+[ext_resource type="Script" uid="uid://ddqo7lgip7v7t" path="res://scripts/maniac.gd" id="1_bpof2"]
 [ext_resource type="Texture2D" uid="uid://bbiwvi24lmb2r" path="res://assets/персы/артем натурал.png" id="2_bpof2"]
 [ext_resource type="Texture2D" uid="uid://d2nbylb5xl5wb" path="res://assets/персы/артем натурал сзади.png" id="3_8tm0s"]
 [ext_resource type="Texture2D" uid="uid://doqrbu2vdidgl" path="res://assets/персы/артем натурал-Sheet бокt.png" id="4_q2kl1"]
 [ext_resource type="Texture2D" uid="uid://cmhldv8tw3523" path="res://assets/персы/Артем ходит.png" id="5_51b7r"]
 [ext_resource type="Texture2D" uid="uid://dsnomn0gy0u0p" path="res://assets/персы/Артем ходит сзади.png" id="6_rgtjv"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_bpof2"]
+radius = 131.03435
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_lafpl"]
 atlas = ExtResource("1_21hg5")
@@ -385,36 +388,29 @@ animations = [{
 }]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_bpof2"]
-height = 46.0
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_8tm0s"]
-radius = 174.00287
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_q2kl1"]
-radius = 40.112343
+radius = 7.0
+height = 28.0
 
 [node name="Maniac" type="CharacterBody2D" unique_id=1295065501]
 script = ExtResource("1_bpof2")
 
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=461057345]
+
+[node name="DetectionArea" type="Area2D" parent="." unique_id=924222962]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectionArea" unique_id=1976462839]
+shape = SubResource("CircleShape2D_bpof2")
+
+[node name="RayCast2D" type="RayCast2D" parent="." unique_id=689152803]
+target_position = Vector2(0, 131)
+
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=989481741]
+position = Vector2(0, -0.99999994)
+scale = Vector2(0.77, 0.77)
 sprite_frames = SubResource("SpriteFrames_yjgpo")
 animation = &"attack"
 autoplay = "idle_down"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=844076088]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1419884595]
 position = Vector2(0, 1)
 shape = SubResource("CapsuleShape2D_bpof2")
-
-[node name="Vision" type="Area2D" parent="." unique_id=1040010030]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Vision" unique_id=1897914803]
-shape = SubResource("CircleShape2D_8tm0s")
-
-[node name="AttackArea" type="Area2D" parent="." unique_id=1666434448]
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackArea" unique_id=1734054015]
-shape = SubResource("CircleShape2D_q2kl1")
-
-[node name="patrol_timer" type="Timer" parent="." unique_id=1907702220]
-
-[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=1692570477]

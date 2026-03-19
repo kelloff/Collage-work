@@ -76,15 +76,31 @@ func get_current_task(level: int, computer_id: int) -> Dictionary:
 	if not dbm._ensure_db():
 		return {}
 	var db = dbm.db
-	db.query("SELECT task_id FROM progress WHERE level = %d AND computer_id = %d AND status = 'assigned'" % [level, computer_id])
-	if db.query_result.size() > 0:
-		var task_id = int(db.query_result[0]["task_id"])
-		db.query("SELECT * FROM tasks WHERE id = %d" % task_id)
+	# Для каждого компьютера держим одну "актуальную" запись прогресса.
+	db.query("SELECT level, task_id, status FROM progress WHERE computer_id = %d ORDER BY id DESC LIMIT 1" % computer_id)
+	if db.query_result.size() == 0:
+		return {}
+
+	var row: Dictionary = db.query_result[0]
+	var task_id: int = int(row.get("task_id", 0))
+	var status: String = str(row.get("status", ""))
+
+	if task_id > 0:
+		db.query("SELECT * FROM tasks WHERE id = %d LIMIT 1" % task_id)
 		if db.query_result.size() > 0:
-			return db.query_result[0]
-	db.query("SELECT * FROM progress WHERE level = %d AND computer_id = %d AND status = 'done'" % [level, computer_id])
-	if db.query_result.size() > 0:
-		return {"message": "Ты уже выполнил задание, продвигайся дальше"}
+			var task: Dictionary = db.query_result[0]
+			# При done возвращаем специальное сообщение, но task остается
+			# "прикреплён" к этому компьютеру навсегда.
+			if status == "done":
+				return {
+					"message": "Ты уже выполнил это задание, продвигайся дальше",
+					"id": task_id,
+					"status": "done",
+					"description": str(task.get("description", ""))
+				}
+			task["status"] = status
+			return task
+
 	return {}
 
 func assign_task(level: int, computer_id: int) -> Dictionary:
@@ -94,15 +110,21 @@ func assign_task(level: int, computer_id: int) -> Dictionary:
 	var current = get_current_task(level, computer_id)
 	if not current.is_empty():
 		return current
+
 	db.query("SELECT * FROM tasks WHERE level = %d" % level)
 	var rows = db.query_result
 	if rows.size() == 0:
 		return {}
-	db.query("SELECT task_id FROM progress WHERE level = %d AND status = 'assigned'" % level)
-	var busy_ids = []
+
+	# Неповторяемость задач:
+	# если задача уже была когда-либо выдана какому-либо компьютеру,
+	# больше её не выдаём.
+	db.query("SELECT task_id FROM progress WHERE task_id > 0")
+	var busy_ids: Array = []
 	for row in db.query_result:
 		busy_ids.append(int(row["task_id"]))
-	var available = []
+
+	var available: Array = []
 	for task in rows:
 		var tid = int(task["id"])
 		if not busy_ids.has(tid):
@@ -110,11 +132,33 @@ func assign_task(level: int, computer_id: int) -> Dictionary:
 	if available.size() == 0:
 		return {"message": "Все задания уровня %d уже назначены" % level}
 	var task = available[randi() % available.size()]
-	db.insert_row("progress", {"level": level, "computer_id": computer_id, "task_id": task["id"], "status": "assigned"})
+
+	# Чистим возможный старый мусор по этому компьютеру и пишем 1 запись assigned.
+	db.query("DELETE FROM progress WHERE computer_id = %d" % computer_id)
+	db.query("INSERT INTO progress (level, computer_id, task_id, status) VALUES (%d, %d, %d, 'assigned')" % [level, computer_id, int(task["id"])])
+
+	db.query("SELECT level, computer_id, task_id, status FROM progress WHERE computer_id = %d" % computer_id)
+	print("DbTasks.assign_task: rows for computer=%d -> %s" % [computer_id, str(db.query_result)])
 	return task
 
 func unassign_task(level: int, computer_id: int) -> void:
 	if not dbm._ensure_db():
 		return
 	var db = dbm.db
-	db.query("UPDATE progress SET status = 'done' WHERE level = %d AND computer_id = %d AND status = 'assigned'" % [level, computer_id])
+	print("DbTasks.unassign_task: marking DONE for level=%d, computer=%d" % [level, computer_id])
+
+	# Берём прикреплённый task_id, чтобы он навсегда остался за компьютером.
+	db.query("SELECT level, task_id, status FROM progress WHERE computer_id = %d ORDER BY id DESC LIMIT 1" % computer_id)
+	var task_id: int = 0
+	var row_level: int = level
+	if db.query_result.size() > 0:
+		var row: Dictionary = db.query_result[0]
+		task_id = int(row.get("task_id", 0))
+		row_level = int(row.get("level", level))
+
+	# Нормализуем: по компьютеру одна запись со статусом done.
+	db.query("DELETE FROM progress WHERE computer_id = %d" % computer_id)
+	db.query("INSERT INTO progress (level, computer_id, task_id, status) VALUES (%d, %d, %d, 'done')" % [row_level, computer_id, task_id])
+
+	db.query("SELECT level, computer_id, task_id, status FROM progress WHERE computer_id = %d" % computer_id)
+	print("DbTasks.unassign_task: rows after DONE normalize -> %s" % str(db.query_result))

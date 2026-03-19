@@ -18,6 +18,12 @@ func _create_tables() -> void:
 			door_id INTEGER
 		)
 	""")
+	db.query("""
+		CREATE TABLE IF NOT EXISTS door_states (
+			door_id INTEGER PRIMARY KEY,
+			is_open INTEGER
+		)
+	""")
 	print("DbDoors: tables ensured")
 
 func link_computer_to_door(computer_id: int, door_id: int) -> void:
@@ -84,3 +90,28 @@ func is_door_accessible(door_id: int) -> bool:
 
 	# ни один связанный компьютер не завершён → дверь заблокирована
 	return false
+
+
+# ---------- Persistent open/close state ----------
+
+func set_door_state(door_id: int, opened: bool) -> void:
+	if door_id <= 0:
+		# "пустые" двери не пишем в БД
+		return
+	if not dbm._ensure_db():
+		return
+	var db = dbm.db
+	var opened_i := 1 if opened else 0
+	db.query("INSERT OR REPLACE INTO door_states (door_id, is_open) VALUES (%d, %d)" % [door_id, opened_i])
+
+
+func get_door_state(door_id: int) -> Variant:
+	if door_id <= 0:
+		return null
+	if not dbm._ensure_db():
+		return null
+	var db = dbm.db
+	db.query("SELECT is_open FROM door_states WHERE door_id = %d" % door_id)
+	if db.query_result.size() == 0:
+		return null
+	return int(db.query_result[0]["is_open"])

@@ -9,6 +9,7 @@ var tasks = null
 var levers = null
 var doors = null
 var debug = null
+var _completed_computers := {} # key: "%d:%d" % [level, computer_id] -> true
 
 func _ready() -> void:
 	randomize()
@@ -48,6 +49,18 @@ func _load_modules() -> void:
 	save = preload("res://db/db_save.gd").new()
 	if save and save.has_method("init"):
 		save.init(self)
+
+# -----------------------
+# Внутренняя "память" завершённых компьютеров
+# -----------------------
+
+func mark_computer_done(level: int, computer_id: int) -> void:
+	var key := "%d:%d" % [level, computer_id]
+	_completed_computers[key] = true
+
+func is_computer_done(level: int, computer_id: int) -> bool:
+	var key := "%d:%d" % [level, computer_id]
+	return _completed_computers.has(key)
 
 # -----------------------
 # Общие помощники
