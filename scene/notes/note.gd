@@ -1,7 +1,5 @@
 extends Area2D
 
-@onready var rect: ColorRect = $ColorRect
-
 @export var note_id: String = "note_01"
 @export var text_path: String = "res://docs/notes/note_01.txt"
 
@@ -23,6 +21,8 @@ func _ready() -> void:
 	set_highlight(false)
 
 func _process(_delta: float) -> void:
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		return
 	if player_in_range and Input.is_action_just_pressed("interact"):
 		_pickup()
 

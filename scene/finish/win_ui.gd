@@ -3,7 +3,6 @@ extends CanvasLayer
 @onready var new_game_btn: Button = $Panel/CenterContainer/VBoxContainer/NewGameButton
 @onready var exit_btn: Button = $Panel/CenterContainer/VBoxContainer/ExitButton
 
-const LEVEL_SCENE := "res://scene/level/level_1(realno).tscn"
 const MAIN_MENU_SCENE := "res://scene/main-menu.tscn"
 
 func _ready() -> void:
@@ -37,19 +36,9 @@ func show_win() -> void:
 		new_game_btn.grab_focus()
 
 func _on_new_game_pressed() -> void:
-	print("WinUI: New Game")
-
-	# 1) сброс сейва — ВАЖНО: вызываем правильный autoload
-	if Engine.has_singleton("savemanager"):
-		SaveMeneger.reset_save()
-	else:
-		push_warning("WinUI: autoload 'savemanager' not found")
-
-	# 2) снимаем паузу
+	print("WinUI: New Game → loading / generation")
 	get_tree().paused = false
-
-	# 3) грузим уровень
-	get_tree().change_scene_to_file(LEVEL_SCENE)
+	get_tree().call_deferred("change_scene_to_file", "res://scene/ui/new_game_loading.tscn")
 
 func _on_exit_pressed() -> void:
 	print("WinUI: Exit to Main Menu")

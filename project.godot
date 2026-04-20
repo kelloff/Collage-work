@@ -25,6 +25,8 @@ buses/default_bus_layout="uid://53fbbn6l3ab0"
 
 [autoload]
 
+BackendUrls="*res://scripts/backend_urls.gd"
+NewGameConfig="*res://scripts/new_game_config.gd"
 DbManager="*res://db/db_meneger.gd"
 CodeRunner="*res://scripts/code_runner.gd"
 audio_manager="*uid://b8gfvuu0ytv5"
@@ -34,7 +36,7 @@ GameState="*uid://dygiqou1xy76e"
 Savemeneger="*uid://31i6j70qj2jg"
 RunStats="*uid://cj0smsq1p7c3p"
 DeathFlow="*uid://ccnmcobyohqyu"
-AiCheckerSingleton="*uid://b6f55nu8v67gn"
+AiCheckerSingleton="*uid://0peo6r2o4dtt"
 
 [display]
 

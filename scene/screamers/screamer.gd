@@ -4,9 +4,12 @@ signal finished
 
 @export var duration: float = 1.35
 
+const CREAMER_SFX_PATH := "res://audio/sounds/creamer.mp3"
+
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var timer: Timer = $Timer
 @onready var bg: ColorRect = $BG
+@onready var sfx_player: AudioStreamPlayer = get_node_or_null("ScreamerSfx")
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -22,7 +25,26 @@ func _ready() -> void:
 	if sprite and sprite.sprite_frames:
 		sprite.play() # проиграет текущую анимацию
 
+	_play_creamer_sfx()
+
+func _play_creamer_sfx() -> void:
+	if sfx_player == null:
+		sfx_player = AudioStreamPlayer.new()
+		sfx_player.name = "ScreamerSfx"
+		add_child(sfx_player)
+	if not ResourceLoader.exists(CREAMER_SFX_PATH):
+		push_warning("screamer: missing audio %s" % CREAMER_SFX_PATH)
+		return
+	var stream: AudioStream = load(CREAMER_SFX_PATH)
+	if stream == null:
+		return
+	sfx_player.stream = stream
+	sfx_player.bus = "Master"
+	sfx_player.play()
+
 func _on_timeout() -> void:
+	if sfx_player and sfx_player.playing:
+		sfx_player.stop()
 	finished.emit()
 
 func _resize_to_screen() -> void:

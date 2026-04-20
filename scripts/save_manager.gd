@@ -173,11 +173,52 @@ func continue_game() -> void:
 
 
 func reset_save() -> void:
-	if DbManager.has_method("clear_save"):
-		DbManager.clear_save()
+	## Полный сброс БД и служебных кэшей (двери, рычаги, задания, сейв).
+	if DbManager.has_method("new_game_database_wipe"):
+		DbManager.new_game_database_wipe()
 	elif DbManager.has_method("reset_all"):
 		DbManager.reset_all()
-	print("SaveManager: save reset")
+	elif DbManager.has_method("clear_save"):
+		DbManager.clear_save()
+	print("SaveManager: reset_save done")
+
+
+const _LOCAL_TASKS_PATH := "res://db/task_data.gd"
+const _TERMINAL_CODE_SNAPSHOT := "user://terminal_last_code.txt"
+
+
+func reset_run_after_death() -> void:
+	## После смерти: прогресс/двери/сейв сбрасываются, **задания из БД с префиксом AI: остаются**;
+	## заново подставятся на компы через `assign_task` (случайный выбор из свободных id).
+	if DbManager.has_method("new_game_database_wipe_keep_ai_tasks"):
+		DbManager.new_game_database_wipe_keep_ai_tasks()
+		if DbManager.has_method("tasks_row_count") and DbManager.tasks_row_count() <= 0:
+			push_warning("SaveManager: в БД не осталось заданий AI: — подгружаем task_data.gd")
+			if DbManager.tasks and DbManager.tasks.has_method("load_default_tasks_from_file"):
+				DbManager.tasks.load_default_tasks_from_file(_LOCAL_TASKS_PATH)
+	else:
+		reset_save()
+		if DbManager.tasks and DbManager.tasks.has_method("load_default_tasks_from_file"):
+			DbManager.tasks.load_default_tasks_from_file(_LOCAL_TASKS_PATH)
+	_erase_user_snapshot(_TERMINAL_CODE_SNAPSHOT)
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("reset_all"):
+		GameState.reset_all()
+	if typeof(RunStats) != TYPE_NIL and RunStats.has_method("reset_session"):
+		RunStats.reset_session()
+	print("SaveManager: reset_run_after_death done")
+
+
+func _erase_user_snapshot(user_path: String) -> void:
+	if not FileAccess.file_exists(user_path):
+		return
+	var err := DirAccess.remove_absolute(ProjectSettings.globalize_path(user_path))
+	if err != OK:
+		push_warning("SaveManager: could not remove %s (err=%d)" % [user_path, err])
+
+
+func load_game() -> void:
+	## Вызывается LevelManager при входе на уровень; реальная загрузка — через continue_game().
+	pass
 
 
 # --------------------

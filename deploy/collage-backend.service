@@ -1,0 +1,26 @@
+[Unit]
+Description=CollageWork backend (FastAPI / uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/collage-work/beck
+
+# venv на сервере (создай: python3 -m venv venv && ./venv/bin/pip install -r requirements.txt)
+EnvironmentFile=-/opt/collage-work/beck/.env
+ExecStart=/opt/collage-work/beck/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+SendSIGKILL=yes
+
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

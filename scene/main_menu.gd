@@ -8,9 +8,10 @@ extends Control
 @onready var settings_btn: Button = get_node_or_null("TextureRect/VBoxContainer/settings")
 @onready var exit_btn: Button = get_node_or_null("TextureRect/VBoxContainer/exit")
 
-const LEVEL_SCENE := "res://scene/level/level_1(realno).tscn"
+const NEW_GAME_LOADING := "res://scene/ui/new_game_loading.tscn"
 
 func _ready() -> void:
+	_apply_loop_on_music_player_if_present()
 	if settings_menu:
 		settings_menu.visible = false
 
@@ -41,17 +42,26 @@ func _ready() -> void:
 	if settings_menu and settings_menu.has_signal("back_pressed"):
 		settings_menu.back_pressed.connect(_on_settings_back)
 
+func _apply_loop_on_music_player_if_present() -> void:
+	var p: AudioStreamPlayer = get_node_or_null("music_player") as AudioStreamPlayer
+	if p == null or p.stream == null:
+		return
+	var st: AudioStream = p.stream
+	if st is AudioStreamOggVorbis:
+		(st as AudioStreamOggVorbis).loop = true
+	elif st is AudioStreamWAV:
+		(st as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	elif ClassDB.class_exists("AudioStreamMP3") and st is AudioStreamMP3:
+		(st as AudioStreamMP3).loop = true
+
 func _on_continue_pressed() -> void:
 	Savemeneger.continue_game()
 
 func _on_play_pressed() -> void:
-	print("MainMenu: New Game")
-
-	# 1. полный сброс
-	Savemeneger.reset_save()
-
-	# 2. загружаем первый уровень
-	get_tree().change_scene_to_file(LEVEL_SCENE)
+	print("MainMenu: New Game → loading / generation")
+	if play_btn:
+		play_btn.disabled = true
+	get_tree().call_deferred("change_scene_to_file", NEW_GAME_LOADING)
 
 func _on_settings_pressed() -> void:
 	main_panel.visible = false

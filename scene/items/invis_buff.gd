@@ -21,6 +21,8 @@ func _ready() -> void:
 	set_highlight(false)
 
 func _process(_delta: float) -> void:
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		return
 	if player_in_range and Input.is_action_just_pressed("interact"):
 		var inventory := get_tree().get_first_node_in_group("inventory")
 		if inventory == null:

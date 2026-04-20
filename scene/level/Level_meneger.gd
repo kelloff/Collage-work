@@ -28,6 +28,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _ready() -> void:
 	RunStats.start_level()
+	_apply_loop_on_music_player_if_present()
 	call_deferred("_init_links")	
 
 	# Попробуем вызвать загрузку через SaveManager (поддерживаем старые/новые имена)
@@ -146,6 +147,18 @@ func _init_links() -> void:
 		print("LevelManager: initialization complete.")
 	if db.has_method("debug_dump_all"):
 		db.debug_dump_all()
+
+func _apply_loop_on_music_player_if_present() -> void:
+	var p: AudioStreamPlayer = get_node_or_null("music_player") as AudioStreamPlayer
+	if p == null or p.stream == null:
+		return
+	var st: AudioStream = p.stream
+	if st is AudioStreamOggVorbis:
+		(st as AudioStreamOggVorbis).loop = true
+	elif st is AudioStreamWAV:
+		(st as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+	elif ClassDB.class_exists("AudioStreamMP3") and st is AudioStreamMP3:
+		(st as AudioStreamMP3).loop = true
 
 # --- Вспомогательная функция: привязать компьютеры и двери по инспекторным полям ---
 func _auto_link_computers_and_doors(db: Node) -> void:

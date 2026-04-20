@@ -12,8 +12,10 @@ enum {
 @onready var hint: Label = $Label
 @onready var animations: AnimatedSprite2D = $AnimatedSprite2D
 @onready var cam: Camera2D = $Camera2D
+@onready var damage_sfx_player: AudioStreamPlayer = get_node_or_null("DamageSfxPlayer")
 
 const BASE_RESOLUTION := Vector2(1280, 720)
+const DAMAGE_SFX_PATH := "res://audio/sounds/урон.mp3"
 
 var speed := 140.0
 var idle_dir := DOWN
@@ -39,6 +41,7 @@ var is_invisible: bool = false
 
 # --- HINT ---
 var _hint_timer: Timer
+var _damage_sfx: AudioStream = null
 
 func _ready() -> void:
 	add_to_group("player")
@@ -73,6 +76,13 @@ func _ready() -> void:
 	_invis_timer.one_shot = true
 	add_child(_invis_timer)
 	_invis_timer.timeout.connect(_on_invis_end)
+
+	if damage_sfx_player == null:
+		damage_sfx_player = AudioStreamPlayer.new()
+		damage_sfx_player.name = "DamageSfxPlayer"
+		add_child(damage_sfx_player)
+	if ResourceLoader.exists(DAMAGE_SFX_PATH):
+		_damage_sfx = load(DAMAGE_SFX_PATH)
 
 	if cam:
 		cam.make_current()
@@ -208,6 +218,7 @@ func take_damage(amount: int = 1, from_maniac: bool = false) -> void:
 		return
 
 	hp -= amount
+	_play_damage_sfx()
 
 	if hp <= 0:
 		die(from_maniac)
@@ -233,6 +244,14 @@ func set_hp(value: int) -> void:
 func _flash_on_damage() -> void:
 	modulate = Color(1, 0.6, 0.6, 1)
 
+func _play_damage_sfx() -> void:
+	if damage_sfx_player == null:
+		return
+	if _damage_sfx == null:
+		return
+	damage_sfx_player.stream = _damage_sfx
+	damage_sfx_player.play()
+
 func die(killed_by_maniac: bool = false) -> void:
 	control_enabled = false
 
@@ -254,3 +273,8 @@ func die(killed_by_maniac: bool = false) -> void:
 # =========================
 func get_speed() -> float:
 	return speed
+
+func set_control_enabled(enabled: bool) -> void:
+	control_enabled = enabled
+	if not enabled:
+		velocity = Vector2.ZERO

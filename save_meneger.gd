@@ -1,11 +1,27 @@
 extends Node
+## Алиас для кода, который ожидает имя SaveMeneger.
+## Реальная логика в save_manager.gd — автозагрузка **Savemeneger** (см. project.godot).
 
 
-# Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	pass # Replace with function body.
+func has_save() -> bool:
+	return Savemeneger.has_save()
 
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+func continue_game() -> void:
+	Savemeneger.continue_game()
+
+
+func reset_save() -> void:
+	Savemeneger.reset_save()
+
+
+func reset_run_after_death() -> void:
+	Savemeneger.reset_run_after_death()
+
+
+func save_now() -> void:
+	Savemeneger.save_now()
+
+
+func load_game() -> void:
+	Savemeneger.load_game()

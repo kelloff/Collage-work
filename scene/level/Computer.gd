@@ -12,6 +12,8 @@ var player_in_range: bool = false
 var player_node: Node = null
 var current_task: Dictionary = {}
 var outline_material: ShaderMaterial
+## true между успешным push_world_input_block в open_terminal и cleanup при закрытии UI
+var _terminal_session_open: bool = false
 
 func _enter_tree() -> void:
 	if not is_in_group("computers"):
@@ -62,6 +64,12 @@ func _update_hint_for_state() -> void:
 # --------------------------------------------
 
 func _process(_delta: float) -> void:
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		# Разрешаем только закрытие уже открытого терминала.
+		if terminal_ui and terminal_ui.visible and Input.is_action_just_pressed("close_terminal"):
+			close_terminal()
+		return
+
 	# Если терминал открыт — слушаем закрытие
 	if terminal_ui and terminal_ui.visible:
 		if Input.is_action_just_pressed("close_terminal"):
@@ -96,6 +104,9 @@ func open_terminal() -> void:
 		return
 
 	_hide_hint()
+	_terminal_session_open = true
+	if GameState.has_method("push_world_input_block"):
+		GameState.push_world_input_block()
 
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(false)
@@ -125,10 +136,17 @@ func open_terminal() -> void:
 func close_terminal() -> void:
 	if terminal_ui and terminal_ui.has_method("close"):
 		terminal_ui.call("close")
+	# Разблокировка мира и игрока — в terminal_ui.close() → _terminal_closed_cleanup()
 
+
+func _terminal_closed_cleanup() -> void:
+	if not _terminal_session_open:
+		return
+	_terminal_session_open = false
+	if GameState.has_method("pop_world_input_block"):
+		GameState.pop_world_input_block()
 	if player_node and player_node.has_method("set_control_enabled"):
 		player_node.set_control_enabled(true)
-
 	_update_hint_for_state()
 
 func set_outline(enabled: bool) -> void:

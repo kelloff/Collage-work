@@ -195,24 +195,81 @@ func clear_save() -> void:
 	if save and save.has_method("clear_save"):
 		save.clear_save()
 		
-func reset_all() -> void:
+## Полная очистка БД и RAM-кэша для «Новая игра»: задания, прогресс, рычаги, двери, сейв.
+func new_game_database_wipe() -> void:
 	if not _ensure_db():
 		return
 
-	print("DbMeneger: FULL RESET")
+	print("DbMeneger: NEW GAME full wipe")
 
-	# Удаляем данные
+	_completed_computers.clear()
+	_assigned_tasks.clear()
+
+	# Таблицы по фактической схеме проекта (старые имена lever_to_* / save были ошибкой)
+	db.query("DELETE FROM progress")
 	db.query("DELETE FROM tasks")
 	db.query("DELETE FROM lever_states")
+	db.query("DELETE FROM lever_links")
+	db.query("DELETE FROM lever_doors")
 	db.query("DELETE FROM door_states")
-	db.query("DELETE FROM lever_to_computer")
-	db.query("DELETE FROM lever_to_door")
-	db.query("DELETE FROM save")
+	db.query("DELETE FROM computer_doors")
+	db.query("DELETE FROM save_state")
 
-	# Сброс автоинкремента (на всякий случай)
 	db.query("VACUUM")
+	print("DbMeneger: wipe complete")
 
-	print("DbMeneger: reset complete")
+
+## После смерти / «ещё раз»: очистить прогресс и связи, но **оставить** в `tasks` только строки с `AI:`
+## (как после /generate_tasks). Без повторной вставки из `task_data.gd` — новые назначения даст `assign_task`.
+func new_game_database_wipe_keep_ai_tasks() -> void:
+	if not _ensure_db():
+		return
+
+	print("DbMeneger: run wipe KEEP AI tasks (death / retry run)")
+
+	_completed_computers.clear()
+	_assigned_tasks.clear()
+
+	db.query("DELETE FROM progress")
+	db.query("DELETE FROM tasks WHERE description IS NULL OR description NOT LIKE 'AI:%'")
+	db.query("DELETE FROM lever_states")
+	db.query("DELETE FROM lever_links")
+	db.query("DELETE FROM lever_doors")
+	db.query("DELETE FROM door_states")
+	db.query("DELETE FROM computer_doors")
+	db.query("DELETE FROM save_state")
+
+	db.query("VACUUM")
+	print("DbMeneger: wipe_keep_ai_tasks complete (tasks rows=", _count_tasks_rows(), ")")
+
+
+func _count_tasks_rows() -> int:
+	db.query("SELECT COUNT(*) AS cnt FROM tasks")
+	if db.query_result.size() > 0:
+		return int(db.query_result[0].get("cnt", db.query_result[0].get("COUNT(*)", 0)))
+	return 0
+
+
+func tasks_row_count() -> int:
+	if not _ensure_db():
+		return 0
+	return _count_tasks_rows()
+
+
+func reset_all() -> void:
+	# Совместимость: старые вызовы → полный сброс
+	new_game_database_wipe()
+
+
+## После ответа /generate_tasks: вставить задачи в пустую (уже очищенную) БД.
+func apply_generated_tasks(rows: Array) -> int:
+	if not _ensure_db():
+		return 0
+	if tasks == null or not tasks.has_method("insert_tasks_from_backend_payload"):
+		push_error("DbMeneger: db_tasks.insert_tasks_from_backend_payload missing")
+		return 0
+	return int(tasks.call("insert_tasks_from_backend_payload", rows))
+
 	
 # Doors state (нужно, чтобы двери сохранялись)
 func set_door_state(door_id: int, opened: bool) -> void:

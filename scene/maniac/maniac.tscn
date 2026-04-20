@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://dt6m0hh2rax60"]
 
 [ext_resource type="Texture2D" uid="uid://cgxmtu0o85x0v" path="res://assets/персы/артеартем бьетt.png" id="1_21hg5"]
-[ext_resource type="Script" uid="uid://ddqo7lgip7v7t" path="res://scripts/maniac.gd" id="1_bpof2"]
+[ext_resource type="Script" uid="uid://bfi7jiar3nbwj" path="res://scripts/maniac.gd" id="1_bpof2"]
 [ext_resource type="Texture2D" uid="uid://bbiwvi24lmb2r" path="res://assets/персы/артем натурал.png" id="2_bpof2"]
 [ext_resource type="Texture2D" uid="uid://d2nbylb5xl5wb" path="res://assets/персы/артем натурал сзади.png" id="3_8tm0s"]
 [ext_resource type="Texture2D" uid="uid://doqrbu2vdidgl" path="res://assets/персы/артем натурал-Sheet бокt.png" id="4_q2kl1"]

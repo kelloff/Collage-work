@@ -53,6 +53,8 @@ func _setup_outline() -> void:
 func _process(_delta: float) -> void:
 	if opened:
 		return
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		return
 
 	if player_in_range and Input.is_action_just_pressed("interact"):
 		open_chest()

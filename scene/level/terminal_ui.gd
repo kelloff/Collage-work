@@ -6,18 +6,34 @@ extends CanvasLayer
 @onready var output_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/OutputScroll/OutputLabel")
 @onready var task_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/TaskLabel")
 @onready var hint_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/HintLabelSyntax")
+@onready var sfx_player: AudioStreamPlayer = get_node_or_null("SfxPlayer")
 
 const SAVE_PATH := "user://terminal_last_code.txt"
+const YES_SFX_PATH := "res://audio/sounds/yes.mp3"
+const NO_SFX_PATH := "res://audio/sounds/no.mp3"
 
 var current_task: Dictionary = {}
+var current_level: int = 1
 var _running := false
 var _use_ai_checker: bool = true
+var _yes_sfx: AudioStream = null
+var _no_sfx: AudioStream = null
 
 func _ready() -> void:
 	if run_button:
 		run_button.pressed.connect(_on_run_button_pressed)
 	if close_button:
 		close_button.pressed.connect(close)
+	if sfx_player == null:
+		sfx_player = AudioStreamPlayer.new()
+		sfx_player.name = "SfxPlayer"
+		add_child(sfx_player)
+	if ResourceLoader.exists(YES_SFX_PATH):
+		_yes_sfx = load(YES_SFX_PATH)
+	if ResourceLoader.exists(NO_SFX_PATH):
+		_no_sfx = load(NO_SFX_PATH)
+	_apply_readability_scale()
+	set_process_unhandled_input(true)
 
 	hide()
 
@@ -27,6 +43,7 @@ func open_with_task(level: int, task: Dictionary) -> void:
 	print("TerminalUI.open_with_task: level=%d id=%s desc=%s" % [level, str(tid), desc])
 
 	current_task = task
+	current_level = level
 	show()
 
 	if output_label:
@@ -77,6 +94,7 @@ func close() -> void:
 			f.close()
 
 	if run_button:
+		run_button.text = "Проверить решение"
 		run_button.disabled = false
 	if output_label:
 		output_label.text = ""
@@ -85,22 +103,40 @@ func close() -> void:
 	if hint_label:
 		hint_label.text = ""
 
+	# Кнопка «Закрыть» вызывает только close(), без Computer.close_terminal() — снимаем блок ввода здесь.
+	var host: Node = get_parent()
+	if host and host.has_method("_terminal_closed_cleanup"):
+		host._terminal_closed_cleanup()
+
 func _on_run_button_pressed() -> void:
 	if _running:
+		_play_result_sfx(false)
 		return
 
 	if not code_edit:
 		if output_label:
 			output_label.text = "❌ Ошибка: CodeEditor не найден"
+		_play_result_sfx(false)
 		return
 
 	var code_text: String = code_edit.text as String
+	if code_text.strip_edges().is_empty():
+		if output_label:
+			output_label.text = "❌ Код пустой. Напиши решение и нажми «Проверить решение»."
+		_play_result_sfx(false)
+		return
+	if current_task.is_empty():
+		if output_label:
+			output_label.text = "❌ Нет активного задания для проверки."
+		_play_result_sfx(false)
+		return
 
 	if _use_ai_checker:
 		_run_with_ai_checker(code_text)
 	else:
 		if output_label:
 			output_label.text = "❌ AI-проверка выключена и CodeRunner не настроен"
+		_play_result_sfx(false)
 
 func _run_with_ai_checker(code_text: String) -> void:
 	if output_label:
@@ -112,7 +148,7 @@ func _run_with_ai_checker(code_text: String) -> void:
 	_run_with_ai_checker_async(code_text)
 
 func _run_with_ai_checker_async(code_text: String) -> void:
-	var result: Dictionary = await AiCheckerSingleton.check_task_async(current_task, code_text)
+	var result: Dictionary = await AiCheckerSingleton.check_task_async(current_task, code_text, current_level)
 
 	_running = false
 	if run_button:
@@ -126,8 +162,46 @@ func _run_with_ai_checker_async(code_text: String) -> void:
 
 	if success:
 		output_label.text = "🎉 Задание выполнено!\n" + feedback
+		_play_result_sfx(true)
 		var computer = get_parent()
 		if computer and computer.has_method("unassign_task_if_completed"):
 			computer.unassign_task_if_completed()
 	else:
 		output_label.text = feedback
+		_play_result_sfx(false)
+
+func _play_result_sfx(success: bool) -> void:
+	if sfx_player == null:
+		return
+	var stream: AudioStream = _yes_sfx if success else _no_sfx
+	if stream == null:
+		return
+	sfx_player.stream = stream
+	sfx_player.play()
+
+func _apply_readability_scale() -> void:
+	# Делаем терминал читабельнее на тёмном фоне и FullHD+.
+	if code_edit:
+		code_edit.add_theme_font_size_override("font_size", 24)
+	if task_label:
+		task_label.add_theme_font_size_override("font_size", 24)
+	if hint_label:
+		hint_label.add_theme_font_size_override("font_size", 19)
+	if run_button:
+		run_button.add_theme_font_size_override("font_size", 24)
+	if output_label:
+		output_label.add_theme_font_size_override("normal_font_size", 23)
+	if close_button:
+		close_button.add_theme_font_size_override("font_size", 24)
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Allow pause menu while terminal is focused/open.
+	if not visible:
+		return
+	if event.is_action_pressed("pause_menu"):
+		var root: Node = get_tree().current_scene
+		if root:
+			var pause_menu: Node = root.find_child("PauseMenu", true, false)
+			if pause_menu and pause_menu.has_method("toggle_menu"):
+				pause_menu.toggle_menu()
+				get_viewport().set_input_as_handled()

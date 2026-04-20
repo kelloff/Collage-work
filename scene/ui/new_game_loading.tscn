@@ -1,0 +1,85 @@
+[gd_scene load_steps=3 format=3 uid="uid://ccwqh_newgame_loading"]
+
+[ext_resource type="Script" path="res://scene/ui/new_game_loading.gd" id="1_gd"]
+[ext_resource type="Script" path="res://scene/ui/simple_spinner.gd" id="2_sp"]
+
+[node name="NewGameLoading" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_gd")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.06, 0.08, 0.12, 0.72)
+
+[node name="BottomRight" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -96.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="VBox" type="VBoxContainer" parent="BottomRight"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="Status" type="Label" parent="BottomRight/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.93, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "Загрузка…"
+horizontal_alignment = 2
+
+[node name="Spinner" type="Control" parent="BottomRight/VBox"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 2
+size_flags_horizontal = 8
+script = ExtResource("2_sp")
+
+[node name="ErrorLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="CenterContainer" type="CenterContainer" parent="ErrorLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="ErrorLayer/CenterContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="ErrorLabel" type="Label" parent="ErrorLayer/CenterContainer/VBox"]
+visible = false
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.65, 0.55, 1)
+theme_override_font_sizes/font_size = 14
+text = "Ошибка"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="BtnToMenu" type="Button" parent="ErrorLayer/CenterContainer/VBox"]
+visible = false
+layout_mode = 2
+text = "В главное меню"

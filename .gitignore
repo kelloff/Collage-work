@@ -26,3 +26,5 @@ user_code_tmp/1768929421.57_3537152288_user_code.py
 tasks.db
 *.uid
 *.import
+/beck/env
+beck/tasks_pool.json

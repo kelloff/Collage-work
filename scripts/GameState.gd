@@ -9,6 +9,7 @@ var death_count: int = 0
 # --- Дополнительные метрики (по желанию) ---
 var pickups_collected: int = 0
 var distance_traveled: float = 0.0
+var _world_input_blockers: int = 0
 
 # --------------------
 # Вспомогательная функция получения текущего времени в секундах
@@ -91,3 +92,13 @@ func reset_all() -> void:
 	death_count = 0
 	pickups_collected = 0
 	distance_traveled = 0.0
+	_world_input_blockers = 0
+
+func push_world_input_block() -> void:
+	_world_input_blockers += 1
+
+func pop_world_input_block() -> void:
+	_world_input_blockers = max(_world_input_blockers - 1, 0)
+
+func is_world_input_blocked() -> bool:
+	return _world_input_blockers > 0

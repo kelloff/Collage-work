@@ -7,6 +7,11 @@ func start_level() -> void:
 	level_started_ms = Time.get_ticks_msec()
 	completed_tasks = 0
 
+
+func reset_session() -> void:
+	level_started_ms = 0
+	completed_tasks = 0
+
 func get_elapsed_seconds() -> float:
 	if level_started_ms <= 0:
 		return 0.0

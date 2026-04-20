@@ -15,11 +15,14 @@ signal closed_by_system
 @onready var nav_a: Marker2D = get_node_or_null("A")
 @onready var nav_b: Marker2D = get_node_or_null("B")
 @onready var maniac_collision: CollisionShape2D = get_node_or_null("ManiacCollision")
+@onready var sfx_player: AudioStreamPlayer2D = get_node_or_null("DoorSfx")
 
 @export var navigation_layers_mask: int = 1
 @export var offset: float = 40
 
 @export var door_id: int = 0
+@export var open_sfx_path: String = "res://audio/door/открывание.mp3"
+@export var close_sfx_path: String = "res://audio/door/закрывание.mp3"
 
 var is_open: bool = false
 var player_in_range: bool = false
@@ -29,6 +32,8 @@ var _opened_by_maniac: bool = false
 var _orig_collision_layer: int = 0
 var _orig_collision_mask: int = 0
 var _maniacs_exceptions: Array[Node] = []
+var _open_sfx: AudioStream = null
+var _close_sfx: AudioStream = null
 
 func _hud() -> Node:
 	return get_tree().current_scene.get_node_or_null("HUD")
@@ -47,7 +52,7 @@ func _update_hint_for_state() -> void:
 	if not player_in_range:
 		return
 	if DbManager.is_door_accessible(door_id):
-		_show_hint("E — открыть дверь")
+		_show_hint("E — открыть/закрыть дверь")
 	else:
 		_show_hint("❌ Дверь заблокирована")
 
@@ -75,6 +80,12 @@ func _ready() -> void:
 	if area == null:
 		push_error("Door '%s': node 'Area2D' NOT FOUND." % name)
 
+	if sfx_player == null:
+		sfx_player = AudioStreamPlayer2D.new()
+		sfx_player.name = "DoorSfx"
+		add_child(sfx_player)
+	_load_door_sfx()
+
 	# Безопасное значение маски навигации
 	if navigation_layers_mask == 0:
 		navigation_layers_mask = 1
@@ -88,7 +99,27 @@ func _ready() -> void:
 
 	_restore_from_db()
 
+func _load_door_sfx() -> void:
+	if open_sfx_path != "" and ResourceLoader.exists(open_sfx_path):
+		_open_sfx = load(open_sfx_path)
+	if close_sfx_path != "" and ResourceLoader.exists(close_sfx_path):
+		_close_sfx = load(close_sfx_path)
+
+func _play_door_sfx(opened: bool) -> void:
+	if sfx_player == null:
+		return
+	var stream: AudioStream = _open_sfx if opened else _close_sfx
+	if stream == null:
+		return
+	sfx_player.stream = stream
+	sfx_player.play()
+
 func _process(_delta: float) -> void:
+	# @tool: в редакторе автозагрузки — placeholder, нельзя вызывать методы.
+	if Engine.is_editor_hint():
+		return
+	if GameState.is_world_input_blocked():
+		return
 	if player_in_range and Input.is_action_just_pressed("interact"):
 		try_toggle_by_player()
 
@@ -202,10 +233,15 @@ func toggle(by_system: bool = false) -> void:
 	if not by_system and is_open and _is_player_inside_door_collision_shape():
 		_show_hint("Выйди из двери", 1.2)
 		return
+	var was_open: bool = is_open
 	is_open = not is_open
-	_opened_by_maniac = by_system and is_open
+	# Только `open_for_maniac()` выставляет «закрыть коллизию для игрока»;
+	# рычаг/система вызывают `toggle(true)` / `open(true)` — это не проход маньяка.
+	_opened_by_maniac = false
 	_apply_visuals()
 	_write_state_to_db()
+	if was_open != is_open:
+		_play_door_sfx(is_open)
 	if by_system:
 		if is_open: emit_signal("opened_by_system")
 		else: emit_signal("closed_by_system")
@@ -223,9 +259,10 @@ func toggle(by_system: bool = false) -> void:
 func open(by_system: bool = false) -> void:
 	if is_open: return
 	is_open = true
-	_opened_by_maniac = by_system
+	# `_opened_by_maniac` задаётся только в `open_for_maniac()` до вызова `open()`.
 	_apply_visuals()
 	_write_state_to_db()
+	_play_door_sfx(true)
 	if by_system: emit_signal("opened_by_system")
 	_update_hint_for_state()
 	for m in get_tree().get_nodes_in_group("maniac"):
@@ -249,6 +286,7 @@ func close(by_system: bool = false) -> void:
 	_opened_by_maniac = false
 	_apply_visuals()
 	_write_state_to_db()
+	_play_door_sfx(false)
 	_clear_maniac_collision_exceptions()
 	_try_reopen_for_maniacs_inside()
 	if by_system: emit_signal("closed_by_system")
