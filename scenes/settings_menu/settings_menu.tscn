@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://d2716w4i5d1dc"]
+
+[ext_resource type="Script" uid="uid://b7s0rwrghkfuk" path="res://scenes/settings_menu/settings_menu.gd" id="1_p32a2"]
+[ext_resource type="Texture2D" uid="uid://217y242wgosg" path="res://assets/меню.png" id="2_mcrq0"]
+
+[node name="SettingsMenu" type="Control" unique_id=994494486]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_p32a2")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1320027358]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_mcrq0")
+expand_mode = 1
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1320027359]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.03, 0.1, 0.55)
+
+[node name="MenuPanel" type="Panel" parent="." unique_id=1320027360]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -190.0
+offset_top = -175.0
+offset_right = 190.0
+offset_bottom = 175.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MenuPanel" unique_id=205053288]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 14.0
+offset_right = -18.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 14
+
+[node name="Label" type="Label" parent="MenuPanel/VBoxContainer" unique_id=266363262]
+layout_mode = 2
+text = "НАСТРОЙКИ"
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="MenuPanel/VBoxContainer" unique_id=968051104]
+layout_mode = 2
+text = "Громкость музыки"
+
+[node name="HSlider" type="HSlider" parent="MenuPanel/VBoxContainer" unique_id=903935177]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+min_value = -40.0
+max_value = 0.0
+
+[node name="Label3" type="Label" parent="MenuPanel/VBoxContainer" unique_id=905399541]
+layout_mode = 2
+text = "Разрешение экрана"
+
+[node name="OptionButton" type="OptionButton" parent="MenuPanel/VBoxContainer" unique_id=423992362]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+
+[node name="exit" type="Button" parent="MenuPanel/VBoxContainer" unique_id=343921091]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "Назад"

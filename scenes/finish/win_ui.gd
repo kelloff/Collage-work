@@ -1,0 +1,52 @@
+extends CanvasLayer
+
+@onready var new_game_btn: Button = $Panel/Cenyterbox/VBoxContainer/NewGameButton
+@onready var exit_btn: Button = $Panel/Cenyterbox/VBoxContainer/ExitButton
+
+const MAIN_MENU_SCENE := "res://scenes/main_menu/main_menu.tscn"
+
+func _ready() -> void:
+	print("WinUI READY")
+	visible = false
+	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_style_ui()
+
+	if new_game_btn:
+		new_game_btn.pressed.connect(_on_new_game_pressed)
+	else:
+		push_warning("WinUI: NewGameButton not found")
+
+	if exit_btn:
+		exit_btn.pressed.connect(_on_exit_pressed)
+	else:
+		push_warning("WinUI: ExitButton not found")
+
+func _style_ui() -> void:
+	var title: Label = get_node_or_null("Panel/Cenyterbox/Label") as Label
+	if title:
+		title.label_settings = GameUiTheme.make_subtitle_settings(36, GameUiTheme.C_ACCENT)
+
+func show_win() -> void:
+	print("WinUI SHOW")
+	visible = true
+
+	# скрываем подсказку B-руководство (если есть)
+	var hud := get_parent()
+	if hud and hud.has_method("hide_hint"):
+		hud.hide_hint() # твой метод из hint_ui.gd
+
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_tree().paused = true
+
+	if new_game_btn:
+		new_game_btn.grab_focus()
+
+func _on_new_game_pressed() -> void:
+	print("WinUI: New Game → loading / generation")
+	get_tree().paused = false
+	get_tree().call_deferred("change_scene_to_file", "res://scenes/new_game_loading/new_game_loading.tscn")
+
+func _on_exit_pressed() -> void:
+	print("WinUI: Exit to Main Menu")
+	get_tree().paused = false
+	get_tree().change_scene_to_file(MAIN_MENU_SCENE)

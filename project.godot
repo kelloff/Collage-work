@@ -14,8 +14,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="godote_new_project"
-run/main_scene="uid://bl5d51ig3ig1y"
+config/name="The Last Code"
+run/main_scene="res://scenes/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -25,18 +25,20 @@ buses/default_bus_layout="uid://53fbbn6l3ab0"
 
 [autoload]
 
+GameUiTheme="*res://scripts/game_ui_theme.gd"
 BackendUrls="*res://scripts/backend_urls.gd"
 NewGameConfig="*res://scripts/new_game_config.gd"
 DbManager="*res://db/db_meneger.gd"
 CodeRunner="*res://scripts/code_runner.gd"
 audio_manager="*uid://b8gfvuu0ytv5"
 JournalData="*uid://bbcymcxuj8j65"
-SaveMeneger="*uid://cg3sd0qe1vgdn"
+SaveMeneger="*res://scripts/save_meneger.gd"
 GameState="*uid://dygiqou1xy76e"
 Savemeneger="*uid://31i6j70qj2jg"
 RunStats="*uid://cj0smsq1p7c3p"
 DeathFlow="*uid://ccnmcobyohqyu"
 AiCheckerSingleton="*uid://0peo6r2o4dtt"
+TutorialManager="*res://scripts/tutorial_manager.gd"
 
 [display]
 

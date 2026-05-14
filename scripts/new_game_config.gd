@@ -1,7 +1,7 @@
 extends Node
 ## Настройки потока «Новая игра»: куда грузить после генерации, сколько задач запросить.
 
-const DEFAULT_LEVEL_SCENE := "res://scene/level/level_1(realno).tscn"
+const DEFAULT_LEVEL_SCENE := "res://scenes/level_1/level_1.tscn"
 
 ## Сцена после успешной генерации и сброса БД
 var next_level_scene: String = DEFAULT_LEVEL_SCENE

@@ -2,9 +2,9 @@ extends Node
 
 enum DeathCause { MANIAC, OTHER }
 
-@export var screamer_scene: PackedScene = preload("res://scene/screamers/Screamer.tscn")
-@export var stats_scene: PackedScene = preload("res://scene/DeathStats/death_stats.tscn")
-@export var main_menu_scene_path: String = "res://scene/main-menu.tscn"
+@export var screamer_scene: PackedScene = preload("res://scenes/screamer/screamer.tscn")
+@export var stats_scene: PackedScene = preload("res://scenes/death_stats/death_stats.tscn")
+@export var main_menu_scene_path: String = "res://scenes/main_menu/main_menu.tscn"
 
 var _last_level_scene_path: String = ""
 var _cause: int = DeathCause.OTHER

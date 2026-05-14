@@ -1,0 +1,79 @@
+[gd_scene format=3 uid="uid://d31jyji8yvnem"]
+
+[ext_resource type="Script" uid="uid://cbuyphylvm2os" path="res://scenes/door/door.gd" id="1_8wc75"]
+[ext_resource type="Texture2D" uid="uid://bm85xvycrm014" path="res://assets/спрайт.png" id="1_l40yk"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8wc75"]
+atlas = ExtResource("1_l40yk")
+region = Rect2(128, 64, 32, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rr6v6"]
+atlas = ExtResource("1_l40yk")
+region = Rect2(128, 96, 32, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_7vk6c"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8wc75")
+}],
+"loop": true,
+"name": &"closed",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rr6v6")
+}],
+"loop": true,
+"name": &"open",
+"speed": 5.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_c5d4o"]
+size = Vector2(32, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tsi06"]
+size = Vector2(51, 50)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8wc75"]
+size = Vector2(94, 78)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rr6v6"]
+size = Vector2(32, 30)
+
+[node name="Node2D" type="StaticBody2D" unique_id=1504298039]
+script = ExtResource("1_8wc75")
+orientation = "horizontal"
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1700547165]
+sprite_frames = SubResource("SpriteFrames_7vk6c")
+animation = &"closed"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1214374580]
+shape = SubResource("RectangleShape2D_c5d4o")
+
+[node name="Area2D" type="Area2D" parent="." unique_id=1013830183]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1109209456]
+shape = SubResource("RectangleShape2D_tsi06")
+
+[node name="NavigationLink2D" type="NavigationLink2D" parent="." unique_id=1004597128]
+position = Vector2(1, 0)
+enabled = false
+start_position = Vector2(-40, 0)
+end_position = Vector2(40, 0)
+
+[node name="A" type="Marker2D" parent="." unique_id=1672183714]
+position = Vector2(-40, 0)
+
+[node name="B" type="Marker2D" parent="." unique_id=584137539]
+position = Vector2(40, 0)
+
+[node name="ManiacTrigger" type="Area2D" parent="." unique_id=256571215]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ManiacTrigger" unique_id=1986718587]
+shape = SubResource("RectangleShape2D_8wc75")
+
+[node name="ManiacCollision" type="CollisionShape2D" parent="." unique_id=547803746]
+shape = SubResource("RectangleShape2D_rr6v6")
