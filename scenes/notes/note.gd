@@ -1,5 +1,7 @@
 extends Area2D
 
+const ICON_SIZE_PX := 16.0
+
 @export var note_id: String = "note_01"
 @export var text_path: String = "res://docs/notes/note_01.txt"
 @export var tutorial_step: String = ""
@@ -7,7 +9,7 @@ extends Area2D
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 var player_in_range: bool = false
-var outline_material: ShaderMaterial
+var _outline_vis := InteractionOutline.new()
 
 func _ready() -> void:
 	if tutorial_step != "":
@@ -22,38 +24,35 @@ func _ready() -> void:
 	body_exited.connect(_on_body_exited)
 
 	_setup_outline()
-	set_outline(false)
-	set_highlight(false)
+	_outline_vis.set_both(false)
 
 func _setup_outline() -> void:
 	if sprite == null:
 		push_warning("Note: AnimatedSprite2D not found")
 		return
-
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-
-	if sprite.material is ShaderMaterial:
-		outline_material = sprite.material as ShaderMaterial
-	else:
-		outline_material = ShaderMaterial.new()
-		if ResourceLoader.exists("res://shaders/Outline.gdshader"):
-			outline_material.shader = load("res://shaders/Outline.gdshader")
-		sprite.material = outline_material
-
-	outline_material.set_shader_parameter("alpha_cutoff", 0.01)
+	var tex: Texture2D = sprite.sprite_frames.get_frame_texture(sprite.animation, 0) if sprite.sprite_frames else null
+	if tex:
+		var sz := tex.get_size()
+		if sz.x > 0.0 and sz.y > 0.0:
+			sprite.scale = Vector2(ICON_SIZE_PX / sz.x, ICON_SIZE_PX / sz.y)
+	_outline_vis.setup(sprite, 0.01)
 
 func _process(_delta: float) -> void:
 	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
 		return
 	if player_in_range and Input.is_action_just_pressed("interact"):
-		if tutorial_step != "" and TutorialManager.try_interact_step(tutorial_step, Callable(self, "_pickup")):
-			return
+		if TutorialManager.is_active():
+			if TutorialManager.try_lesson_then("note", Callable(self, "_pickup")):
+				return
 		_pickup()
 
 func _pickup() -> void:
 	_hide_hint()
 	var text := _load_text(text_path)
 	JournalData.add_note(note_id, text)
+	if tutorial_step != "":
+		TutorialManager.notify_note_collected(note_id)
 	queue_free()
 
 func _load_text(path: String) -> String:
@@ -65,15 +64,13 @@ func _load_text(path: String) -> String:
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = true
-		set_outline(true)
-		set_highlight(true)
+		_outline_vis.set_both(true)
 		_show_hint("E — подобрать записку")
 
 func _on_body_exited(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = false
-		set_outline(false)
-		set_highlight(false)
+		_outline_vis.set_both(false)
 		_hide_hint()
 
 func _hud() -> Node:
@@ -90,9 +87,10 @@ func _hide_hint() -> void:
 		hud.hide_hint(self)
 
 func set_outline(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("enabled", enabled)
+	_outline_vis.set_outline(enabled)
 
 func set_highlight(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("highlight", enabled)
+	_outline_vis.set_highlight(enabled)
+
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)

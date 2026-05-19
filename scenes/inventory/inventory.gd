@@ -38,6 +38,7 @@ func _apply_scale() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("inventory"):
 		toggle()
+		get_viewport().set_input_as_handled()
 
 func toggle() -> void:
 	is_open = !is_open
@@ -50,5 +51,6 @@ func add_item(item_type: String, icon: Texture2D, duration: float, value: float 
 	for slot in slots_container.get_children():
 		if slot.has_method("is_empty") and slot.is_empty():
 			slot.set_item(item_type, icon, duration, value)
+			TutorialManager.notify_item_added_to_inventory()
 			return true
 	return false

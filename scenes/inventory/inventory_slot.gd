@@ -42,7 +42,14 @@ func _gui_input(event: InputEvent) -> void:
 				if player.has_method("apply_speed_buff"):
 					player.apply_speed_buff(value, duration)
 					clear()
+					TutorialManager.notify_inventory_item_used()
 			"invis":
 				if player.has_method("apply_invisibility"):
 					player.apply_invisibility(duration)
 					clear()
+					TutorialManager.notify_inventory_item_used()
+			"heal":
+				if player.has_method("heal"):
+					if player.heal(int(value)):
+						clear()
+						TutorialManager.notify_inventory_item_used()

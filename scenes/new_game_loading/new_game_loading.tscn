@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://ccwqh_newgame_loading"]
+[gd_scene load_steps=4 format=3 uid="uid://ccwqh_newgame_loading"]
 
 [ext_resource type="Script" path="res://scenes/new_game_loading/new_game_loading.gd" id="1_gd"]
 [ext_resource type="Script" path="res://scenes/new_game_loading/simple_spinner.gd" id="2_sp"]
+[ext_resource type="Script" path="res://scenes/new_game_loading/loading_background.gd" id="3_bg"]
 
 [node name="NewGameLoading" type="Control"]
 layout_mode = 3
@@ -13,6 +14,16 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_gd")
 
+[node name="LoadingBackground" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_bg")
+
 [node name="Dim" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -21,7 +32,64 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.06, 0.08, 0.12, 0.72)
+color = Color(0.04, 0.06, 0.1, 0.45)
+
+[node name="CenterTitle" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -72.0
+offset_right = 280.0
+offset_bottom = 72.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="GameTitle" type="Label" parent="CenterTitle"]
+layout_mode = 2
+text = "The Last Code"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="CenterTitle"]
+layout_mode = 2
+text = "Подготовка нового забега…"
+horizontal_alignment = 1
+
+[node name="BottomTips" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -168.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 88
+
+[node name="VBox" type="VBoxContainer" parent="BottomTips"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="TipPrefix" type="Label" parent="BottomTips/VBox"]
+layout_mode = 2
+text = "Совет"
+horizontal_alignment = 1
+
+[node name="TipLabel" type="Label" parent="BottomTips/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "Загрузка подсказок…"
+horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="BottomRight" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -30,8 +98,8 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -200.0
-offset_top = -96.0
+offset_left = -240.0
+offset_top = -88.0
 offset_right = -20.0
 offset_bottom = -20.0
 grow_horizontal = 0

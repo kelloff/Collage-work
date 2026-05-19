@@ -28,3 +28,9 @@ tasks.db
 *.import
 /beck/env
 beck/tasks_pool.json
+docs/_gen_drawio.py
+docs/_gen_cheme_drawio.py
+*.drawio
+docs/КАК_ОТКРЫТЬ_СХЕМУ_drawio.txt
+docs/functional_scheme_A3_tree.txt
+docs/functional_scheme.md

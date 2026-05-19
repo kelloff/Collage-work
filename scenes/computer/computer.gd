@@ -11,7 +11,7 @@ extends Node2D
 var player_in_range: bool = false
 var player_node: Node = null
 var current_task: Dictionary = {}
-var outline_material: ShaderMaterial
+var _outline_vis := InteractionOutline.new()
 ## true между успешным push_world_input_block в open_terminal и cleanup при закрытии UI
 var _terminal_session_open: bool = false
 
@@ -32,13 +32,9 @@ func _ready() -> void:
 	if terminal_ui:
 		terminal_ui.visible = false
 
-	outline_material = ShaderMaterial.new()
-	if ResourceLoader.exists("res://shaders/outline.gdshader"):
-		outline_material.shader = load("res://shaders/outline.gdshader")
-		sprite.material = outline_material
-
-	set_outline(false)
-	set_highlight(false)
+	if sprite:
+		_outline_vis.setup(sprite)
+	_outline_vis.set_both(false)
 
 # ---------------- HUD helpers ----------------
 func _hud() -> Node:
@@ -77,22 +73,23 @@ func _process(_delta: float) -> void:
 		return
 
 	if player_in_range and Input.is_action_just_pressed("interact"):
+		if TutorialManager.is_active():
+			if TutorialManager.try_lesson_then("computer", Callable(self, "open_terminal")):
+				return
 		open_terminal()
 
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = true
 		player_node = body
-		set_outline(true)
-		set_highlight(true)
+		_outline_vis.set_both(true)
 		_update_hint_for_state()
 
 func _on_body_exited(body: Node) -> void:
 	if body == player_node:
 		player_in_range = false
 		player_node = null
-		set_outline(false)
-		set_highlight(false)
+		_outline_vis.set_both(false)
 		_hide_hint()
 
 func open_terminal() -> void:
@@ -132,6 +129,8 @@ func open_terminal() -> void:
 
 	if terminal_ui and terminal_ui.has_method("open_with_task"):
 		terminal_ui.call("open_with_task", level, current_task)
+		if TutorialManager.is_active() and computer_id == TutorialManager.tutorial_computer_id:
+			TutorialManager.notify_terminal_opened()
 
 func close_terminal() -> void:
 	if terminal_ui and terminal_ui.has_method("close"):
@@ -150,12 +149,13 @@ func _terminal_closed_cleanup() -> void:
 	_update_hint_for_state()
 
 func set_outline(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("enabled", enabled)
+	_outline_vis.set_outline(enabled)
 
 func set_highlight(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("highlight", enabled)
+	_outline_vis.set_highlight(enabled)
+
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)
 
 func unassign_task_if_completed() -> void:
 	if computer_id == 0:
@@ -165,6 +165,7 @@ func unassign_task_if_completed() -> void:
 	var finished_task: Dictionary = current_task
 	DbManager.unassign_task(level, computer_id)
 	DbManager.mark_computer_done(level, computer_id)
+	RunStats.add_completed_task()
 	# Сохраняем последнюю задачу как закреплённую (на будущее сообщение/контекст).
 	if not finished_task.is_empty():
 		DbManager.set_assigned_task(level, computer_id, finished_task)

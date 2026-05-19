@@ -2,15 +2,15 @@
 
 [ext_resource type="Script" uid="uid://dyw5n5eo6m8n1" path="res://scenes/chest/chest.gd" id="1_d0g14"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_ttm6p"]
-[ext_resource type="Shader" uid="uid://ch4ltdhfjxbbp" path="res://shaders/Outline.gdshader" id="2_ysjwe"]
+[ext_resource type="Shader" uid="uid://ch4ltdhfjxbbp" path="res://shaders/outline.gdshader" id="2_ysjwe"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_xd5so"]
 shader = ExtResource("2_ysjwe")
 shader_parameter/enabled = false
-shader_parameter/outline_color = Color(1, 1, 1, 1)
+shader_parameter/outline_color = Color(0.9, 0.32, 0.26, 0.96)
 shader_parameter/outline_size = 1.0
 shader_parameter/highlight = false
-shader_parameter/highlight_color = Color(0.6, 0.6, 0.6, 0.3)
+shader_parameter/highlight_color = Color(0.48, 0.06, 0.09, 0.4)
 shader_parameter/alpha_cutoff = 0.5
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_ysjwe"]

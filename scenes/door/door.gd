@@ -27,7 +27,7 @@ signal closed_by_system
 
 var is_open: bool = false
 var player_in_range: bool = false
-var outline_material: ShaderMaterial
+var _outline_vis := InteractionOutline.new()
 var _maniacs_inside: int = 0
 var _opened_by_maniac: bool = false
 var _orig_collision_layer: int = 0
@@ -101,7 +101,13 @@ func _ready() -> void:
 		area.body_entered.connect(_on_body_entered)
 		area.body_exited.connect(_on_body_exited)
 
+	_setup_interact_outline()
 	_restore_from_db()
+
+func _setup_interact_outline() -> void:
+	if sprite:
+		_outline_vis.setup(sprite)
+	_outline_vis.set_both(false)
 
 func _load_door_sfx() -> void:
 	if open_sfx_path != "" and ResourceLoader.exists(open_sfx_path):
@@ -125,8 +131,8 @@ func _process(_delta: float) -> void:
 	if GameState.is_world_input_blocked():
 		return
 	if player_in_range and Input.is_action_just_pressed("interact"):
-		if tutorial_step != "" and TutorialManager.try_interact_step(tutorial_step, Callable(self, "try_toggle_by_player")):
-			return
+		if TutorialManager.is_active():
+			TutorialManager.try_door_interact(door_id)
 		try_toggle_by_player()
 
 func _ensure_nav_nodes() -> void:
@@ -214,9 +220,9 @@ func _set_collision_shapes_recursive(root: Node, open_state: bool) -> void:
 			if _is_descendant_of(c, area) or _is_descendant_of(c, maniac_trigger):
 				continue
 			if c is CollisionShape2D:
-				(c as CollisionShape2D).disabled = open_state
-			else:
-				(c as CollisionPolygon2D).disabled = open_state
+				c.disabled = open_state
+			elif c is CollisionPolygon2D:
+				c.disabled = open_state
 		_set_collision_shapes_recursive(c, open_state)
 
 func try_toggle_by_player() -> void:
@@ -248,6 +254,8 @@ func toggle(by_system: bool = false) -> void:
 	_write_state_to_db()
 	if was_open != is_open:
 		_play_door_sfx(is_open)
+	if not by_system and is_open and not was_open:
+		TutorialManager.notify_door_opened(door_id)
 	if by_system:
 		if is_open: emit_signal("opened_by_system")
 		else: emit_signal("closed_by_system")
@@ -376,15 +384,13 @@ func _try_reopen_for_maniacs_inside() -> void:
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = true
-		set_outline(true)
-		set_highlight(true)
+		_outline_vis.set_both(true)
 		_update_hint_for_state()
 
 func _on_body_exited(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = false
-		set_outline(false)
-		set_highlight(false)
+		_outline_vis.set_both(false)
 		_hide_hint()
 
 func open_for_maniac(maniac_body: Node) -> void:
@@ -436,12 +442,13 @@ func close_after_maniac(delay := 1.2) -> void:
 		close()
 
 func set_outline(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("enabled", enabled)
+	_outline_vis.set_outline(enabled)
 
 func set_highlight(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("highlight", enabled)
+	_outline_vis.set_highlight(enabled)
+
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)
 
 func _apply_navigation_link() -> void:
 	if nav_link == null: return

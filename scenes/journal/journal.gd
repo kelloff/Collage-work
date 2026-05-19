@@ -27,9 +27,10 @@ func _ready() -> void:
 	_on_tab_selected(0)
 
 func _style_ui() -> void:
+	GameUiTheme.apply_horror_panel(panel as Panel)
 	var title: Label = $Panel/VBoxContainer/Title
 	if title:
-		title.label_settings = GameUiTheme.make_subtitle_settings(26, GameUiTheme.C_ACCENT)
+		title.label_settings = GameUiTheme.make_horror_title_settings(26)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text.scroll_active = true
 	text.fit_content = false
@@ -47,13 +48,19 @@ func toggle() -> void:
 func show_journal() -> void:
 	_open = true
 	panel.visible = true
-	get_tree().paused = true
+	if GameState.has_method("push_gameplay_freeze"):
+		GameState.push_gameplay_freeze()
+	else:
+		get_tree().paused = true
 	TutorialManager.notify_journal_opened()
 
 func hide_journal() -> void:
 	_open = false
 	panel.visible = false
-	get_tree().paused = false
+	if GameState.has_method("pop_gameplay_freeze"):
+		GameState.pop_gameplay_freeze()
+	else:
+		get_tree().paused = false
 
 func _reload_tabs() -> void:
 	tabs.clear()

@@ -10,6 +10,7 @@ var death_count: int = 0
 var pickups_collected: int = 0
 var distance_traveled: float = 0.0
 var _world_input_blockers: int = 0
+var _gameplay_freeze_depth: int = 0
 
 # --------------------
 # Вспомогательная функция получения текущего времени в секундах
@@ -93,6 +94,7 @@ func reset_all() -> void:
 	pickups_collected = 0
 	distance_traveled = 0.0
 	_world_input_blockers = 0
+	_gameplay_freeze_depth = 0
 
 func push_world_input_block() -> void:
 	_world_input_blockers += 1
@@ -102,3 +104,25 @@ func pop_world_input_block() -> void:
 
 func is_world_input_blocked() -> bool:
 	return _world_input_blockers > 0
+
+
+func push_gameplay_freeze() -> void:
+	_gameplay_freeze_depth += 1
+	if _gameplay_freeze_depth == 1:
+		get_tree().paused = true
+
+
+func pop_gameplay_freeze() -> void:
+	_gameplay_freeze_depth = maxi(_gameplay_freeze_depth - 1, 0)
+	if _gameplay_freeze_depth == 0:
+		get_tree().paused = false
+
+
+func is_gameplay_frozen() -> bool:
+	return _gameplay_freeze_depth > 0
+
+
+func clear_gameplay_freeze() -> void:
+	_gameplay_freeze_depth = 0
+	_world_input_blockers = 0
+	get_tree().paused = false

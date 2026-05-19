@@ -114,13 +114,15 @@ def _start_ollama_warmup_background() -> None:
             # 1) Супер-легкий ping для быстрого пробуждения модели.
             ping_opts = dict(base_opts)
             ping_opts["num_predict"] = 8
+            # Первый запрос: модель может долго грузиться в RAM — не обрезать до 25 с.
+            ping_timeout_s = max(20, min(timeout_s, 120))
             _ = ollama_chat(
                 ollama_base_url=SETTINGS.ollama_base_url,
                 ollama_model=SETTINGS.ollama_model,
                 ollama_num_predict=8,
                 system_msg="Ответь одним символом: 1",
                 user_msg="1",
-                timeout_s=max(10, min(timeout_s, 25)),
+                timeout_s=ping_timeout_s,
                 force_json=False,
                 temperature=0.0,
                 extra_options=ping_opts,

@@ -3,7 +3,7 @@ extends Control
 
 var _angle := 0.0
 @export var speed := 5.0
-@export var color := Color(0.92, 0.96, 1.0, 0.95)
+@export var color := Color(0.35, 1.0, 0.62, 0.95)
 
 
 func _process(delta: float) -> void:

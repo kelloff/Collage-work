@@ -93,6 +93,29 @@ def try_pop_batch(levels: List[int], count_per_level: int) -> Optional[List[dict
         return out
 
 
+def try_pop_partial_batch(levels: List[int], count_per_level: int) -> List[dict]:
+    """Забирает до count_per_level задач с каждого уровня — сколько есть в пуле."""
+    if not ENABLED or not levels or count_per_level <= 0:
+        return []
+    with _lock:
+        out: List[dict] = []
+        changed = False
+        for lv in levels:
+            lv_i = int(lv)
+            take = min(count_per_level, len(_buckets[lv_i]))
+            for _ in range(take):
+                out.append(_buckets[lv_i].pop(0))
+            if take > 0:
+                changed = True
+        if changed:
+            save_unlocked()
+        return out
+
+
+def try_pop_for_level(level: int, count: int) -> List[dict]:
+    return try_pop_partial_batch([int(level)], count)
+
+
 def add_tasks(tasks: List[dict]) -> None:
     if not tasks:
         return

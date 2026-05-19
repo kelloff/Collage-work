@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://bhealbuff001"]
+
+[ext_resource type="Script" uid="uid://bbtm1hdtque1x" path="res://scenes/items/heal_buff.gd" id="1_heal"]
+[ext_resource type="Texture2D" uid="uid://dqdcc42htfdo1" path="res://assets/1.png" id="2_heal_icon"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_heal"]
+radius = 8.0
+
+[node name="HealBuff" type="Area2D"]
+script = ExtResource("1_heal")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture_filter = 0
+texture = ExtResource("2_heal_icon")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_heal")

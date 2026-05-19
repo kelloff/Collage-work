@@ -2,72 +2,81 @@
 
 [ext_resource type="Script" uid="uid://d1joxgbms5jd8" path="res://scenes/death_stats/death_stats.gd" id="1_3sqd6"]
 
-[node name="DeathStats" type="Control" unique_id=48622363]
+[node name="DeathStats" type="CanvasLayer"]
+layer = 120
+script = ExtResource("1_3sqd6")
+
+[node name="Root" type="Control" parent="."]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_3sqd6")
+mouse_filter = 0
 
-[node name="Dim" type="ColorRect" parent="." unique_id=1608319325]
+[node name="Dim" type="ColorRect" parent="Root"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.08, 0.02, 0.06, 0.78)
+mouse_filter = 2
+color = Color(0.02, 0, 0.02, 0.55)
 
-[node name="Panel" type="Panel" parent="." unique_id=436253765]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -290.0
-offset_top = -170.0
-offset_right = 290.0
-offset_bottom = 170.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="Panel" unique_id=856778080]
+[node name="Center" type="CenterContainer" parent="Root"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 20.0
-offset_top = 16.0
-offset_right = -20.0
-offset_bottom = -16.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 14
 
-[node name="Title" type="Label" parent="Panel/VBoxContainer" unique_id=149319868]
+[node name="Panel" type="Panel" parent="Root/Center"]
+custom_minimum_size = Vector2(320, 220)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="MarginContainer" type="MarginContainer" parent="Root/Center/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="Root/Center/Panel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Root/Center/Panel/MarginContainer/VBox"]
 layout_mode = 2
 text = "ВЫ ПОГИБЛИ"
 horizontal_alignment = 1
 
-[node name="StatsLabel" type="Label" parent="Panel/VBoxContainer" unique_id=968255918]
-custom_minimum_size = Vector2(0, 120)
+[node name="StatsLabel" type="Label" parent="Root/Center/Panel/MarginContainer/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Panel/VBoxContainer" unique_id=846314989]
+[node name="Buttons" type="HBoxContainer" parent="Root/Center/Panel/MarginContainer/VBox"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 alignment = 1
 
-[node name="RetryBtn" type="Button" parent="Panel/VBoxContainer/HBoxContainer" unique_id=1579227309]
-custom_minimum_size = Vector2(200, 48)
+[node name="RetryBtn" type="Button" parent="Root/Center/Panel/MarginContainer/VBox/Buttons"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
 text = "Заново"
 
-[node name="MenuBtn" type="Button" parent="Panel/VBoxContainer/HBoxContainer" unique_id=60913951]
-custom_minimum_size = Vector2(200, 48)
+[node name="MenuBtn" type="Button" parent="Root/Center/Panel/MarginContainer/VBox/Buttons"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 1.0
 text = "Главное меню"

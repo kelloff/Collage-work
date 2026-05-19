@@ -1,11 +1,11 @@
 shader_type canvas_item;
 
 uniform bool enabled = false;
-uniform vec4 outline_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+uniform vec4 outline_color : source_color = vec4(0.9, 0.32, 0.26, 0.96);
 uniform float outline_size = 1.0;
 
 uniform bool highlight = false;
-uniform vec4 highlight_color : source_color = vec4(0.6, 0.6, 0.6, 0.3);
+uniform vec4 highlight_color : source_color = vec4(0.48, 0.06, 0.09, 0.4);
 
 // ВАЖНО: порог альфы. Всё что ниже — считаем “пустотой”.
 uniform float alpha_cutoff : hint_range(0.0, 1.0) = 0.5;

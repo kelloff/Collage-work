@@ -285,6 +285,10 @@ func _set_door_collision_mode(active: bool) -> void:
 		cap.height = _capsule_orig_height
 
 func _physics_process(delta: float) -> void:
+	if get_tree().paused:
+		return
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("is_gameplay_frozen") and GameState.is_gameplay_frozen():
+		return
 	if _debug_collision_timer > 0.0:
 		_debug_collision_timer -= delta
 	if _attack_recovery_left > 0.0:

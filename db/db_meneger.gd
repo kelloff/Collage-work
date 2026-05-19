@@ -124,6 +124,8 @@ func link_lever_to_door(lever_id: int, door_id: int) -> void:
 		levers.link_lever_to_door(lever_id, door_id)
 
 func is_computer_accessible(computer_id: int) -> bool:
+	if TutorialManager.is_active() and TutorialManager.allows_tutorial_computer(computer_id):
+		return true
 	if levers and levers.has_method("is_computer_accessible"):
 		return levers.is_computer_accessible(computer_id)
 	# fallback: доступ открыт
@@ -140,6 +142,8 @@ func get_doors_for_computer(computer_id: int) -> Array:
 	return []
 
 func is_door_accessible(door_id: int) -> bool:
+	if TutorialManager.is_active() and TutorialManager.allows_tutorial_door(door_id):
+		return true
 	if doors and doors.has_method("is_door_accessible"):
 		return doors.is_door_accessible(door_id)
 	# fallback: доступ открыт

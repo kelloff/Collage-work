@@ -6,7 +6,7 @@ class_name Lever
 
 var is_on: bool = true
 var player_in_range: bool = false
-var outline_material: ShaderMaterial
+var _outline_vis := InteractionOutline.new()
 
 @export var lever_id: int = 0
 @export var linked_computers: Array[int] = []
@@ -25,14 +25,9 @@ func _ready() -> void:
 	if sprite == null:
 		push_error("Lever '%s': node 'AnimatedSprite2D' NOT FOUND. Проверь имя узла!" % name)
 
-	# outline
 	if sprite:
-		outline_material = ShaderMaterial.new()
-		if ResourceLoader.exists("res://shaders/outline.gdshader"):
-			outline_material.shader = load("res://shaders/outline.gdshader")
-			sprite.material = outline_material
-		set_outline(false)
-		set_highlight(false)
+		_outline_vis.setup(sprite)
+	_outline_vis.set_both(false)
 
 	# восстановим из БД
 	_restore_from_db()
@@ -48,6 +43,9 @@ func _process(_delta: float) -> void:
 	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
 		return
 	if player_in_range and Input.is_action_just_pressed("interact"):
+		if TutorialManager.is_active():
+			if TutorialManager.try_lesson_then("lever", Callable(self, "toggle")):
+				return
 		toggle()
 
 # ---------- SAVE/LOAD ----------
@@ -110,19 +108,18 @@ func _apply_linked_doors() -> void:
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = true
-		set_outline(true)
-		set_highlight(true)
+		_outline_vis.set_both(true)
 
 func _on_body_exited(body: Node) -> void:
 	if body.is_in_group("player"):
 		player_in_range = false
-		set_outline(false)
-		set_highlight(false)
+		_outline_vis.set_both(false)
 
 func set_outline(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("enabled", enabled)
+	_outline_vis.set_outline(enabled)
 
 func set_highlight(enabled: bool) -> void:
-	if outline_material:
-		outline_material.set_shader_parameter("highlight", enabled)
+	_outline_vis.set_highlight(enabled)
+
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)

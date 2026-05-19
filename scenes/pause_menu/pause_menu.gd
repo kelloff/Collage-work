@@ -4,6 +4,7 @@ const SETTINGS_SCENE := preload("res://scenes/settings_menu/settings_menu.tscn")
 const MAIN_MENU_SCENE := "res://scenes/main_menu/main_menu.tscn" # проверь путь
 
 @onready var pause_panel: Control = get_node_or_null("PausePanel")
+@onready var menu_panel: Panel = get_node_or_null("PausePanel/MenuPanel") as Panel
 @onready var settings_menu: Control = get_node_or_null("PausePanel/SettingsMenu")
 
 @onready var resume_btn: Button = get_node_or_null("PausePanel/MenuPanel/VBoxContainer/ResumeButton")
@@ -12,8 +13,10 @@ const MAIN_MENU_SCENE := "res://scenes/main_menu/main_menu.tscn" # провер�
 @onready var exit_btn: Button = get_node_or_null("PausePanel/MenuPanel/VBoxContainer/ExitButton")
 
 var _open: bool = false
+var _pause_pushed_world_block: bool = false
 
 func _ready() -> void:
+	layer = 100
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	set_process_unhandled_input(true)
 	visible = false
@@ -55,12 +58,19 @@ func _ready() -> void:
 	if settings_menu and settings_menu.has_signal("back_pressed"):
 		if not settings_menu.back_pressed.is_connected(_on_settings_back):
 			settings_menu.back_pressed.connect(_on_settings_back)
+	if settings_menu:
+		settings_menu.visible = false
+		settings_menu.z_index = 20
+		settings_menu.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 
 
 func _style_ui() -> void:
+	var menu_panel := get_node_or_null("PausePanel/MenuPanel") as Panel
+	if menu_panel:
+		GameUiTheme.apply_horror_panel(menu_panel)
 	var title: Label = get_node_or_null("PausePanel/MenuPanel/VBoxContainer/Title") as Label
 	if title:
-		title.label_settings = GameUiTheme.make_subtitle_settings(30, GameUiTheme.C_TITLE)
+		title.label_settings = GameUiTheme.make_horror_title_settings(30)
 
 
 func _hide_all_panels() -> void:
@@ -76,8 +86,15 @@ func show_pause() -> void:
 	_hide_all_panels()
 	if pause_panel:
 		pause_panel.visible = true
+	if menu_panel:
+		menu_panel.visible = true
 
-	get_tree().paused = true
+	_freeze_player_for_pause(true)
+
+	if GameState.has_method("push_gameplay_freeze"):
+		GameState.push_gameplay_freeze()
+	else:
+		get_tree().paused = true
 
 
 func hide_pause() -> void:
@@ -85,7 +102,27 @@ func hide_pause() -> void:
 	_hide_all_panels()
 	visible = false
 
-	get_tree().paused = false
+	_freeze_player_for_pause(false)
+
+	if GameState.has_method("pop_gameplay_freeze"):
+		GameState.pop_gameplay_freeze()
+	else:
+		get_tree().paused = false
+
+
+func _freeze_player_for_pause(frozen: bool) -> void:
+	if frozen:
+		if not _pause_pushed_world_block and GameState.has_method("push_world_input_block"):
+			GameState.push_world_input_block()
+			_pause_pushed_world_block = true
+	else:
+		if _pause_pushed_world_block and GameState.has_method("pop_world_input_block"):
+			GameState.pop_world_input_block()
+			_pause_pushed_world_block = false
+	var players := get_tree().get_nodes_in_group("player")
+	for p in players:
+		if p.has_method("set_control_enabled"):
+			p.set_control_enabled(not frozen)
 
 
 func toggle_menu() -> void:
@@ -103,19 +140,19 @@ func _on_resume_pressed() -> void:
 
 
 func _on_settings_pressed() -> void:
-	if pause_panel:
-		pause_panel.visible = false
-
+	if menu_panel:
+		menu_panel.visible = false
 	if settings_menu:
 		settings_menu.visible = true
-		settings_menu.process_mode = Node.PROCESS_MODE_WHEN_PAUSED  # важно для UI на паузе
+		if settings_menu.has_method("refresh_pause_ui"):
+			settings_menu.refresh_pause_ui()
 
 
 func _on_settings_back() -> void:
 	if settings_menu:
 		settings_menu.visible = false
-	if pause_panel:
-		pause_panel.visible = true
+	if menu_panel:
+		menu_panel.visible = true
 
 
 func _on_save_pressed() -> void:
@@ -127,14 +164,18 @@ func _on_save_pressed() -> void:
 
 
 func _on_exit_pressed() -> void:
-	# снимаем паузу ОБЯЗАТЕЛЬНО
-	get_tree().paused = false
+	_freeze_player_for_pause(false)
+	if GameState.has_method("clear_gameplay_freeze"):
+		GameState.clear_gameplay_freeze()
+	else:
+		get_tree().paused = false
 
-	# закрываем пауз-меню
+	if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("prepare_exit_to_main_menu"):
+		TutorialManager.prepare_exit_to_main_menu()
+
 	_open = false
 	visible = false
 
-	# переходим в главное меню
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
 
 func _unhandled_input(event: InputEvent) -> void:

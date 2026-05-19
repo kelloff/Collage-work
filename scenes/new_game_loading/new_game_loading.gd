@@ -2,12 +2,34 @@ extends Control
 ## Экран загрузки: HTTP /generate_tasks_multi (или 4× /generate_tasks) → wipe БД → вставка задач.
 
 @onready var _status: Label = $BottomRight/VBox/Status
+@onready var _tip_prefix: Label = $BottomTips/VBox/TipPrefix
+@onready var _tip_label: Label = $BottomTips/VBox/TipLabel
+@onready var _game_title: Label = $CenterTitle/GameTitle
+@onready var _subtitle: Label = $CenterTitle/Subtitle
 @onready var _error: Label = $ErrorLayer/CenterContainer/VBox/ErrorLabel
 @onready var _btn_menu: Button = $ErrorLayer/CenterContainer/VBox/BtnToMenu
 
 var _http: HTTPRequest
-const SERVER_TASK_TIMEOUT_S: float = 35.0
+var _tip_timer: Timer
+var _tip_index: int = 0
+var _tip_tween: Tween
+
+const SERVER_TASK_TIMEOUT_S: float = 60.0
 const LOCAL_TASKS_PATH := "res://db/task_data.gd"
+const TIP_ROTATE_SEC: float = 5.5
+
+const LOADING_TIPS: PackedStringArray = [
+	"Первый запуск может занять несколько минут — сервер генерирует уникальные задания.",
+	"В терминале пиши код на Python: print(), переменные, if и циклы пригодятся сразу.",
+	"Если застрял — открой журнал (J): там могут быть подсказки по сюжету.",
+	"Маньяк слышит шум: беги тихо, когда нужно спрятаться.",
+	"Баффы в коридорах дают скорость, невидимость или лечение — не проходи мимо.",
+	"На сложных уровнях проверка кода строже: сначала логика, потом вывод.",
+	"Сохраняйся у компьютера, когда нашёл безопасное место.",
+	"Инвентарь ограничен — бери только то, что реально пригодится.",
+	"Рычаги и двери часто связаны: ищи, что открылось после действия.",
+	"Совет по коду: сначала набросай решение на бумаге, потом переноси в терминал.",
+]
 
 
 func _ready() -> void:
@@ -15,18 +37,93 @@ func _ready() -> void:
 	_btn_menu.visible = false
 	_btn_menu.pressed.connect(_on_to_menu)
 	_style_ui()
+	_start_loading_tips()
 	_run_flow.call_deferred()
 
+
+func _exit_tree() -> void:
+	if _tip_timer and is_instance_valid(_tip_timer):
+		_tip_timer.stop()
+	if _tip_tween and _tip_tween.is_valid():
+		_tip_tween.kill()
+
+
 func _style_ui() -> void:
+	if _game_title:
+		_game_title.label_settings = GameUiTheme.make_title_settings(34)
+	if _subtitle:
+		_subtitle.label_settings = _make_loading_body_settings(17, GameUiTheme.C_TEXT_DIM)
+	if _tip_prefix:
+		_tip_prefix.label_settings = GameUiTheme.make_subtitle_settings(15, GameUiTheme.C_TITLE)
+	if _tip_label:
+		_tip_label.label_settings = _make_loading_body_settings(16, GameUiTheme.C_TEXT)
 	if _status:
-		_status.add_theme_color_override("font_color", GameUiTheme.C_TEXT)
+		_status.label_settings = _make_loading_body_settings(15, GameUiTheme.C_TEXT)
 	if _error:
 		_error.add_theme_color_override("font_color", GameUiTheme.C_DANGER)
+		_apply_loading_font(_error, 17)
 	if _btn_menu:
 		_btn_menu.custom_minimum_size = Vector2(220, 48)
 
 
+func _make_loading_body_settings(size: int, color: Color) -> LabelSettings:
+	## Читаемый текст без жирной обводки (советы, подзаголовок).
+	var ls := LabelSettings.new()
+	if ResourceLoader.exists(GameUiTheme.FONT_BODY):
+		var ff: FontFile = load(GameUiTheme.FONT_BODY)
+		ff.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
+		ff.hinting = TextServer.HINTING_LIGHT
+		ls.font = ff
+	ls.font_size = size
+	ls.font_color = color
+	ls.shadow_size = 4
+	ls.shadow_color = Color(0.0, 0.0, 0.0, 0.65)
+	ls.shadow_offset = Vector2(1, 2)
+	return ls
+
+
+func _apply_loading_font(label: Label, size: int) -> void:
+	if label == null:
+		return
+	if ResourceLoader.exists(GameUiTheme.FONT_BODY):
+		label.add_theme_font_override("font", load(GameUiTheme.FONT_BODY))
+	label.add_theme_font_size_override("font_size", size)
+
+
+func _start_loading_tips() -> void:
+	if LOADING_TIPS.is_empty() or _tip_label == null:
+		return
+	_tip_index = randi() % LOADING_TIPS.size()
+	_tip_label.text = LOADING_TIPS[_tip_index]
+	_tip_label.modulate.a = 1.0
+	_tip_timer = Timer.new()
+	_tip_timer.wait_time = TIP_ROTATE_SEC
+	_tip_timer.autostart = true
+	_tip_timer.timeout.connect(_rotate_loading_tip)
+	add_child(_tip_timer)
+
+
+func _rotate_loading_tip() -> void:
+	if _tip_label == null or LOADING_TIPS.is_empty():
+		return
+	if _tip_tween and _tip_tween.is_valid():
+		_tip_tween.kill()
+	_tip_tween = create_tween()
+	_tip_tween.tween_property(_tip_label, "modulate:a", 0.0, 0.35)
+	_tip_tween.tween_callback(_apply_next_tip)
+	_tip_tween.tween_property(_tip_label, "modulate:a", 1.0, 0.45)
+
+
+func _apply_next_tip() -> void:
+	_tip_index = (_tip_index + 1) % LOADING_TIPS.size()
+	if randf() < 0.25:
+		_tip_index = randi() % LOADING_TIPS.size()
+	_tip_label.text = LOADING_TIPS[_tip_index]
+
+
 func _on_to_menu() -> void:
+	if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("prepare_exit_to_main_menu"):
+		TutorialManager.prepare_exit_to_main_menu()
 	get_tree().change_scene_to_file("res://scenes/main_menu/main_menu.tscn")
 
 
@@ -64,16 +161,22 @@ func _load_local_tasks_into_db() -> bool:
 	return false
 
 
-func _parse_tasks_response(text: String, err_ctx: String) -> Array:
+func _parse_tasks_response(text: String, err_ctx: String) -> Dictionary:
+	## { "tasks": Array, "source": String }
+	var empty := {"tasks": [], "source": ""}
 	var parsed: Variant = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_error("new_game_loading: %s — не JSON" % err_ctx)
-		return []
+		return empty
+	var source: String = str(parsed.get("source", ""))
+	if "fallback" in source.to_lower():
+		push_warning("new_game_loading: %s — отклонён source=%s (шаблоны)" % [err_ctx, source])
+		return empty
 	var tasks_raw: Variant = parsed.get("tasks", [])
 	if typeof(tasks_raw) != TYPE_ARRAY:
 		push_error("new_game_loading: %s — нет tasks[]" % err_ctx)
-		return []
-	return tasks_raw
+		return empty
+	return {"tasks": tasks_raw, "source": source}
 
 
 func _run_flow() -> void:
@@ -84,20 +187,32 @@ func _run_flow() -> void:
 	await get_tree().process_frame
 
 	var tasks_arr: Array = []
+	var task_source: String = ""
 	var url_multi := BackendUrls.url("/generate_tasks_multi")
 	var payload_multi := JSON.stringify({
 		"levels": levels,
 		"count_per_level": per_level,
 	})
 
-	var r: Dictionary = await _http_post_json(url_multi, payload_multi)
-	if r.get("ok", false) and int(r.get("code", 0)) == 200:
-		tasks_arr = _parse_tasks_response(str(r.get("text", "")), "/generate_tasks_multi")
-	elif int(r.get("code", 0)) == 404:
-		tasks_arr = []
-	else:
-		push_warning("new_game_loading: /generate_tasks_multi failed. fallback to per-level. r=%s" % str(r))
-		tasks_arr = []
+	for attempt in range(2):
+		if attempt > 0:
+			_set_status("Повтор запроса заданий…")
+			await get_tree().process_frame
+
+		var r: Dictionary = await _http_post_json(url_multi, payload_multi)
+		if r.get("ok", false) and int(r.get("code", 0)) == 200:
+			var parsed: Dictionary = _parse_tasks_response(str(r.get("text", "")), "/generate_tasks_multi")
+			tasks_arr = parsed.get("tasks", [])
+			task_source = str(parsed.get("source", ""))
+			if not tasks_arr.is_empty():
+				print("new_game_loading: tasks from server source=", task_source, " count=", tasks_arr.size())
+				break
+		elif int(r.get("code", 0)) == 503:
+			push_warning("new_game_loading: server 503 (pool/LLM busy), attempt=%d" % attempt)
+		elif int(r.get("code", 0)) == 404:
+			break
+		else:
+			push_warning("new_game_loading: /generate_tasks_multi failed. r=%s" % str(r))
 
 	if tasks_arr.is_empty():
 		_set_status("Батч недоступен, запрос по уровням…")
@@ -114,11 +229,17 @@ func _run_flow() -> void:
 				push_warning("new_game_loading: level=%s request failed -> local fallback" % str(lvl))
 				tasks_arr.clear()
 				break
-			if int(rr.get("code", 0)) != 200:
-				push_warning("new_game_loading: level=%s non-200=%d -> local fallback" % [str(lvl), int(rr.get("code", 0))])
+			var code := int(rr.get("code", 0))
+			if code == 503:
+				push_warning("new_game_loading: level=%s 503 -> local fallback" % str(lvl))
 				tasks_arr.clear()
 				break
-			var batch: Array = _parse_tasks_response(str(rr.get("text", "")), "/generate_tasks")
+			if code != 200:
+				push_warning("new_game_loading: level=%s non-200=%d -> local fallback" % [str(lvl), code])
+				tasks_arr.clear()
+				break
+			var batch_parsed: Dictionary = _parse_tasks_response(str(rr.get("text", "")), "/generate_tasks")
+			var batch: Array = batch_parsed.get("tasks", [])
 			if batch.is_empty():
 				push_warning("new_game_loading: level=%s returned 0 tasks -> local fallback" % str(lvl))
 				tasks_arr.clear()

@@ -288,6 +288,7 @@ autowrap_mode = 2
 position = Vector2(751, 4450)
 
 [node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=1128019219]
+visible = false
 color = Color(0.039215688, 0.039215688, 0.039215688, 1)
 
 [node name="Vaza1" parent="." unique_id=1032219073 instance=ExtResource("17_leimv")]
@@ -341,117 +342,73 @@ position = Vector2(4468, 2836)
 [node name="Chest6" parent="." unique_id=589060738 instance=ExtResource("15_leimv")]
 position = Vector2(2235, 2600)
 drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
+extra_drop_chance = 0.071
 
 [node name="Chest7" parent="." unique_id=155880828 instance=ExtResource("15_leimv")]
 position = Vector2(4016, 3016)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest8" parent="." unique_id=1090838917 instance=ExtResource("12_ll8hu")]
 position = Vector2(2277, 2602)
-drop_chance = 1.0
+drop_chance = 0.25
+extra_drop_chance = 0.08
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 tutorial_step = "chest_1"
 
-[node name="Chest30" parent="." unique_id=1262787083 instance=ExtResource("12_ll8hu")]
-position = Vector2(2277, 2602)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("13_rhfjy")
-invis_buff_scene = ExtResource("14_b6wb6")
-
 [node name="Chest26" parent="." unique_id=1251139099 instance=ExtResource("12_ll8hu")]
 position = Vector2(2331, 2601)
-drop_chance = 1.0
+drop_chance = 0.25
+extra_drop_chance = 0.216
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 tutorial_step = "chest_2"
 
-[node name="Chest28" parent="." unique_id=606312808 instance=ExtResource("12_ll8hu")]
-position = Vector2(2331, 2601)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("13_rhfjy")
-invis_buff_scene = ExtResource("14_b6wb6")
-
 [node name="Chest29" parent="." unique_id=1040101582 instance=ExtResource("12_ll8hu")]
 position = Vector2(2109, 3529)
-drop_chance = 0.25
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 
 [node name="Chest15" parent="." unique_id=472170427 instance=ExtResource("15_leimv")]
 position = Vector2(4351, 3211)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest20" parent="." unique_id=150089537 instance=ExtResource("15_leimv")]
 position = Vector2(2991, 3830)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest21" parent="." unique_id=1307566996 instance=ExtResource("15_leimv")]
 position = Vector2(3188, 3624)
 drop_chance = 0.0
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest25" parent="." unique_id=1783588032 instance=ExtResource("15_leimv")]
 position = Vector2(2844, 4012)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest22" parent="." unique_id=417359757 instance=ExtResource("15_leimv")]
 position = Vector2(4029, 3081)
 drop_chance = 0.0
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest23" parent="." unique_id=1749227659 instance=ExtResource("15_leimv")]
 position = Vector2(3866, 3209)
 drop_chance = 0.0
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest24" parent="." unique_id=882822680 instance=ExtResource("15_leimv")]
 position = Vector2(3640, 3274)
 drop_chance = 0.0
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest19" parent="." unique_id=559821354 instance=ExtResource("15_leimv")]
 position = Vector2(3835, 3882)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest27" parent="." unique_id=802053790 instance=ExtResource("15_leimv")]
 position = Vector2(3765, 3882)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest18" parent="." unique_id=426702680 instance=ExtResource("15_leimv")]
 position = Vector2(5454, 3619)
-drop_chance = 0.25
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
-
-[node name="Chest16" parent="." unique_id=218122677 instance=ExtResource("12_ll8hu")]
-position = Vector2(4473, 3211)
-sprite_path = NodePath("")
-drop_chance = 0.25
-speed_buff_scene = ExtResource("13_rhfjy")
-invis_buff_scene = ExtResource("14_b6wb6")
 
 [node name="Chest17" parent="." unique_id=726603467 instance=ExtResource("12_ll8hu")]
 position = Vector2(4422, 3210)
-drop_chance = 0.25
+speed_buff_scene = ExtResource("13_rhfjy")
+invis_buff_scene = ExtResource("14_b6wb6")
+
+[node name="Chest28" parent="." unique_id=1262622825 instance=ExtResource("12_ll8hu")]
+position = Vector2(4486, 3210)
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 
@@ -459,37 +416,30 @@ invis_buff_scene = ExtResource("14_b6wb6")
 position = Vector2(3925, 3268)
 sprite_path = NodePath("")
 drop_chance = 0.0
-speed_buff_scene = ExtResource("14_b6wb6")
-invis_buff_scene = ExtResource("13_rhfjy")
 
 [node name="Chest11" parent="." unique_id=2052817204 instance=ExtResource("12_ll8hu")]
 position = Vector2(4534, 2601)
-drop_chance = 0.25
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 
 [node name="Chest12" parent="." unique_id=1620920094 instance=ExtResource("12_ll8hu")]
 position = Vector2(4603, 2648)
-drop_chance = 0.25
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 
 [node name="Chest31" parent="." unique_id=1673467215 instance=ExtResource("12_ll8hu")]
 position = Vector2(4598, 2708)
-drop_chance = 0.25
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 
 [node name="Chest14" parent="." unique_id=1559466312 instance=ExtResource("12_ll8hu")]
 position = Vector2(4545, 3011)
 sprite_path = NodePath("")
-drop_chance = 0.25
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 
 [node name="Chest13" parent="." unique_id=1905796331 instance=ExtResource("12_ll8hu")]
 position = Vector2(4595, 2783)
-drop_chance = 0.25
 speed_buff_scene = ExtResource("13_rhfjy")
 invis_buff_scene = ExtResource("14_b6wb6")
 
@@ -593,12 +543,12 @@ bus = &"Music"
 [node name="Inventory" parent="." unique_id=1589718433 groups=["inventory"] instance=ExtResource("18_leimv")]
 
 [node name="player" parent="." unique_id=2121775425 groups=["player"] instance=ExtResource("4_miadu")]
-position = Vector2(2298, 2689)
+position = Vector2(2350.0002, 2680)
 scale = Vector2(0.994, 1)
 max_hp = 3
 
 [node name="Maniac" parent="." unique_id=1295065501 instance=ExtResource("18_e7axt")]
-position = Vector2(2793, 3225)
+position = Vector2(3087, 3004)
 detection_radius = 130.0
 attack_range = 50.0
 
@@ -862,37 +812,35 @@ linked_doors = [4]
 
 [node name="comp4" parent="." unique_id=1899550197 instance=ExtResource("19_e7axt")]
 position = Vector2(3324, 3471)
-level = 2
 computer_id = 66
 linked_doors = [101]
 
 [node name="comp8" parent="." unique_id=112416289 instance=ExtResource("19_e7axt")]
 position = Vector2(2763, 3866)
-level = 3
+level = 2
 computer_id = 999931
 linked_doors = [99993]
 
 [node name="comp5" parent="." unique_id=831867183 instance=ExtResource("19_e7axt")]
 position = Vector2(4090, 3652)
-level = 2
+level = 1
 computer_id = 67
 linked_doors = [104]
 
 [node name="comp6" parent="." unique_id=2022912282 instance=ExtResource("19_e7axt")]
 position = Vector2(4215, 3655)
-level = 2
+level = 1
 computer_id = 68
 linked_doors = [103]
 
 [node name="comp7" parent="." unique_id=1936985844 instance=ExtResource("19_e7axt")]
 position = Vector2(4860, 3461)
-level = 3
+level = 2
 computer_id = 8428
 linked_doors = [107]
 
 [node name="comp3" parent="." unique_id=1774865572 instance=ExtResource("19_e7axt")]
 position = Vector2(3381, 2609)
-level = 2
 computer_id = 3
 linked_doors = [6]
 

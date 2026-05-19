@@ -1,12 +1,81 @@
 from typing import Callable, List, Optional, Tuple
 import json
+import os
 import re
+from datetime import date, datetime
 
 from openai import OpenAI
 
 import task_pool
 from models import TaskSpec
 from ollama_client import ollama_chat
+
+
+def _reference_date_prompt_block() -> str:
+    today = date.today()
+    now = datetime.now()
+    return (
+        f"Сегодня на сервере: {today.isoformat()} (год {today.year}).\n"
+        f"Текущие дата и время: {now.isoformat(sep=' ', timespec='seconds')}.\n"
+        "Если задание про «текущую» / «сегодняшнюю» дату — expected_output должен "
+        f"соответствовать этой дате (год {today.year}), не выдумывай 2023 или другой год.\n"
+        "Задания с datetime.now() / import datetime — только для уровня 2+; "
+        "на уровне 0–1 не требуй импорт библиотек.\n"
+    )
+
+
+def _task_mentions_live_date(text: str) -> bool:
+    t = (text or "").lower()
+    keys = (
+        "текущ",
+        "сегодня",
+        "нынешн",
+        "datetime",
+        "дату",
+        "дата",
+        "now()",
+        "сейчас",
+    )
+    return any(k in t for k in keys)
+
+
+def _normalize_task_list(tasks: List[TaskSpec]) -> List[TaskSpec]:
+    return [_normalize_task_dates(t) for t in tasks]
+
+
+def _normalize_task_dates(task: TaskSpec) -> TaskSpec:
+    """Задачи про «текущую дату» — уровень 2+, актуальный expected_output."""
+    desc = task.description.strip()
+    exp = (task.expected_output or "").strip()
+    patterns = (task.required_patterns or "").strip()
+    lv = int(task.level)
+
+    if not _task_mentions_live_date(desc) and not _task_mentions_live_date(exp):
+        return task
+
+    if lv < 2:
+        lv = 2
+        if not patterns:
+            patterns = "datetime"
+
+    if _task_mentions_live_date(desc):
+        now = datetime.now()
+        iso = now.isoformat(sep=" ", timespec="seconds")
+        if not exp or re.search(r"20(1[0-9]|2[0-3])", exp):
+            exp = iso
+        elif str(date.today().year) not in exp:
+            exp = iso
+
+    return TaskSpec(
+        level=lv,
+        category=task.category,
+        description=desc,
+        expected_output=exp,
+        required_patterns=patterns,
+        check_type=task.check_type,
+        required_keywords=task.required_keywords,
+        allow_direct_print=task.allow_direct_print,
+    )
 
 
 def parse_ollama_tasks_json(raw_text: str, level_hint: int = -1) -> List[dict]:
@@ -123,6 +192,34 @@ def fallback_generate_tasks(level: int, count: int) -> List[TaskSpec]:
     return out
 
 
+_FALLBACK_DESCRIPTIONS: Optional[set[str]] = None
+
+
+def _fallback_description_set() -> set[str]:
+    global _FALLBACK_DESCRIPTIONS
+    if _FALLBACK_DESCRIPTIONS is None:
+        found: set[str] = set()
+        for lvl in range(4):
+            for t in fallback_generate_tasks(lvl, 12):
+                found.add(t.description.strip())
+        _FALLBACK_DESCRIPTIONS = found
+    return _FALLBACK_DESCRIPTIONS
+
+
+def is_fallback_task(task: TaskSpec | dict) -> bool:
+    if isinstance(task, TaskSpec):
+        desc = task.description.strip()
+    else:
+        desc = str(task.get("description", "")).strip()
+        if desc.startswith("AI:"):
+            desc = desc[3:].strip()
+    return desc in _fallback_description_set()
+
+
+def strip_fallback_tasks(tasks: List[TaskSpec]) -> List[TaskSpec]:
+    return [t for t in tasks if not is_fallback_task(t)]
+
+
 def generate_tasks_via_ollama(
     level: int,
     count: int,
@@ -135,7 +232,8 @@ def generate_tasks_via_ollama(
 ) -> Tuple[List[TaskSpec], bool]:
     system_msg = (
         "Ты создаёшь учебные задания по Python для новичков.\n"
-        "Верни только валидный JSON-объект формата {\"tasks\":[...]}.\n"
+        + _reference_date_prompt_block()
+        + "Верни только валидный JSON-объект формата {\"tasks\":[...]}.\n"
         "В tasks должно быть ровно N объектов (N задаётся пользователем).\n"
         "Никакого markdown, комментариев, code fences и текста вне JSON.\n"
         "У каждого объекта обязательные поля: "
@@ -195,15 +293,17 @@ def generate_tasks_via_ollama(
                 desc = str(obj.get("description", "")).strip()
                 if not desc or desc in seen_desc:
                     continue
-                task = TaskSpec(
-                    level=level,
-                    category=str(obj.get("category", "easy")),
-                    description=desc,
-                    expected_output=str(obj.get("expected_output", "")),
-                    required_patterns=str(obj.get("required_patterns", "")),
-                    check_type=str(obj.get("check_type", "stdout_exact")),
-                    required_keywords=str(obj.get("required_keywords", "")),
-                    allow_direct_print=int(obj.get("allow_direct_print", 0)),
+                task = _normalize_task_dates(
+                    TaskSpec(
+                        level=level,
+                        category=str(obj.get("category", "easy")),
+                        description=desc,
+                        expected_output=str(obj.get("expected_output", "")),
+                        required_patterns=str(obj.get("required_patterns", "")),
+                        check_type=str(obj.get("check_type", "stdout_exact")),
+                        required_keywords=str(obj.get("required_keywords", "")),
+                        allow_direct_print=int(obj.get("allow_direct_print", 0)),
+                    )
                 )
                 collected.append(task)
                 seen_desc.add(desc)
@@ -213,7 +313,7 @@ def generate_tasks_via_ollama(
                 continue
 
     if not collected:
-        return fallback_generate_tasks(level, count), True
+        return [], True
     return collected, False
 
 
@@ -239,7 +339,9 @@ def llm_generate_tasks(
             timeout_s=ollama_single_timeout,
             extra_options=ollama_extra_options,
         )
-        return tasks, ("fallback" if used_fallback else "ollama")
+        if used_fallback or not tasks:
+            return [], "fallback"
+        return tasks, "ollama"
 
     system_msg = (
         "Ты создаёшь учебные задания по Python для новичков. "
@@ -288,12 +390,14 @@ def llm_generate_tasks(
             timeout_s=ollama_single_timeout,
             extra_options=ollama_extra_options,
         )
-        return tasks, ("fallback" if used_fallback else "ollama")
+        if used_fallback or not tasks:
+            return [], "fallback"
+        return tasks, "ollama"
 
     try:
         data = json.loads(raw)
     except Exception:
-        return fallback_generate_tasks(level, count), "fallback"
+        return [], "fallback"
 
     tasks: List[TaskSpec] = []
     for obj in data:
@@ -312,8 +416,9 @@ def llm_generate_tasks(
             )
         except Exception:
             continue
+    tasks = strip_fallback_tasks(tasks)
     if not tasks:
-        return fallback_generate_tasks(level, count), "fallback"
+        return [], "fallback"
     return tasks, "openai"
 
 
@@ -376,7 +481,8 @@ def generate_all_levels_via_ollama_one_shot(
     lv_str = ", ".join(str(x) for x in levels)
     system_msg = (
         "Ты создаёшь учебные задания по Python для новичков.\n"
-        "Верни только валидный JSON-объект формата {\"tasks\":[...]}.\n"
+        + _reference_date_prompt_block()
+        + "Верни только валидный JSON-объект формата {\"tasks\":[...]}.\n"
         f"В tasks должно быть ровно {total} объектов.\n"
         "Никакого markdown, комментариев, code fences и текста вне JSON.\n"
         "У каждого объекта обязательные поля: "
@@ -438,10 +544,14 @@ def refill_one_batch(
                 continue
             ask = min(max(1, pool_refill_chunk), need)
             batch, _ = llm_generate_tasks_fn(int(lvl), ask)
-            out.extend([t.model_dump() for t in batch])
-        return out
+            out.extend([t.model_dump() for t in strip_fallback_tasks(batch)])
+        return [t for t in out if not is_fallback_task(t)]
 
-    if pool_use_one_shot_refill:
+    # Один уровень за батч (по умолчанию): один HTTP к Ollama ≈ до 5 задач — реже 480s timeout.
+    # Старый режим «все уровни за раз»: TASK_POOL_REFILL_ONE_LEVEL_PER_BATCH=0
+    one_level_per_batch = os.getenv("TASK_POOL_REFILL_ONE_LEVEL_PER_BATCH", "1") != "0"
+
+    if pool_use_one_shot_refill and not one_level_per_batch:
         levels_need: List[int] = []
         max_need = 0
         for lvl in pool_levels:
@@ -451,9 +561,30 @@ def refill_one_batch(
                 max_need = max(max_need, min(need, pool_refill_chunk))
         if levels_need and max_need > 0:
             one, _ = generate_all_levels_via_ollama_one_shot_fn(levels_need, max_need)
-            out.extend([t.model_dump() for t in one])
-            if out:
-                return out
+            out.extend([t.model_dump() for t in strip_fallback_tasks(one)])
+            filtered = [t for t in out if not is_fallback_task(t)]
+            if filtered:
+                return filtered
+
+    if one_level_per_batch:
+        # Строго 0 → 1 → 2 → 3: сначала добиваем уровень 0 до цели, потом следующий.
+        for lvl in pool_levels:
+            lv = int(lvl)
+            need = max(0, pool_target_per_level - task_pool.count_by_level(lv))
+            if need <= 0:
+                continue
+            ask = min(max(1, pool_refill_chunk), need)
+            print(f"task_pool: refill lvl={lv} ask={ask} have={task_pool.count_by_level(lv)}")
+            batch, used_fb = generate_tasks_via_ollama_fn(lv, ask)
+            if used_fb or not batch:
+                print(f"task_pool: refill lvl={lv} empty (fallback or ollama fail)")
+                continue
+            dumped = [t.model_dump() for t in _normalize_task_list(strip_fallback_tasks(batch))]
+            filtered = [t for t in dumped if not is_fallback_task(t)]
+            if filtered:
+                print(f"task_pool: refill lvl={lv} +{len(filtered)}")
+                return filtered
+        return []
 
     for lvl in pool_levels:
         cur = task_pool.count_by_level(lvl)
@@ -461,6 +592,8 @@ def refill_one_batch(
         if need <= 0:
             continue
         ask = min(max(1, pool_refill_chunk), need)
-        batch, _ = generate_tasks_via_ollama_fn(int(lvl), ask)
-        out.extend([t.model_dump() for t in batch])
-    return out
+        batch, used_fb = generate_tasks_via_ollama_fn(int(lvl), ask)
+        if used_fb:
+            continue
+        out.extend([t.model_dump() for t in strip_fallback_tasks(batch)])
+    return [t for t in out if not is_fallback_task(t)]

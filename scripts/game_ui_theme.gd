@@ -9,6 +9,9 @@ const C_TEXT_DIM := Color(0.82, 0.78, 0.86, 1.0)
 const C_TITLE := Color(1.0, 0.88, 0.35, 1.0)
 const C_ACCENT := Color(0.35, 1.0, 0.62, 1.0)
 const C_DANGER := Color(1.0, 0.42, 0.48, 1.0)
+## Как обводка интерактивных объектов (InteractHighlight).
+const C_HORROR_OUTLINE := Color(0.9, 0.32, 0.26, 0.96)
+const C_HORROR_GLOW := Color(0.48, 0.06, 0.09, 0.4)
 
 var theme: Theme
 
@@ -102,6 +105,52 @@ func make_title_settings(size: int = 42) -> LabelSettings:
 	ls.shadow_color = Color(0.0, 0.0, 0.0, 0.55)
 	ls.shadow_offset = Vector2(2, 3)
 	return ls
+
+func make_horror_panel_style(
+	border_width: int = 3,
+	corner_radius: int = 10,
+	bg_alpha: float = 0.92,
+	margin: float = 14.0
+) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0.05, 0.02, 0.04, bg_alpha)
+	s.border_color = C_HORROR_OUTLINE
+	s.set_border_width_all(border_width)
+	s.set_corner_radius_all(corner_radius)
+	s.content_margin_left = margin
+	s.content_margin_top = margin
+	s.content_margin_right = margin
+	s.content_margin_bottom = margin
+	s.shadow_color = C_HORROR_GLOW
+	s.shadow_size = 8
+	s.shadow_offset = Vector2(0, 3)
+	s.anti_aliasing = true
+	return s
+
+
+func apply_horror_panel(node: Control) -> void:
+	if node == null:
+		return
+	var style := make_horror_panel_style()
+	if node is Panel:
+		(node as Panel).add_theme_stylebox_override("panel", style)
+	elif node is PanelContainer:
+		(node as PanelContainer).add_theme_stylebox_override("panel", style)
+
+
+func make_horror_title_settings(size: int = 24) -> LabelSettings:
+	return make_subtitle_settings(size, C_HORROR_OUTLINE)
+
+
+func make_dialog_body_settings(size: int = 17, color: Color = C_TEXT) -> LabelSettings:
+	var ls := LabelSettings.new()
+	ls.font = _load_font(FONT_BODY, size)
+	ls.font_size = size
+	ls.font_color = color
+	ls.outline_size = 2
+	ls.outline_color = Color(0.08, 0.04, 0.06, 0.85)
+	return ls
+
 
 func make_subtitle_settings(size: int = 28, color: Color = C_ACCENT) -> LabelSettings:
 	var ls := LabelSettings.new()

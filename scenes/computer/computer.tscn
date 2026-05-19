@@ -1,17 +1,17 @@
 [gd_scene format=3 uid="uid://cwiw011pkxys1"]
 
 [ext_resource type="Script" uid="uid://d3lc86igkolpw" path="res://scenes/computer/computer.gd" id="1_7kpmg"]
-[ext_resource type="Shader" uid="uid://ch4ltdhfjxbbp" path="res://shaders/Outline.gdshader" id="2_1bm87"]
+[ext_resource type="Shader" uid="uid://ch4ltdhfjxbbp" path="res://shaders/outline.gdshader" id="2_1bm87"]
 [ext_resource type="Texture2D" uid="uid://dte1iv6dkb0ut" path="res://assets/текст.png" id="2_donbk"]
 [ext_resource type="Script" uid="uid://hcwnjbgcdrpq" path="res://scenes/computer/terminal_ui.gd" id="3_donbk"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_donbk"]
 shader = ExtResource("2_1bm87")
 shader_parameter/enabled = false
-shader_parameter/outline_color = Color(1, 1, 1, 1)
+shader_parameter/outline_color = Color(0.9, 0.32, 0.26, 0.96)
 shader_parameter/outline_size = 1.0
 shader_parameter/highlight = false
-shader_parameter/highlight_color = Color(0.5, 0.5, 0.5, 0.5)
+shader_parameter/highlight_color = Color(0.48, 0.06, 0.09, 0.4)
 shader_parameter/alpha_cutoff = 0.5
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_1bm87"]

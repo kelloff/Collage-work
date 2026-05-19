@@ -9,10 +9,9 @@ class_name LevelManager
 @export var wait_frames: int = 2
 
 func _unhandled_input(event: InputEvent) -> void:
-	if TutorialManager.is_popup_open():
-		return
-
 	var pause_open: bool = pause_menu != null and pause_menu.is_open()
+	if TutorialManager.is_popup_open() and not event.is_action_pressed("pause_menu"):
+		return
 	var journal_open: bool = journal != null and journal.is_open()
 
 	if event.is_action_pressed("pause_menu"):
@@ -30,9 +29,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 func _ready() -> void:
-	RunStats.start_level()
+	set_process_mode(Node.PROCESS_MODE_ALWAYS)
+	set_process_unhandled_input(true)
+	RunStats.start_level(1)
 	_apply_loop_on_music_player_if_present()
 	call_deferred("_init_links")
+	call_deferred("_register_run_stats_quota")
 	call_deferred("_start_tutorial")
 
 	# Попробуем вызвать загрузку через SaveManager (поддерживаем старые/новые имена)
@@ -44,6 +46,10 @@ func _ready() -> void:
 	else:
 		if verbose:
 			print("LevelManager: Save singleton not found or has no load_game()")
+
+func _register_run_stats_quota() -> void:
+	RunStats.register_level_computers_from_tree(get_tree())
+
 
 # --- Поиск singleton SaveManager (поддерживает SaveManager и SaveMeneger) ---
 func _find_save_singleton() -> Object:
@@ -162,11 +168,11 @@ func _apply_loop_on_music_player_if_present() -> void:
 		return
 	var st: AudioStream = p.stream
 	if st is AudioStreamOggVorbis:
-		(st as AudioStreamOggVorbis).loop = true
+		st.loop = true
 	elif st is AudioStreamWAV:
-		(st as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
+		st.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	elif ClassDB.class_exists("AudioStreamMP3") and st is AudioStreamMP3:
-		(st as AudioStreamMP3).loop = true
+		st.loop = true
 
 # --- Вспомогательная функция: привязать компьютеры и двери по инспекторным полям ---
 func _auto_link_computers_and_doors(db: Node) -> void:

@@ -12,10 +12,14 @@ var _cause: int = DeathCause.OTHER
 func start_death_flow(level_scene_path: String, cause: int) -> void:
 	_last_level_scene_path = level_scene_path
 	_cause = cause
+	RunStats.record_death()
 
 	# Важно: если смерть наступила внутри терминала/другого world-UI,
 	# закрываем такие окна ДО паузы, иначе death-экран может оказаться "сзади".
 	_close_world_overlays_before_death()
+	_hide_level_hud()
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("clear_gameplay_freeze"):
+		GameState.clear_gameplay_freeze()
 	get_tree().paused = true
 
 	# если вдруг забыли стартануть уровень — подстрахуемся
@@ -47,6 +51,14 @@ func _close_world_overlays_before_death() -> void:
 		elif n is CanvasItem:
 			(n as CanvasItem).hide()
 
+func _hide_level_hud() -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	var hud := scene.get_node_or_null("HUD")
+	if hud is CanvasItem:
+		(hud as CanvasItem).hide()
+
 func _show_screamer_then_stats() -> void:
 	var screamer: CanvasLayer = screamer_scene.instantiate() as CanvasLayer
 	get_tree().root.add_child(screamer)
@@ -58,19 +70,18 @@ func _show_screamer_then_stats() -> void:
 	)
 
 func _show_stats() -> void:
-	var ui: Control = stats_scene.instantiate() as Control
+	var ui: CanvasLayer = stats_scene.instantiate() as CanvasLayer
 	get_tree().root.add_child(ui)
 	ui.process_mode = Node.PROCESS_MODE_ALWAYS
 
-	var time_txt: String = RunStats.get_elapsed_text()
-	var tasks_done: int = RunStats.get_completed_tasks()
-	print("ELAPSED=", RunStats.get_elapsed_seconds())
-	var stats_text: String = "Время: %s\nЗаданий выполнено: %d" % [time_txt, tasks_done]
+	var stats_text: String = RunStats.build_report_text(false)
 
 	if ui.has_method("set_stats_text"):
 		ui.call("set_stats_text", stats_text)
 
 	ui.retry_pressed.connect(func():
+		if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("skip_for_death_retry"):
+			TutorialManager.skip_for_death_retry()
 		if typeof(Savemeneger) != TYPE_NIL and Savemeneger.has_method("reset_run_after_death"):
 			Savemeneger.reset_run_after_death()
 		ui.queue_free()
@@ -79,6 +90,8 @@ func _show_stats() -> void:
 	)
 
 	ui.menu_pressed.connect(func():
+		if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("prepare_exit_to_main_menu"):
+			TutorialManager.prepare_exit_to_main_menu()
 		if typeof(Savemeneger) != TYPE_NIL and Savemeneger.has_method("reset_run_after_death"):
 			Savemeneger.reset_run_after_death()
 		ui.queue_free()

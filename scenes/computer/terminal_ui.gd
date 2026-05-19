@@ -14,12 +14,15 @@ const YES_SFX_PATH := "res://audio/sounds/yes.mp3"
 const NO_SFX_PATH := "res://audio/sounds/no.mp3"
 
 var current_task: Dictionary = {}
+## Уровень компьютера на карте (для БД), не путать со сложностью задания.
 var current_level: int = 1
 var _running := false
+var _local_check_pending: bool = false
 var _use_ai_checker: bool = true
 var _yes_sfx: AudioStream = null
 var _no_sfx: AudioStream = null
 var _host_parent: Node = null
+var _gameplay_frozen_by_terminal: bool = false
 
 const TERM_GREEN := Color(0.45, 1.0, 0.58, 1.0)
 const TERM_TEXT := Color(0.95, 0.98, 0.95, 1.0)
@@ -28,6 +31,7 @@ func _ready() -> void:
 	layer = 100
 	if panel_root:
 		panel_root.theme = Theme.new()
+		GameUiTheme.apply_horror_panel(panel_root)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if run_button:
 		run_button.pressed.connect(_on_run_button_pressed)
@@ -54,6 +58,9 @@ func open_with_task(level: int, task: Dictionary) -> void:
 	current_task = task
 	current_level = level
 	_mount_to_root()
+	if not _gameplay_frozen_by_terminal and GameState.has_method("push_gameplay_freeze"):
+		GameState.push_gameplay_freeze()
+		_gameplay_frozen_by_terminal = true
 	show()
 
 	if output_label:
@@ -92,6 +99,9 @@ func open_with_task(level: int, task: Dictionary) -> void:
 		hint_label.text = "Подсказка: print(), переменные, if/for, функции. Файлы/удаление запрещены."
 
 func close() -> void:
+	if _gameplay_frozen_by_terminal and GameState.has_method("pop_gameplay_freeze"):
+		GameState.pop_gameplay_freeze()
+		_gameplay_frozen_by_terminal = false
 	hide()
 	_restore_parent()
 	current_task = {}
@@ -145,36 +155,161 @@ func _on_run_button_pressed() -> void:
 		_set_output("❌ AI-проверка выключена и CodeRunner не настроен")
 		_play_result_sfx(false)
 
+func _task_difficulty() -> int:
+	## Сложность задания 0–3 из БД (для /check_task). Не computer.level на сцене.
+	if current_task.is_empty():
+		return 0
+	return int(current_task.get("level", 0))
+
+
 func _run_with_ai_checker(code_text: String) -> void:
-	_set_output("🤖 Проверка решения ИИ...")
+	var diff := _task_difficulty()
+	if diff < 2:
+		_set_output("Проверка решения…")
+		_run_local_check_async(code_text)
+	else:
+		_set_output("Проверка решения ИИ…")
+		_run_remote_check_async(code_text)
+
+
+func _run_local_check_async(code_text: String) -> void:
 	if run_button:
 		run_button.disabled = true
 	_running = true
+	RunStats.begin_task_attempt()
 
-	_run_with_ai_checker_async(code_text)
+	if not CodeRunner.has_signal("run_finished"):
+		_finish_check(_fail_feedback("Локальный запуск кода недоступен"))
+		return
 
-func _run_with_ai_checker_async(code_text: String) -> void:
-	var result: Dictionary = await AiCheckerSingleton.check_task_async(current_task, code_text, current_level)
+	if _local_check_pending:
+		_finish_check(_fail_feedback("Подождите, идёт проверка…"))
+		return
 
-	_running = false
+	_local_check_pending = true
+	if not CodeRunner.run_finished.is_connected(_on_local_run_finished):
+		CodeRunner.run_finished.connect(_on_local_run_finished)
+	CodeRunner.run_code_async(code_text, "terminal_check.py")
+
+
+func _on_local_run_finished(result: Dictionary) -> void:
+	if not _local_check_pending:
+		return
+	_local_check_pending = false
+	_finish_check(_evaluate_local_check(result))
+
+
+func _evaluate_local_check(run_result: Dictionary) -> Dictionary:
+	var stdout := str(run_result.get("stdout", ""))
+	var stderr := str(run_result.get("stderr", ""))
+	if bool(run_result.get("timed_out", false)):
+		return _fail_feedback("Превышено время выполнения кода.")
+	if int(run_result.get("exit_code", -1)) != 0 and stderr.strip_edges() != "":
+		var err_line := stderr.strip_edges().split("\n")
+		return _fail_feedback("Ошибка выполнения: %s" % err_line[-1])
+
+	var expected := str(current_task.get("expected_output", "")).strip_edges()
+	var patterns_raw := str(current_task.get("required_patterns", "")).strip_edges()
+	var allow_direct := int(current_task.get("allow_direct_print", 0))
+	var code_text: String = code_edit.text if code_edit != null else ""
+
+	if expected != "":
+		if _normalize_out(stdout) != _normalize_out(expected):
+			return _fail_feedback(
+				"Вывод не совпадает с ожидаемым.\nОжидалось: %s\nПолучено: %s"
+				% [expected, stdout.strip_edges()]
+			)
+		if allow_direct == 0 and _looks_like_direct_print(code_text, expected):
+			var has_logic := false
+			for kw in ["=", "if", "for", "while"]:
+				if kw in code_text:
+					has_logic = true
+					break
+			if not has_logic:
+				return _fail_feedback(
+					"Нельзя просто печатать готовый ответ. Используй переменные, условия или циклы."
+				)
+	if patterns_raw != "":
+		var missing: PackedStringArray = []
+		for p in patterns_raw.split(";"):
+			p = p.strip_edges()
+			if p != "" and p not in code_text:
+				missing.append(p)
+		if not missing.is_empty():
+			return _fail_feedback(
+				"В коде не хватает обязательных фрагментов:\n- " + "\n- ".join(missing)
+			)
+
+	return {
+		"success": true,
+		"feedback": "Решение корректное.",
+		"stdout": stdout,
+		"stderr": stderr,
+	}
+
+
+func _normalize_out(text: String) -> String:
+	var t := text.replace("\r", "").strip_edges()
+	var lines: PackedStringArray = []
+	for ln in t.split("\n"):
+		lines.append(ln.strip_edges())
+	return "\n".join(lines).strip_edges()
+
+
+func _looks_like_direct_print(user_code: String, expected_output: String) -> bool:
+	if "print" not in user_code:
+		return false
+	var exp := expected_output.strip_edges()
+	if exp == "":
+		return false
+	if ("\"%s\"" % exp) in user_code or ("'%s'" % exp) in user_code:
+		return true
+	if exp.is_valid_int() and ("print(%s)" % exp) in user_code.replace(" ", ""):
+		return true
+	return false
+
+
+func _fail_feedback(msg: String) -> Dictionary:
+	return {"success": false, "feedback": msg, "stdout": "", "stderr": ""}
+
+
+func _run_remote_check_async(code_text: String) -> void:
 	if run_button:
-		run_button.disabled = false
+		run_button.disabled = true
+	_running = true
+	RunStats.begin_task_attempt()
+	var result: Dictionary = await AiCheckerSingleton.check_task_async(
+		current_task, code_text, _task_difficulty()
+	)
+	_finish_check(result)
+
+
+func _finish_check(result: Dictionary) -> void:
 
 	if not output_label:
+		_running = false
+		if run_button:
+			run_button.disabled = false
 		return
 
 	var success: bool = bool(result.get("success", false))
 	var feedback: String = str(result.get("feedback", ""))
 
 	if success:
-		_set_output("🎉 Задание выполнено!\n" + feedback)
+		RunStats.record_task_success()
+		_set_output("Задание выполнено!\n" + feedback)
 		_play_result_sfx(true)
 		var computer = _host_parent if _host_parent != null else get_parent()
 		if computer and computer.has_method("unassign_task_if_completed"):
 			computer.unassign_task_if_completed()
 	else:
+		RunStats.record_task_failure()
 		_set_output(feedback)
 		_play_result_sfx(false)
+
+	_running = false
+	if run_button:
+		run_button.disabled = false
 
 func _play_result_sfx(success: bool) -> void:
 	if sfx_player == null:

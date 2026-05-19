@@ -39,9 +39,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -190.0
-offset_top = -175.0
+offset_top = -195.0
 offset_right = 190.0
-offset_bottom = 175.0
+offset_bottom = 195.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -63,23 +63,25 @@ layout_mode = 2
 text = "НАСТРОЙКИ"
 horizontal_alignment = 1
 
-[node name="Label2" type="Label" parent="MenuPanel/VBoxContainer" unique_id=968051104]
+[node name="MasterVolumeLabel" type="Label" parent="MenuPanel/VBoxContainer" unique_id=968051104]
 layout_mode = 2
-text = "Громкость музыки"
+text = "Общая громкость"
 
-[node name="HSlider" type="HSlider" parent="MenuPanel/VBoxContainer" unique_id=903935177]
+[node name="MasterVolumeSlider" type="HSlider" parent="MenuPanel/VBoxContainer" unique_id=903935177]
 custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 min_value = -40.0
 max_value = 0.0
 
-[node name="Label3" type="Label" parent="MenuPanel/VBoxContainer" unique_id=905399541]
+[node name="MusicVolumeLabel" type="Label" parent="MenuPanel/VBoxContainer" unique_id=905399541]
 layout_mode = 2
-text = "Разрешение экрана"
+text = "Громкость музыки"
 
-[node name="OptionButton" type="OptionButton" parent="MenuPanel/VBoxContainer" unique_id=423992362]
-custom_minimum_size = Vector2(0, 44)
+[node name="MusicVolumeSlider" type="HSlider" parent="MenuPanel/VBoxContainer" unique_id=423992362]
+custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
+min_value = -40.0
+max_value = 0.0
 
 [node name="exit" type="Button" parent="MenuPanel/VBoxContainer" unique_id=343921091]
 custom_minimum_size = Vector2(0, 48)

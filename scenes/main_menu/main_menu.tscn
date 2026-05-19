@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://37s8ekdjc6st" path="res://scenes/main_menu/main_menu.gd" id="1_afsif"]
 [ext_resource type="Texture2D" uid="uid://217y242wgosg" path="res://assets/меню.png" id="2_6l0qi"]
 [ext_resource type="PackedScene" uid="uid://d2716w4i5d1dc" path="res://scenes/settings_menu/settings_menu.tscn" id="2_xpixl"]
+[ext_resource type="PackedScene" uid="uid://bconfirmdlg01" path="res://scenes/ui/confirm_dialog.tscn" id="3_confirm"]
 [ext_resource type="AudioStream" uid="uid://y340f2ilrmwv" path="res://audio/music/main_theme.ogg" id="4_4jkfy"]
 
 [node name="Control" type="Control" unique_id=1911049840]
@@ -54,12 +55,6 @@ toggle_mode = true
 button_pressed = true
 text = "Обучение: включено"
 
-[node name="tutorial_status" type="Label" parent="TextureRect/VBoxContainer"]
-layout_mode = 2
-text = "Подсказки и стрелки в начале новой игры"
-horizontal_alignment = 1
-autowrap_mode = 3
-
 [node name="continue" type="Button" parent="TextureRect/VBoxContainer" unique_id=407038068]
 layout_mode = 2
 text = "Продолжить"
@@ -73,6 +68,10 @@ layout_mode = 2
 text = "Выход"
 
 [node name="SettingsMenu" parent="." unique_id=1918203984 instance=ExtResource("2_xpixl")]
+visible = false
+layout_mode = 1
+
+[node name="NewGameConfirmDialog" parent="." instance=ExtResource("3_confirm")]
 visible = false
 layout_mode = 1
 

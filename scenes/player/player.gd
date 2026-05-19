@@ -2,6 +2,7 @@ extends CharacterBody2D
 
 signal became_invisible
 signal became_visible
+signal hp_changed(current: int, maximum: int)
 
 enum {
 	DOWN,
@@ -48,6 +49,7 @@ func _ready() -> void:
 
 	# HP init
 	hp = max_hp
+	call_deferred("_emit_hp_changed")
 	_invuln_timer = Timer.new()
 	_invuln_timer.one_shot = true
 	add_child(_invuln_timer)
@@ -104,6 +106,11 @@ func _hide_hint() -> void:
 # ДВИЖЕНИЕ
 # =========================
 func _physics_process(delta: float) -> void:
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("is_world_input_blocked"):
+		if GameState.is_world_input_blocked():
+			velocity = Vector2.ZERO
+			move_and_slide()
+			return
 	if not control_enabled:
 		velocity = Vector2.ZERO
 		move_and_slide()
@@ -218,6 +225,7 @@ func take_damage(amount: int = 1, from_maniac: bool = false) -> void:
 		return
 
 	hp -= amount
+	_emit_hp_changed()
 	_play_damage_sfx()
 
 	if hp <= 0:
@@ -240,6 +248,20 @@ func get_hp() -> int:
 
 func set_hp(value: int) -> void:
 	hp = int(clamp(value, 0, max_hp))
+	_emit_hp_changed()
+
+func heal(amount: int = 1) -> bool:
+	if hp >= max_hp:
+		return false
+	hp = min(hp + amount, max_hp)
+	_emit_hp_changed()
+	modulate = Color(0.75, 1.0, 0.82, 1.0)
+	var tween := create_tween()
+	tween.tween_property(self, "modulate", _saved_modulate, 0.35)
+	return true
+
+func _emit_hp_changed() -> void:
+	hp_changed.emit(hp, max_hp)
 
 func _flash_on_damage() -> void:
 	modulate = Color(1, 0.6, 0.6, 1)
