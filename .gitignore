@@ -2,6 +2,16 @@
 *.godot/
 .nomedia
 
+# Export / local run artifacts (regenerate via Godot Export)
+godote_new_project*.exe
+*.console.exe
+/libgdsqlite.windows.template_debug.x86_64.dll
+
+# Draft assets (moved out of repo — use assets/ only)
+ibm5150*
+dynamic.ttf
+dynamic.ttf.import
+
 # Godot-specific ignores
 .import/
 export.cfg
@@ -16,7 +26,6 @@ export_credentials.cfg
 data_*/
 mono_crash.*.json
 /addons
-dynamic.ttf.import
 project.godot
 tasks.db
 *.import
@@ -34,3 +43,4 @@ docs/_gen_cheme_drawio.py
 docs/КАК_ОТКРЫТЬ_СХЕМУ_drawio.txt
 docs/functional_scheme_A3_tree.txt
 docs/functional_scheme.md
+POOL_MONITOR_OUTPUT/

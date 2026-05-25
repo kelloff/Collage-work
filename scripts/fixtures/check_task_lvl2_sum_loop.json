@@ -1,0 +1,8 @@
+{
+  "description": "Посчитай сумму чисел от 1 до 5 с помощью цикла",
+  "expected_output": "15",
+  "required_patterns": "",
+  "allow_direct_print": 0,
+  "level": 2,
+  "user_code": "total = 0\nfor i in range(1, 6):\n    total += i\nprint(total)\n"
+}

@@ -17,14 +17,20 @@ var _last_hp: int = -1
 var _low_hp_pulse: Tween
 var _heart_pulse_tweens: Array[Tween] = []
 
-const C_BLOOD := Color(0.55, 0.03, 0.05, 1.0)
-const C_BLOOD_GLOW := Color(0.82, 0.06, 0.08, 1.0)
-const C_BLOOD_EMPTY := Color(0.12, 0.08, 0.1, 0.35)
-const C_ASH := Color(0.48, 0.44, 0.46, 0.75)
-const C_PALE := Color(0.68, 0.64, 0.66, 0.9)
+const HUD_LAYER := 20
+const HP_OVERLAY_LAYER := 32
+
+const C_BLOOD := Color(0.78, 0.05, 0.08, 1.0)
+const C_BLOOD_GLOW := Color(1.0, 0.22, 0.18, 1.0)
+const C_BLOOD_EMPTY := Color(0.32, 0.28, 0.3, 0.72)
+const C_ASH := Color(0.82, 0.78, 0.8, 1.0)
+const C_PALE := Color(0.92, 0.88, 0.9, 1.0)
+
+var _hp_canvas: CanvasLayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	layer = HUD_LAYER
 
 	GameUiTheme.apply_horror_panel(panel)
 	panel.visible = true
@@ -42,10 +48,17 @@ func _ready() -> void:
 	_setup_hp_display()
 	call_deferred("_bind_player")
 
+
+func _exit_tree() -> void:
+	if _hp_canvas and is_instance_valid(_hp_canvas):
+		_hp_canvas.queue_free()
+		_hp_canvas = null
+
+
 func _make_horror_hp_panel_style() -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
-	s.bg_color = Color(0.025, 0.015, 0.03, 0.88)
-	s.border_color = Color(0.38, 0.04, 0.07, 0.75)
+	s.bg_color = Color(0.08, 0.04, 0.05, 0.94)
+	s.border_color = Color(0.72, 0.12, 0.14, 0.95)
 	s.border_width_left = 1
 	s.border_width_top = 1
 	s.border_width_right = 1
@@ -138,6 +151,24 @@ func _setup_hp_display() -> void:
 	_hp_value_label.add_theme_color_override("font_color", C_PALE)
 	vbox.add_child(_hp_value_label)
 
+	_mount_hp_above_canvas_modulate()
+
+func _mount_hp_above_canvas_modulate() -> void:
+	if _hp_panel == null:
+		return
+	var parent := _hp_panel.get_parent()
+	if parent:
+		parent.remove_child(_hp_panel)
+	if _hp_canvas == null or not is_instance_valid(_hp_canvas):
+		_hp_canvas = CanvasLayer.new()
+		_hp_canvas.name = "HpHudOverlay"
+		_hp_canvas.layer = HP_OVERLAY_LAYER
+		_hp_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
+		get_tree().root.add_child(_hp_canvas)
+	_hp_canvas.add_child(_hp_panel)
+	_hp_panel.self_modulate = Color.WHITE
+	_hp_panel.modulate = Color.WHITE
+
 func _bind_player() -> void:
 	var players := get_tree().get_nodes_in_group("player")
 	if players.is_empty():
@@ -164,7 +195,10 @@ func _rebuild_hearts(max_hp: int) -> void:
 		heart.text = "♥"
 		heart.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		heart.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		heart.add_theme_font_size_override("font_size", 26)
+		heart.add_theme_font_size_override("font_size", 28)
+		heart.modulate = Color.WHITE
+		heart.add_theme_color_override("font_outline_color", Color(0.12, 0.02, 0.04, 0.95))
+		heart.add_theme_constant_override("outline_size", 2)
 		_hearts_row.add_child(heart)
 		_heart_labels.append(heart)
 
@@ -175,7 +209,11 @@ func _on_hp_changed(current: int, maximum: int) -> void:
 	for i in range(maximum):
 		var heart := _heart_labels[i]
 		var filled := i < current
-		heart.modulate = C_BLOOD_GLOW if filled else C_BLOOD_EMPTY
+		heart.modulate = Color.WHITE
+		heart.add_theme_color_override(
+			"font_color",
+			C_BLOOD_GLOW if filled else C_BLOOD_EMPTY
+		)
 		heart.scale = Vector2.ONE
 
 	if _blood_bar:
@@ -219,36 +257,51 @@ func _update_low_hp_pulse(current: int) -> void:
 
 	if current > 1:
 		for heart in _heart_labels:
-			if heart.modulate != C_BLOOD_EMPTY:
-				heart.modulate = C_BLOOD_GLOW
+			if heart.get_theme_color("font_color") != C_BLOOD_EMPTY:
+				heart.add_theme_color_override("font_color", C_BLOOD_GLOW)
 		return
 
 	_low_hp_pulse = create_tween()
 	_low_hp_pulse.set_loops()
 	_low_hp_pulse.set_trans(Tween.TRANS_SINE)
 	_low_hp_pulse.set_ease(Tween.EASE_IN_OUT)
-	_low_hp_pulse.tween_property(_hp_panel, "modulate", Color(1.0, 0.82, 0.84, 1.0), 0.55)
-	_low_hp_pulse.tween_property(_hp_panel, "modulate", Color(0.78, 0.72, 0.74, 1.0), 0.55)
+	_low_hp_pulse.tween_property(_hp_panel, "modulate", Color(1.0, 0.9, 0.9, 1.0), 0.55)
+	_low_hp_pulse.tween_property(_hp_panel, "modulate", Color(0.92, 0.86, 0.88, 1.0), 0.55)
 
 	for heart in _heart_labels:
-		if heart.modulate == C_BLOOD_EMPTY:
+		if heart.get_theme_color("font_color") == C_BLOOD_EMPTY:
 			continue
 		var ht := create_tween()
 		ht.set_loops()
 		ht.set_trans(Tween.TRANS_SINE)
 		ht.set_ease(Tween.EASE_IN_OUT)
-		ht.tween_property(heart, "modulate", C_BLOOD, 0.55)
-		ht.tween_property(heart, "modulate", C_BLOOD_GLOW, 0.55)
+		ht.tween_method(
+			func(c: Color) -> void: heart.add_theme_color_override("font_color", c),
+			C_BLOOD,
+			C_BLOOD_GLOW,
+			0.55
+		)
+		ht.tween_method(
+			func(c: Color) -> void: heart.add_theme_color_override("font_color", c),
+			C_BLOOD_GLOW,
+			C_BLOOD,
+			0.55
+		)
 		_heart_pulse_tweens.append(ht)
 
 func _pulse_heart(heart: Label) -> void:
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_ELASTIC)
 	tween.set_ease(Tween.EASE_OUT)
-	heart.modulate = Color(1.0, 0.15, 0.12, 1.0)
+	heart.add_theme_color_override("font_color", Color(1.0, 0.35, 0.28, 1.0))
 	heart.scale = Vector2(1.4, 1.4)
 	tween.tween_property(heart, "scale", Vector2.ONE, 0.35)
-	tween.parallel().tween_property(heart, "modulate", C_BLOOD_EMPTY, 0.45)
+	tween.parallel().tween_method(
+		func(c: Color) -> void: heart.add_theme_color_override("font_color", c),
+		Color(1.0, 0.35, 0.28, 1.0),
+		C_BLOOD_EMPTY,
+		0.45
+	)
 
 func _pulse_hp_panel() -> void:
 	if _hp_panel == null:

@@ -14,17 +14,18 @@ var _tip_timer: Timer
 var _tip_index: int = 0
 var _tip_tween: Tween
 
-const SERVER_TASK_TIMEOUT_S: float = 60.0
+## Пул на сервере — секунды; при пустом пуле ответ fallback обычно < 5 с.
+const SERVER_TASK_TIMEOUT_S: float = 120.0
 const LOCAL_TASKS_PATH := "res://db/task_data.gd"
 const TIP_ROTATE_SEC: float = 5.5
 
 const LOADING_TIPS: PackedStringArray = [
-	"Первый запуск может занять несколько минут — сервер генерирует уникальные задания.",
+	"«Новая игра» берёт задания с сервера (пул kellofff.me); при сбое — локальный запас.",
 	"В терминале пиши код на Python: print(), переменные, if и циклы пригодятся сразу.",
-	"Если застрял — открой журнал (J): там могут быть подсказки по сюжету.",
+	"Если застрял — открой журнал (B): вкладки «Руководство» и «Python: база», записки на уровне.",
 	"Маньяк слышит шум: беги тихо, когда нужно спрятаться.",
 	"Баффы в коридорах дают скорость, невидимость или лечение — не проходи мимо.",
-	"На сложных уровнях проверка кода строже: сначала логика, потом вывод.",
+	"Уровни 0–1: проверка на твоём ПК. Уровни 2–3: проверка на сервере — решения в записках note_03.",
 	"Сохраняйся у компьютера, когда нашёл безопасное место.",
 	"Инвентарь ограничен — бери только то, что реально пригодится.",
 	"Рычаги и двери часто связаны: ищи, что открылось после действия.",
@@ -169,9 +170,6 @@ func _parse_tasks_response(text: String, err_ctx: String) -> Dictionary:
 		push_error("new_game_loading: %s — не JSON" % err_ctx)
 		return empty
 	var source: String = str(parsed.get("source", ""))
-	if "fallback" in source.to_lower():
-		push_warning("new_game_loading: %s — отклонён source=%s (шаблоны)" % [err_ctx, source])
-		return empty
 	var tasks_raw: Variant = parsed.get("tasks", [])
 	if typeof(tasks_raw) != TYPE_ARRAY:
 		push_error("new_game_loading: %s — нет tasks[]" % err_ctx)
@@ -180,6 +178,10 @@ func _parse_tasks_response(text: String, err_ctx: String) -> Dictionary:
 
 
 func _run_flow() -> void:
+	if NewGameConfig.use_local_tasks_only:
+		await _run_flow_local_only()
+		return
+
 	var levels: Array = NewGameConfig.GENERATE_LEVELS
 	var per_level: int = NewGameConfig.generate_task_count
 
@@ -206,6 +208,11 @@ func _run_flow() -> void:
 			task_source = str(parsed.get("source", ""))
 			if not tasks_arr.is_empty():
 				print("new_game_loading: tasks from server source=", task_source, " count=", tasks_arr.size())
+				var src_hint := task_source
+				if src_hint.is_empty():
+					src_hint = "server"
+				_set_status("Задания с сервера (%s), %d шт.…" % [src_hint, tasks_arr.size()])
+				await get_tree().process_frame
 				break
 		elif int(r.get("code", 0)) == 503:
 			push_warning("new_game_loading: server 503 (pool/LLM busy), attempt=%d" % attempt)
@@ -268,6 +275,36 @@ func _run_flow() -> void:
 		if not _load_local_tasks_into_db():
 			_fail("Не удалось загрузить ни серверные, ни локальные задания")
 			return
+
+	GameState.reset_all()
+	RunStats.reset_session()
+
+	_set_status("Готово")
+	await get_tree().process_frame
+
+	var next := NewGameConfig.next_level_scene
+	if next.is_empty():
+		next = NewGameConfig.DEFAULT_LEVEL_SCENE
+	get_tree().change_scene_to_file(next)
+
+
+func _run_flow_local_only() -> void:
+	_set_status("Локальные задания (тест, без сервера)…")
+	await get_tree().process_frame
+	print("new_game_loading: use_local_tasks_only — ", LOCAL_TASKS_PATH)
+
+	_set_status("Сброс сохранения и мира…")
+	await get_tree().process_frame
+
+	if DbManager.has_method("new_game_database_wipe"):
+		DbManager.new_game_database_wipe()
+
+	_set_status("Загрузка task_data.gd…")
+	await get_tree().process_frame
+
+	if not _load_local_tasks_into_db():
+		_fail("Не удалось загрузить %s" % LOCAL_TASKS_PATH)
+		return
 
 	GameState.reset_all()
 	RunStats.reset_session()

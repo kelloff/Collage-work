@@ -6,6 +6,8 @@ import os
 import re
 import traceback
 
+import requests
+
 from models import CheckTaskRequest, CheckTaskResponse
 from ollama_client import ollama_chat
 
@@ -113,34 +115,62 @@ def _ai_check_solution_via_ollama(
     user_code: str,
     stdout: str,
     stderr: str,
+    *,
+    check_base_url: Optional[str] = None,
+    check_model: Optional[str] = None,
+    check_num_predict: Optional[int] = None,
+    check_timeout_s: Optional[int] = None,
+    check_extra_options: Optional[dict] = None,
 ) -> Tuple[bool, str]:
+    base_url = (check_base_url or ollama_base_url).strip()
+    model = (check_model or ollama_model).strip()
+    num_predict = int(check_num_predict or min(128, ollama_num_predict))
+    desc_short = (description or "")[:400]
+    code_short = (user_code or "")[:1200]
+    stdout_short = (stdout or "")[:200]
     system_msg = (
-        "Ты проверяешь решение студента по заданию на Python. "
-        "Ты НЕ изменяешь код. Ты оцениваешь корректность по входным данным ниже. "
-        "Верни строго JSON без markdown вида: {\"success\": true/false, \"feedback\": \"...\"}."
+        "Проверка Python-решения. Не меняй код. "
+        'JSON: {"success":bool,"feedback":"..."}'
     )
     user_msg = (
-        f"Задание: {description}\n"
-        f"Ожидаемый вывод: {expected_output or '<нет>'}\n"
-        f"required_patterns: {required_patterns or '<пусто>'}\n"
-        f"stdout: {stdout or '<пусто>'}\n"
-        f"stderr: {stderr or '<пусто>'}\n"
-        f"Код студента:\n{user_code}\n"
-        "Правила:\n"
-        "- Если stderr непустой: success=false.\n"
-        "- Если expected_output непустой: сравни stdout (нормализуй пробелы и переводы строк), чтобы совпасть со значением.\n"
-        "- required_patterns: если какие-то фрагменты разделенные ';' не входят в user_code, то success=false.\n"
-        "- feedback должен кратко объяснить что поправить. Не пиши готовое решение.\n"
+        f"Задание: {desc_short}\n"
+        f"Ожидаемый вывод: {expected_output or '-'}\n"
+        f"patterns: {required_patterns or '-'}\n"
+        f"stdout: {stdout_short or '-'}\n"
+        f"stderr: {(stderr or '')[:120] or '-'}\n"
+        f"Код:\n{code_short}\n"
+        "stderr→success false. Сравни stdout с ожидаемым. "
+        "patterns через ';' должны быть в коде. Краткий feedback без готового решения."
     )
-    ai_timeout_s = int(os.getenv("CHECK_TASK_AI_TIMEOUT", "20"))
-    raw = ollama_chat(
-        ollama_base_url=ollama_base_url,
-        ollama_model=ollama_model,
-        ollama_num_predict=ollama_num_predict,
-        system_msg=system_msg,
-        user_msg=user_msg,
-        timeout_s=ai_timeout_s,
+    ai_timeout_s = min(
+        10,
+        int(check_timeout_s or os.getenv("CHECK_TASK_AI_TIMEOUT", "10")),
     )
+    retry = os.getenv("CHECK_TASK_AI_RETRY", "0") != "0"
+    budgets = [ai_timeout_s]
+    if retry and ai_timeout_s >= 7:
+        budgets = [max(5, ai_timeout_s - 3), 3]
+
+    raw = ""
+    last_err: Optional[Exception] = None
+    for tmo in budgets:
+        try:
+            raw = ollama_chat(
+                ollama_base_url=base_url,
+                ollama_model=model,
+                ollama_num_predict=num_predict,
+                system_msg=system_msg,
+                user_msg=user_msg,
+                timeout_s=tmo,
+                force_json=True,
+                extra_options=check_extra_options,
+            )
+            last_err = None
+            break
+        except Exception as e:
+            last_err = e
+    if last_err is not None:
+        raise last_err
     arr_match = re.search(r"\{[\s\S]*\}", raw)
     json_str = arr_match.group(0) if arr_match else raw
     data = json.loads(json_str)
@@ -149,11 +179,40 @@ def _ai_check_solution_via_ollama(
     return success, feedback
 
 
+def _ollama_check_reachable(base_url: str, timeout_s: float = 2.0) -> bool:
+    url = f"{(base_url or '').rstrip('/')}/api/tags"
+    if not url.startswith("http"):
+        return False
+    try:
+        r = requests.get(url, timeout=timeout_s)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
+def _det_fail_is_stdout_mismatch(feedback: str) -> bool:
+    fb = (feedback or "").lower()
+    return "не совпадает" in fb or "разное количество строк" in fb
+
+
+def _check_ollama_extra_options(num_ctx: int) -> dict:
+    d: dict = {}
+    if num_ctx > 0:
+        d["num_ctx"] = num_ctx
+    return d
+
+
 def check_task_logic(
     req: CheckTaskRequest,
     ollama_base_url: str,
     ollama_model: str,
     ollama_num_predict: int,
+    *,
+    ollama_check_base_url: str = "",
+    ollama_check_model: str = "",
+    ollama_check_num_predict: int = 128,
+    ollama_check_timeout: int = 25,
+    ollama_check_num_ctx: int = 2048,
 ) -> CheckTaskResponse:
     desc = req.description.strip()
     expected = (req.expected_output or "").strip()
@@ -173,7 +232,9 @@ def check_task_logic(
     det_success: bool = False
     det_feedback: str = ""
     level: int = int(getattr(req, "level", 1) or 1)
-    force_ai_after_det_ok: bool = level >= 2
+    # Уровень 2+: ИИ только если дет. проверка не прошла (см. CHECK_TASK_FAST_DET_OK).
+    want_ai_for_level: bool = level >= 2
+    fast_det_ok: bool = os.getenv("CHECK_TASK_FAST_DET_OK", "1") != "0"
 
     if stderr:
         det_success = False
@@ -232,7 +293,17 @@ def check_task_logic(
             det_success = True
             det_feedback = "Решение принято (ошибок выполнения нет)."
 
-    if det_success and not force_ai_after_det_ok:
+    env_ai: bool = os.getenv("CHECK_TASK_USE_AI", "0") != "0"
+    ai_mode = os.getenv("CHECK_TASK_AI_MODE", "fail_only").strip().lower()
+    always_ai_l2 = ai_mode in ("always", "all", "1", "yes")
+    skip_ai_det_ok: bool = (
+        fast_det_ok
+        and det_success
+        and want_ai_for_level
+        and not env_ai
+        and not always_ai_l2
+    )
+    if det_success and (not want_ai_for_level or skip_ai_det_ok):
         return CheckTaskResponse(
             success=True,
             feedback=det_feedback,
@@ -243,8 +314,21 @@ def check_task_logic(
     ai_success: bool = False
     ai_feedback: str = det_feedback
     ai_call_failed: bool = False
-    env_ai: bool = os.getenv("CHECK_TASK_USE_AI", "0") != "0"
-    want_ai: bool = env_ai or force_ai_after_det_ok
+    want_ai: bool = env_ai or (want_ai_for_level and not skip_ai_det_ok)
+    skip_on_det_fail: bool = os.getenv("CHECK_TASK_SKIP_AI_ON_DET_FAIL", "1") != "0"
+    skip_on_stdout_only: bool = (
+        os.getenv("CHECK_TASK_SKIP_AI_ON_STDOUT_MISMATCH", "1") != "0"
+        and _det_fail_is_stdout_mismatch(det_feedback)
+    )
+    if want_ai and not env_ai and not always_ai_l2:
+        if skip_on_det_fail and not det_success and det_feedback:
+            want_ai = False
+        elif skip_on_stdout_only and not det_success and not stderr:
+            want_ai = False
+    check_base = (ollama_check_base_url or ollama_base_url).strip()
+    if want_ai and check_base and not _ollama_check_reachable(check_base):
+        ai_call_failed = True
+        want_ai = False
     if want_ai:
         try:
             ai_success, ai_feedback = _ai_check_solution_via_ollama(
@@ -257,11 +341,16 @@ def check_task_logic(
                 user_code=code,
                 stdout=stdout,
                 stderr=stderr,
+                check_base_url=ollama_check_base_url or None,
+                check_model=ollama_check_model or None,
+                check_num_predict=ollama_check_num_predict,
+                check_timeout_s=ollama_check_timeout,
+                check_extra_options=_check_ollama_extra_options(ollama_check_num_ctx),
             )
         except Exception:
             ai_call_failed = True
             ai_success = False
-            if force_ai_after_det_ok and det_success:
+            if want_ai_for_level and det_success:
                 ai_feedback = (
                     "На уровне 2+ нужна проверка ИИ, но сервис недоступен "
                     "(Ollama/сеть/таймаут). Повтори позже."
@@ -272,12 +361,12 @@ def check_task_logic(
     if stderr:
         ai_success = False
 
-    # Уровень 2+: при падении вызова ИИ не держать игрока — принять дет. результат (как уровень 1).
+    # При падении ИИ: если дет. уже ОК — засчитать (не ждать повторов).
     # Отключить: CHECK_TASK_AI_UNAVAILABLE_FALLBACK_DET=0
     fallback_det: bool = os.getenv("CHECK_TASK_AI_UNAVAILABLE_FALLBACK_DET", "1") != "0"
     if (
         fallback_det
-        and force_ai_after_det_ok
+        and want_ai_for_level
         and det_success
         and want_ai
         and not ai_success

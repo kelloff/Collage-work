@@ -28,6 +28,7 @@ const TERM_GREEN := Color(0.45, 1.0, 0.58, 1.0)
 const TERM_TEXT := Color(0.95, 0.98, 0.95, 1.0)
 
 func _ready() -> void:
+	add_to_group("gameplay_overlay_ui")
 	layer = 100
 	if panel_root:
 		panel_root.theme = Theme.new()
@@ -99,6 +100,8 @@ func open_with_task(level: int, task: Dictionary) -> void:
 		hint_label.text = "Подсказка: print(), переменные, if/for, функции. Файлы/удаление запрещены."
 
 func close() -> void:
+	_release_ui_focus()
+	set_pause_input_passthrough(false)
 	if _gameplay_frozen_by_terminal and GameState.has_method("pop_gameplay_freeze"):
 		GameState.pop_gameplay_freeze()
 		_gameplay_frozen_by_terminal = false
@@ -196,6 +199,10 @@ func _on_local_run_finished(result: Dictionary) -> void:
 	if not _local_check_pending:
 		return
 	_local_check_pending = false
+	if not is_inside_tree() or not visible:
+		_running = false
+		_local_check_pending = false
+		return
 	_finish_check(_evaluate_local_check(result))
 
 
@@ -281,6 +288,9 @@ func _run_remote_check_async(code_text: String) -> void:
 	var result: Dictionary = await AiCheckerSingleton.check_task_async(
 		current_task, code_text, _task_difficulty()
 	)
+	if not is_inside_tree() or not visible:
+		_running = false
+		return
 	_finish_check(result)
 
 
@@ -354,6 +364,7 @@ func _set_output(text: String) -> void:
 	if output_label == null:
 		return
 	output_label.text = text
+	output_label.queue_redraw()
 
 func _mount_to_root() -> void:
 	var root := get_tree().root
@@ -376,11 +387,32 @@ func _restore_parent() -> void:
 		parent.remove_child(self)
 	_host_parent.add_child(self)
 
+func _release_ui_focus() -> void:
+	if code_edit:
+		code_edit.release_focus()
+	var vp := get_viewport()
+	if vp:
+		vp.gui_release_focus()
+
+
+func set_pause_input_passthrough(enabled: bool) -> void:
+	if not visible:
+		return
+	if panel_root:
+		panel_root.mouse_filter = (
+			Control.MOUSE_FILTER_IGNORE if enabled else Control.MOUSE_FILTER_STOP
+		)
+	if enabled:
+		_release_ui_focus()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	# Allow pause menu while terminal is focused/open.
 	if not visible:
 		return
 	if event.is_action_pressed("pause_menu"):
+		_release_ui_focus()
+		set_pause_input_passthrough(true)
 		var root: Node = get_tree().current_scene
 		if root:
 			var pause_menu: Node = root.find_child("PauseMenu", true, false)

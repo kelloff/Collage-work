@@ -49,7 +49,7 @@ const LESSONS: Dictionary = {
 	},
 	"computer": {
 		"title": "Компьютер",
-		"text": "Терминал с заданиями.\n\n• подойдите и нажмите E;\n• в окне — пишите код и «Выполнить»;\n• после успешного задания откроется связанная дверь.\n\nСейчас откройте терминал хотя бы один раз.",
+		"text": "Терминал с заданиями.\n\n• подойдите и нажмите E;\n• пишите код и «Проверить решение»;\n• подсказки: журнал B → «Python: база» и записки на уровне;\n• после успеха откроется связанная дверь.\n\nСейчас откройте терминал хотя бы один раз.",
 	},
 	"exit_door": {
 		"title": "Дверь дальше",
@@ -356,17 +356,19 @@ func _finish_tutorial() -> void:
 	active = false
 	_phase = Phase.ROOM
 	_popup_open = false
-	_teardown_overlay()
-	_restore_interaction_highlights()
+	# Нельзя free() из колбэка Popup/BtnOk — объект ещё «locked».
+	call_deferred("_teardown_overlay")
+	call_deferred("_restore_interaction_highlights")
 	tutorial_finished.emit()
 
 
 func _teardown_overlay() -> void:
-	if _overlay != null and is_instance_valid(_overlay):
-		if _overlay.has_method("force_hide_all"):
-			_overlay.call("force_hide_all")
-		_overlay.free()
+	var overlay := _overlay
 	_overlay = null
+	if overlay != null and is_instance_valid(overlay):
+		if overlay.has_method("force_hide_all"):
+			overlay.call("force_hide_all")
+		overlay.queue_free()
 
 
 func _purge_loose_overlays() -> void:
@@ -379,7 +381,7 @@ func _purge_loose_overlays() -> void:
 			remove_list.append(child)
 	for node in remove_list:
 		if is_instance_valid(node):
-			node.free()
+			node.queue_free()
 
 
 func _release_popup_blocks() -> void:

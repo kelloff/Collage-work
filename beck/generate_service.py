@@ -2,193 +2,52 @@ from typing import Callable, List, Optional, Tuple
 import json
 import os
 import re
-from datetime import date, datetime
-
+import time
 from openai import OpenAI
 
 import task_pool
+import task_diversity
 from models import TaskSpec
 from ollama_client import ollama_chat
+from task_filters import is_date_related_task, is_valid_playable_task, text_mentions_date_topic
 
 
-def _reference_date_prompt_block() -> str:
-    today = date.today()
-    now = datetime.now()
+def _no_date_tasks_prompt_block() -> str:
     return (
-        f"Сегодня на сервере: {today.isoformat()} (год {today.year}).\n"
-        f"Текущие дата и время: {now.isoformat(sep=' ', timespec='seconds')}.\n"
-        "Если задание про «текущую» / «сегодняшнюю» дату — expected_output должен "
-        f"соответствовать этой дате (год {today.year}), не выдумывай 2023 или другой год.\n"
-        "Задания с datetime.now() / import datetime — только для уровня 2+; "
-        "на уровне 0–1 не требуй импорт библиотек.\n"
+        "Не создавай задания про дату, время, календарь, datetime, strftime, "
+        "today/сегодня/текущая дата, now() или import datetime.\n"
+        "Только базовый Python: print, переменные, арифметика, if/else, циклы, списки — "
+        "без сторонних библиотек.\n"
     )
-
-
-def _task_mentions_live_date(text: str) -> bool:
-    t = (text or "").lower()
-    keys = (
-        "текущ",
-        "сегодня",
-        "нынешн",
-        "datetime",
-        "дату",
-        "дата",
-        "now()",
-        "сейчас",
-    )
-    return any(k in t for k in keys)
 
 
 def _normalize_task_list(tasks: List[TaskSpec]) -> List[TaskSpec]:
-    return [_normalize_task_dates(t) for t in tasks]
-
-
-def _normalize_task_dates(task: TaskSpec) -> TaskSpec:
-    """Задачи про «текущую дату» — уровень 2+, актуальный expected_output."""
-    desc = task.description.strip()
-    exp = (task.expected_output or "").strip()
-    patterns = (task.required_patterns or "").strip()
-    lv = int(task.level)
-
-    if not _task_mentions_live_date(desc) and not _task_mentions_live_date(exp):
-        return task
-
-    if lv < 2:
-        lv = 2
-        if not patterns:
-            patterns = "datetime"
-
-    if _task_mentions_live_date(desc):
-        now = datetime.now()
-        iso = now.isoformat(sep=" ", timespec="seconds")
-        if not exp or re.search(r"20(1[0-9]|2[0-3])", exp):
-            exp = iso
-        elif str(date.today().year) not in exp:
-            exp = iso
-
-    return TaskSpec(
-        level=lv,
-        category=task.category,
-        description=desc,
-        expected_output=exp,
-        required_patterns=patterns,
-        check_type=task.check_type,
-        required_keywords=task.required_keywords,
-        allow_direct_print=task.allow_direct_print,
-    )
+    return [t for t in tasks if not is_date_related_task(t)]
 
 
 def parse_ollama_tasks_json(raw_text: str, level_hint: int = -1) -> List[dict]:
-    cleaned = (raw_text or "").strip()
-    cleaned = cleaned.replace("```json", "").replace("```", "").strip()
-    cleaned = cleaned.replace("\\[", "[").replace("\\]", "]")
-    cleaned = cleaned.replace("\\{", "{").replace("\\}", "}")
-    cleaned = re.sub(r",\s*//[^\n\r]*", "", cleaned)
-    cleaned = re.sub(r"//[^\n\r]*", "", cleaned)
-    cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+    from ollama_tasks_json import parse_ollama_tasks_json as _parse
 
-    data = None
-    try:
-        data = json.loads(cleaned)
-    except Exception:
-        data = None
-
-    if data is None:
-        arr_match = re.search(r"\[[\s\S]*\]", cleaned)
-        if arr_match:
-            try:
-                data = json.loads(arr_match.group(0))
-            except Exception:
-                data = None
-        if data is None:
-            arr_match = re.search(r"\[[\s\S]*?\]", cleaned)
-            if arr_match:
-                try:
-                    data = json.loads(arr_match.group(0))
-                except Exception:
-                    data = None
-
-    if data is None:
-        obj_match = re.search(r"\{[\s\S]*?\"tasks\"[\s\S]*?\}", cleaned)
-        if obj_match:
-            try:
-                maybe_obj = json.loads(obj_match.group(0))
-                if isinstance(maybe_obj, dict) and "tasks" in maybe_obj:
-                    data = maybe_obj["tasks"]
-            except Exception:
-                pass
-
-    if data is None:
-        obj_matches = re.findall(
-            r"\{[\s\S]*?\"category\"[\s\S]*?\"expected_output\"[\s\S]*?\}",
-            cleaned,
-        )
-        objs: list[dict] = []
-        for m in obj_matches:
-            if '"category"' not in m or '"expected_output"' not in m:
-                continue
-            try:
-                parsed_obj = json.loads(m)
-                if isinstance(parsed_obj, dict) and "expected_output" in parsed_obj:
-                    objs.append(parsed_obj)
-            except Exception:
-                continue
-        if objs:
-            data = objs
-
-    if isinstance(data, dict):
-        if "tasks" in data and isinstance(data["tasks"], list):
-            data = data["tasks"]
-        elif "category" in data and "expected_output" in data:
-            data = [data]
-
-    if not isinstance(data, list):
-        short = (raw_text or "")[:400].replace("\n", "\\n")
-        print(
-            f"parse_ollama_tasks_json: JSON parse failed, "
-            f"level_hint={level_hint}. Raw(head)={short!r}"
-        )
-        return []
-
-    return [obj for obj in data if isinstance(obj, dict)]
+    return _parse(raw_text, level_hint)
 
 
 def fallback_generate_tasks(level: int, count: int) -> List[TaskSpec]:
-    tasks_by_level: dict[int, list[dict]] = {
-        0: [
-            {"category": "easy", "description": 'Выведи строку "Hello, World!"', "expected_output": "Hello, World!", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 1},
-            {"category": "easy", "description": 'Создай переменную со значением "Python" и выведи её', "expected_output": "Python", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 1},
-            {"category": "easy", "description": "Создай переменную со значением 20 и выведи её", "expected_output": "20", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 1},
-            {"category": "easy", "description": "Сложи числа 2 и 3 и выведи результат", "expected_output": "5", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 1},
-            {"category": "easy", "description": "Выведи результат выражения 7*8", "expected_output": "56", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 1},
-        ],
-        1: [
-            {"category": "medium", "description": 'Создай переменную x = 12. Если x больше 10, выведи "Большое", иначе "Маленькое"', "expected_output": "Большое", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": 'Создай переменную x = 7. Если число чётное — выведи "Even", иначе "Odd"', "expected_output": "Odd", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": 'Создай строку s = "Python". Если строка равна "Python", выведи "Да", иначе "Нет"', "expected_output": "Да", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": 'Создай переменную x = -5. Если число отрицательное — выведи "Минус", иначе "Плюс"', "expected_output": "Минус", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": 'Создай переменную x = 9. Если число делится на 3 — выведи "Div3", иначе "No"', "expected_output": "Div3", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-        ],
-        2: [
-            {"category": "medium", "description": "Пройди по списку чисел [1,2,3] и выведи каждое", "expected_output": "1\n2\n3", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": "Посчитай сумму чисел от 1 до 5 с помощью цикла", "expected_output": "15", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": "Выведи квадраты чисел от 1 до 3", "expected_output": "1\n4\n9", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": "Выведи все элементы списка ['a','b','c']", "expected_output": "a\nb\nc", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "medium", "description": "Посчитай количество элементов в списке [10,20,30]", "expected_output": "3", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-        ],
-        3: [
-            {"category": "hard", "description": "Отсортируй список [5,2,9,1] и выведи результат", "expected_output": "[1, 2, 5, 9]", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "hard", "description": "Выведи только чётные числа из списка [1,2,3,4,5]", "expected_output": "2\n4", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "hard", "description": "Найди максимальное число в списке [3,7,2]", "expected_output": "7", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "hard", "description": "Найди минимальное число в списке [3,7,2]", "expected_output": "2", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-            {"category": "hard", "description": "Посчитай сумму элементов списка [1,2,3,4]", "expected_output": "10", "required_patterns": "", "check_type": "stdout_exact", "required_keywords": "", "allow_direct_print": 0},
-        ],
-    }
-    lst = tasks_by_level.get(level, [])
+    from tasks_fallback_catalog import catalog_tasks_for_level
+
     out: list[TaskSpec] = []
-    for i in range(min(count, len(lst))):
-        obj = lst[i]
-        out.append(TaskSpec(level=level, category=str(obj.get("category", "easy")), description=str(obj.get("description", "")), expected_output=str(obj.get("expected_output", "")), required_patterns=str(obj.get("required_patterns", "")), check_type=str(obj.get("check_type", "stdout_exact")), required_keywords=str(obj.get("required_keywords", "")), allow_direct_print=int(obj.get("allow_direct_print", 0))))
+    for obj in catalog_tasks_for_level(level, count):
+        out.append(
+            TaskSpec(
+                level=level,
+                category=str(obj.get("category", "easy")),
+                description=str(obj.get("description", "")),
+                expected_output=str(obj.get("expected_output", "")),
+                required_patterns=str(obj.get("required_patterns", "")),
+                check_type=str(obj.get("check_type", "stdout_exact")),
+                required_keywords=str(obj.get("required_keywords", "")),
+                allow_direct_print=int(obj.get("allow_direct_print", 0)),
+            )
+        )
     return out
 
 
@@ -229,10 +88,14 @@ def generate_tasks_via_ollama(
     ollama_temperature: float,
     timeout_s: int = 120,
     extra_options: Optional[dict] = None,
+    *,
+    max_attempts: int = 5,
 ) -> Tuple[List[TaskSpec], bool]:
+    """Генерация для игрока (/generate_tasks*), не для фонового пула."""
     system_msg = (
         "Ты создаёшь учебные задания по Python для новичков.\n"
-        + _reference_date_prompt_block()
+        + _no_date_tasks_prompt_block()
+        + task_diversity.diversity_prompt_block(level)
         + "Верни только валидный JSON-объект формата {\"tasks\":[...]}.\n"
         "В tasks должно быть ровно N объектов (N задаётся пользователем).\n"
         "Никакого markdown, комментариев, code fences и текста вне JSON.\n"
@@ -250,7 +113,7 @@ def generate_tasks_via_ollama(
         if avoid:
             avoid_text = (
                 "Не повторяй формулировки из этого списка:\n- "
-                + "\n- ".join(avoid[:10])
+                + "\n- ".join(avoid[:20])
                 + "\n"
             )
         return (
@@ -262,13 +125,15 @@ def generate_tasks_via_ollama(
             "- description на русском, без привязки к имени переменной.\n"
             "- expected_output краткий и однозначный.\n"
             "- не создавай задачи, где ожидается конкретное имя человека в выводе (например 'Иван').\n"
+            "- не создавай задачи про дату, время или datetime.\n"
             + avoid_text
             + "Никакого текста вне JSON."
         )
 
     collected: List[TaskSpec] = []
     seen_desc: set[str] = set()
-    for _ in range(5):
+    attempts = max(1, min(5, int(max_attempts)))
+    for attempt in range(attempts):
         if len(collected) >= count:
             break
         need = count - len(collected)
@@ -285,26 +150,30 @@ def generate_tasks_via_ollama(
                 temperature=ollama_temperature,
                 extra_options=extra_options,
             )
-        except Exception:
+        except Exception as e:
+            print(f"generate_tasks_via_ollama: attempt={attempt + 1} error: {e}")
             continue
 
         for obj in parse_ollama_tasks_json(raw, level):
             try:
                 desc = str(obj.get("description", "")).strip()
+                out = str(obj.get("expected_output", "")).strip()
                 if not desc or desc in seen_desc:
                     continue
-                task = _normalize_task_dates(
-                    TaskSpec(
-                        level=level,
-                        category=str(obj.get("category", "easy")),
-                        description=desc,
-                        expected_output=str(obj.get("expected_output", "")),
-                        required_patterns=str(obj.get("required_patterns", "")),
-                        check_type=str(obj.get("check_type", "stdout_exact")),
-                        required_keywords=str(obj.get("required_keywords", "")),
-                        allow_direct_print=int(obj.get("allow_direct_print", 0)),
-                    )
+                if any(task_diversity.descriptions_too_similar(desc, p) for p in seen_desc):
+                    continue
+                task = TaskSpec(
+                    level=level,
+                    category=str(obj.get("category", "easy")),
+                    description=desc,
+                    expected_output=out,
+                    required_patterns=str(obj.get("required_patterns", "")),
+                    check_type=str(obj.get("check_type", "stdout_exact")),
+                    required_keywords=str(obj.get("required_keywords", "")),
+                    allow_direct_print=int(obj.get("allow_direct_print", 0)),
                 )
+                if is_date_related_task(task) or not is_valid_playable_task(task, level):
+                    continue
                 collected.append(task)
                 seen_desc.add(desc)
                 if len(collected) >= count:
@@ -365,6 +234,7 @@ def llm_generate_tasks(
         "- В description НЕ указывай конкретные имена переменных (name, x, age и т.д.). "
         "Используй нейтрально: \"создай переменную со значением ... и выведи её\".\n"
         "- Избегай задач, где ожидается конкретное имя человека (например 'Иван') в выводе.\n"
+        "- Не создавай задачи про дату, время, datetime или сторонние библиотеки.\n"
         "Верни JSON‑массив таких объектов, без комментариев и лишнего текста."
     )
 
@@ -402,20 +272,21 @@ def llm_generate_tasks(
     tasks: List[TaskSpec] = []
     for obj in data:
         try:
-            tasks.append(
-                TaskSpec(
-                    level=level,
-                    category=str(obj.get("category", "easy")),
-                    description=str(obj.get("description", "")),
-                    expected_output=str(obj.get("expected_output", "")),
-                    required_patterns=str(obj.get("required_patterns", "")),
-                    check_type=str(obj.get("check_type", "stdout_exact")),
-                    required_keywords=str(obj.get("required_keywords", "")),
-                    allow_direct_print=int(obj.get("allow_direct_print", 0)),
-                )
+            task = TaskSpec(
+                level=level,
+                category=str(obj.get("category", "easy")),
+                description=str(obj.get("description", "")),
+                expected_output=str(obj.get("expected_output", "")),
+                required_patterns=str(obj.get("required_patterns", "")),
+                check_type=str(obj.get("check_type", "stdout_exact")),
+                required_keywords=str(obj.get("required_keywords", "")),
+                allow_direct_print=int(obj.get("allow_direct_print", 0)),
             )
         except Exception:
             continue
+        if is_date_related_task(task):
+            continue
+        tasks.append(task)
     tasks = strip_fallback_tasks(tasks)
     if not tasks:
         return [], "fallback"
@@ -430,6 +301,10 @@ def normalize_tasks_multi(objs: List[dict], levels: List[int], count_per_level: 
             break
         desc = str(obj.get("description", "")).strip()
         if not desc:
+            continue
+        if text_mentions_date_topic(desc) or text_mentions_date_topic(
+            str(obj.get("expected_output", ""))
+        ) or text_mentions_date_topic(str(obj.get("required_patterns", ""))):
             continue
         lv: Optional[int] = None
         try:
@@ -475,13 +350,19 @@ def generate_all_levels_via_ollama_one_shot(
     ollama_temperature: float,
     ollama_multi_timeout: int,
     extra_options: Optional[dict] = None,
+    *,
+    for_pool: bool = False,
 ) -> Tuple[List[TaskSpec], str]:
+    if for_pool:
+        import ollama_coordinator
+
+        ollama_coordinator.wait_if_check_active()
     levels = [int(x) for x in levels]
     total = len(levels) * count_per_level
     lv_str = ", ".join(str(x) for x in levels)
     system_msg = (
         "Ты создаёшь учебные задания по Python для новичков.\n"
-        + _reference_date_prompt_block()
+        + _no_date_tasks_prompt_block()
         + "Верни только валидный JSON-объект формата {\"tasks\":[...]}.\n"
         f"В tasks должно быть ровно {total} объектов.\n"
         "Никакого markdown, комментариев, code fences и текста вне JSON.\n"
@@ -500,6 +381,7 @@ def generate_all_levels_via_ollama_one_shot(
         "- Уровень 0: самые простые (print, одна переменная).\n"
         "- Уровни 1–3: постепенно сложнее (if, циклы, списки).\n"
         "- description на русском; expected_output краткий и проверяемый.\n"
+        "- не создавай задачи про дату, время или datetime.\n"
         "Верни JSON с ключом tasks."
     )
     try:
@@ -526,74 +408,29 @@ def generate_all_levels_via_ollama_one_shot(
 
 
 def refill_one_batch(
-    client: Optional[OpenAI],
     pool_levels: List[int],
     pool_target_per_level: int,
     pool_refill_chunk: int,
-    pool_use_one_shot_refill: bool,
-    llm_generate_tasks_fn: Callable[[int, int], Tuple[List[TaskSpec], str]],
-    generate_tasks_via_ollama_fn: Callable[[int, int], Tuple[List[TaskSpec], bool]],
-    generate_all_levels_via_ollama_one_shot_fn: Callable[[List[int], int], Tuple[List[TaskSpec], str]],
+    *,
+    ollama_base_url: str,
+    ollama_model: str,
+    ollama_num_predict: int,
+    ollama_temperature: float,
+    timeout_s: int,
+    extra_options: Optional[dict],
+    max_attempts: int = 3,
 ) -> List[dict]:
-    out: List[dict] = []
-    if client:
-        for lvl in pool_levels:
-            cur = task_pool.count_by_level(lvl)
-            need = max(0, pool_target_per_level - cur)
-            if need <= 0:
-                continue
-            ask = min(max(1, pool_refill_chunk), need)
-            batch, _ = llm_generate_tasks_fn(int(lvl), ask)
-            out.extend([t.model_dump() for t in strip_fallback_tasks(batch)])
-        return [t for t in out if not is_fallback_task(t)]
+    from pool_refill import run_refill_batch
 
-    # Один уровень за батч (по умолчанию): один HTTP к Ollama ≈ до 5 задач — реже 480s timeout.
-    # Старый режим «все уровни за раз»: TASK_POOL_REFILL_ONE_LEVEL_PER_BATCH=0
-    one_level_per_batch = os.getenv("TASK_POOL_REFILL_ONE_LEVEL_PER_BATCH", "1") != "0"
-
-    if pool_use_one_shot_refill and not one_level_per_batch:
-        levels_need: List[int] = []
-        max_need = 0
-        for lvl in pool_levels:
-            need = max(0, pool_target_per_level - task_pool.count_by_level(lvl))
-            if need > 0:
-                levels_need.append(lvl)
-                max_need = max(max_need, min(need, pool_refill_chunk))
-        if levels_need and max_need > 0:
-            one, _ = generate_all_levels_via_ollama_one_shot_fn(levels_need, max_need)
-            out.extend([t.model_dump() for t in strip_fallback_tasks(one)])
-            filtered = [t for t in out if not is_fallback_task(t)]
-            if filtered:
-                return filtered
-
-    if one_level_per_batch:
-        # Строго 0 → 1 → 2 → 3: сначала добиваем уровень 0 до цели, потом следующий.
-        for lvl in pool_levels:
-            lv = int(lvl)
-            need = max(0, pool_target_per_level - task_pool.count_by_level(lv))
-            if need <= 0:
-                continue
-            ask = min(max(1, pool_refill_chunk), need)
-            print(f"task_pool: refill lvl={lv} ask={ask} have={task_pool.count_by_level(lv)}")
-            batch, used_fb = generate_tasks_via_ollama_fn(lv, ask)
-            if used_fb or not batch:
-                print(f"task_pool: refill lvl={lv} empty (fallback or ollama fail)")
-                continue
-            dumped = [t.model_dump() for t in _normalize_task_list(strip_fallback_tasks(batch))]
-            filtered = [t for t in dumped if not is_fallback_task(t)]
-            if filtered:
-                print(f"task_pool: refill lvl={lv} +{len(filtered)}")
-                return filtered
-        return []
-
-    for lvl in pool_levels:
-        cur = task_pool.count_by_level(lvl)
-        need = max(0, pool_target_per_level - cur)
-        if need <= 0:
-            continue
-        ask = min(max(1, pool_refill_chunk), need)
-        batch, used_fb = generate_tasks_via_ollama_fn(int(lvl), ask)
-        if used_fb:
-            continue
-        out.extend([t.model_dump() for t in strip_fallback_tasks(batch)])
-    return [t for t in out if not is_fallback_task(t)]
+    return run_refill_batch(
+        pool_levels,
+        pool_target_per_level,
+        pool_refill_chunk,
+        ollama_base_url=ollama_base_url,
+        ollama_model=ollama_model,
+        ollama_num_predict=ollama_num_predict,
+        ollama_temperature=ollama_temperature,
+        timeout_s=timeout_s,
+        extra_options=extra_options,
+        max_attempts=max_attempts,
+    )

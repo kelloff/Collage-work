@@ -197,6 +197,9 @@ func _apply_visuals() -> void:
 	# - Если дверь открыл игрок/система: отключаем коллизии полностью.
 	var collisions_disabled: bool = is_open and (not _opened_by_maniac)
 	_set_collision_shapes_recursive(self, collisions_disabled)
+	# Открытая дверь не должна упираться в ManiacCollision (иначе маньяк метается у порога).
+	if maniac_collision:
+		maniac_collision.disabled = is_open
 
 	_apply_navigation_link()
 
@@ -217,6 +220,8 @@ func _set_collision_shapes_recursive(root: Node, open_state: bool) -> void:
 		# В Godot 4 `Area2D` (и вообще некоторые Physics-узлы) не имеют свойства `disabled`,
 		# поэтому отключаем именно формы столкновений.
 		if c is CollisionShape2D or c is CollisionPolygon2D:
+			if c == maniac_collision:
+				continue
 			if _is_descendant_of(c, area) or _is_descendant_of(c, maniac_trigger):
 				continue
 			if c is CollisionShape2D:
@@ -358,8 +363,11 @@ func _clear_maniac_collision_exceptions() -> void:
 	for m in _maniacs_exceptions:
 		if m == null:
 			continue
-		if m is CollisionObject2D and has_method("remove_collision_exception_with"):
-			remove_collision_exception_with(m)
+		if m is CollisionObject2D:
+			if has_method("remove_collision_exception_with"):
+				remove_collision_exception_with(m)
+			if m.has_method("remove_collision_exception_with"):
+				m.remove_collision_exception_with(self)
 	_maniacs_exceptions.clear()
 
 func _try_reopen_for_maniacs_inside() -> void:
@@ -435,6 +443,8 @@ func open_for_maniac(maniac_body: Node) -> void:
 		if not _maniacs_exceptions.has(maniac_body):
 			_maniacs_exceptions.append(maniac_body)
 		add_collision_exception_with(maniac_body)
+		if maniac_body.has_method("add_collision_exception_with"):
+			maniac_body.add_collision_exception_with(self)
 
 func close_after_maniac(delay := 1.2) -> void:
 	await get_tree().create_timer(delay).timeout
@@ -485,10 +495,7 @@ func _on_maniac_entered(body: Node) -> void:
 func _on_maniac_exited(body: Node) -> void:
 	if body.is_in_group("maniac"):
 		_maniacs_inside = max(_maniacs_inside - 1, 0)
-		if body in _maniacs_exceptions:
-			_maniacs_exceptions.erase(body)
-		if body is CollisionObject2D and has_method("remove_collision_exception_with"):
-			remove_collision_exception_with(body)
+		# Исключение столкновения не снимаем при выходе из триггера — маньяк ещё в проёме.
 		if _maniacs_inside <= 0 and _opened_by_maniac:
 			close_after_maniac(1.2)
 

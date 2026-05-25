@@ -144,8 +144,16 @@ func _terminal_closed_cleanup() -> void:
 	_terminal_session_open = false
 	if GameState.has_method("pop_world_input_block"):
 		GameState.pop_world_input_block()
-	if player_node and player_node.has_method("set_control_enabled"):
-		player_node.set_control_enabled(true)
+	var p := player_node
+	if p == null or not is_instance_valid(p):
+		for node in get_tree().get_nodes_in_group("player"):
+			p = node
+			break
+	if p and p.has_method("set_control_enabled"):
+		var enable := true
+		if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+			enable = false
+		p.set_control_enabled(enable)
 	_update_hint_for_state()
 
 func set_outline(enabled: bool) -> void:

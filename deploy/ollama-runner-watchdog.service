@@ -1,0 +1,9 @@
+[Unit]
+Description=Kill stuck Ollama inference runner processes (main :11434)
+Documentation=file:///opt/collage-work/deploy/ollama_runner_killer.sh
+After=ollama.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/default/ollama-runner-watchdog
+ExecStart=/opt/collage-work/deploy/ollama_runner_killer.sh

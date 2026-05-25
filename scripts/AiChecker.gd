@@ -3,7 +3,12 @@ class_name AiChecker
 
 ## Если пусто — берётся BackendUrls + /check_task (тот же хост, что и /generate_tasks).
 @export var api_url: String = ""
-const CHECK_TIMEOUT_S: float = 25.0
+const CHECK_TIMEOUT_S: float = 12.0
+
+
+func _ready() -> void:
+	# Терминал ставит get_tree().paused — без ALWAYS HTTP не завершится до выхода.
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 # Асинхронная проверка решения через Python backend.
 # Backend должен принимать JSON:
@@ -17,6 +22,7 @@ func check_task_async(task: Dictionary, user_code: String, level: int = 1) -> Di
 
 	var http: HTTPRequest = HTTPRequest.new()
 	http.timeout = CHECK_TIMEOUT_S
+	http.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(http)
 
 	var payload: Dictionary = {

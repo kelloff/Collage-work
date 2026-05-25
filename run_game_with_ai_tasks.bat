@@ -59,9 +59,18 @@ if exist "%TASKS_LOCK_FILE%" (
 )
 
 echo [3/3] Starting Godot project...
-"%~dp0godote_new_project1.exe"
-
-echo Done. If Godot did not start, check the Godot exe path in this .bat file.
+where godot >nul 2>&1
+if %errorlevel%==0 (
+	godot --path "%~dp0"
+	goto end_all
+)
+if defined GODOT_EXE if exist "%GODOT_EXE%" (
+	"%GODOT_EXE%" --path "%~dp0"
+	goto end_all
+)
+echo Godot not found in PATH.
+echo Install Godot 4.x and add "godot" to PATH, or set GODOT_EXE to the editor .exe path.
+echo For a standalone build: export from the editor ^(export_presets.cfg^).
 
 :end_all
 endlocal

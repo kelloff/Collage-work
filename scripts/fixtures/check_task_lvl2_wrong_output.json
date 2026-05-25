@@ -1,0 +1,8 @@
+{
+  "level": 2,
+  "description": "Вычисли сумму чисел от 1 до 5 и выведи результат.",
+  "expected_output": "15",
+  "required_patterns": "for;range",
+  "user_code": "print(10)",
+  "allow_direct_print": 0
+}

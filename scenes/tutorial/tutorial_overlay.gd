@@ -163,9 +163,11 @@ func _on_popup_ok() -> void:
 		GameState.pop_gameplay_freeze()
 	if GameState.has_method("pop_world_input_block"):
 		GameState.pop_world_input_block()
-	if _on_close.is_valid():
-		_on_close.call()
+	var cb := _on_close
 	_on_close = Callable()
+	# Откладываем: proceed может вызвать teardown overlay, пока BtnOk ещё в стеке.
+	if cb.is_valid():
+		cb.call_deferred()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not popup.visible:

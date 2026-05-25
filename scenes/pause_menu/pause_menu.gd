@@ -16,7 +16,7 @@ var _open: bool = false
 var _pause_pushed_world_block: bool = false
 
 func _ready() -> void:
-	layer = 100
+	layer = 110
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	set_process_unhandled_input(true)
 	visible = false
@@ -89,6 +89,7 @@ func show_pause() -> void:
 	if menu_panel:
 		menu_panel.visible = true
 
+	_set_overlay_passthrough(true)
 	_freeze_player_for_pause(true)
 
 	if GameState.has_method("push_gameplay_freeze"):
@@ -96,18 +97,28 @@ func show_pause() -> void:
 	else:
 		get_tree().paused = true
 
+	if resume_btn:
+		resume_btn.grab_focus()
+
 
 func hide_pause() -> void:
 	_open = false
 	_hide_all_panels()
 	visible = false
 
+	_set_overlay_passthrough(false)
 	_freeze_player_for_pause(false)
 
 	if GameState.has_method("pop_gameplay_freeze"):
 		GameState.pop_gameplay_freeze()
 	else:
 		get_tree().paused = false
+
+
+func _set_overlay_passthrough(enabled: bool) -> void:
+	for node in get_tree().get_nodes_in_group("gameplay_overlay_ui"):
+		if node.has_method("set_pause_input_passthrough"):
+			node.set_pause_input_passthrough(enabled)
 
 
 func _freeze_player_for_pause(frozen: bool) -> void:
@@ -119,10 +130,14 @@ func _freeze_player_for_pause(frozen: bool) -> void:
 		if _pause_pushed_world_block and GameState.has_method("pop_world_input_block"):
 			GameState.pop_world_input_block()
 			_pause_pushed_world_block = false
+	var enable_player := not frozen
+	if not frozen and GameState.has_method("is_world_input_blocked"):
+		if GameState.is_world_input_blocked():
+			enable_player = false
 	var players := get_tree().get_nodes_in_group("player")
 	for p in players:
 		if p.has_method("set_control_enabled"):
-			p.set_control_enabled(not frozen)
+			p.set_control_enabled(enable_player)
 
 
 func toggle_menu() -> void:

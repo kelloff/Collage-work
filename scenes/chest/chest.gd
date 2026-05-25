@@ -2,6 +2,11 @@ extends Node2D
 
 const DROP_OCCUPY_RADIUS := 14.0
 const DROP_RING_STEP := 18.0
+const DROP_WALL_PROBE_DIST := 22.0
+
+const _CARDINAL_DIRS: Array[Vector2] = [
+	Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP,
+]
 
 @onready var area: Area2D = $InteractionArea
 
@@ -11,6 +16,8 @@ const DROP_RING_STEP := 18.0
 @export_range(0.0, 1.0) var drop_chance: float = 0.12
 @export_range(0, 3) var drops_per_open: int = 1
 @export_range(0.0, 1.0) var extra_drop_chance: float = 0.0
+## Сколько раз с этого сундука может выпасть каждый тип баффа (скорость / инвиз / хил).
+@export_range(0, 2) var max_drops_per_buff_type: int = 2
 @export var speed_buff_scene: PackedScene = preload("res://scenes/items/speed_buff.tscn")
 @export var invis_buff_scene: PackedScene = preload("res://scenes/items/invis_buff.tscn")
 @export var heal_buff_scene: PackedScene = preload("res://scenes/items/heal_buff.tscn")
@@ -24,6 +31,7 @@ const DROP_RING_STEP := 18.0
 
 var player_in_range := false
 var opened := false
+var _buff_drops_spawned: Dictionary = {}  # "speed" | "invis" | "heal" -> int
 var _outline_vis := InteractionOutline.new()
 var rng := RandomNumberGenerator.new()
 
@@ -88,25 +96,53 @@ func _roll_drop_count(force_one: bool) -> int:
 				count += 1
 	return count
 
-func _spawn_drops(count: int) -> void:
-	var scenes: Array[PackedScene] = []
-	if speed_buff_scene:
-		scenes.append(speed_buff_scene)
-	if invis_buff_scene:
-		scenes.append(invis_buff_scene)
-	if heal_buff_scene:
-		scenes.append(heal_buff_scene)
-	if scenes.is_empty():
-		return
+func _buff_type_for_scene(scene: PackedScene) -> String:
+	if speed_buff_scene != null and scene == speed_buff_scene:
+		return "speed"
+	if invis_buff_scene != null and scene == invis_buff_scene:
+		return "invis"
+	if heal_buff_scene != null and scene == heal_buff_scene:
+		return "heal"
+	return ""
 
-	var base_pos: Vector2 = global_position + drop_offset
+
+func _can_drop_buff(buff_type: String) -> bool:
+	if buff_type == "" or max_drops_per_buff_type <= 0:
+		return false
+	return int(_buff_drops_spawned.get(buff_type, 0)) < max_drops_per_buff_type
+
+
+func _eligible_drop_scenes() -> Array[PackedScene]:
+	var scenes: Array[PackedScene] = []
+	if speed_buff_scene and _can_drop_buff("speed"):
+		scenes.append(speed_buff_scene)
+	if invis_buff_scene and _can_drop_buff("invis"):
+		scenes.append(invis_buff_scene)
+	if heal_buff_scene and _can_drop_buff("heal"):
+		scenes.append(heal_buff_scene)
+	return scenes
+
+
+func _register_buff_drop(scene: PackedScene) -> void:
+	var buff_type := _buff_type_for_scene(scene)
+	if buff_type == "":
+		return
+	_buff_drops_spawned[buff_type] = int(_buff_drops_spawned.get(buff_type, 0)) + 1
+
+
+func _spawn_drops(count: int) -> void:
+	var base_pos: Vector2 = global_position + _resolved_drop_offset()
 	var positions: Array[Vector2] = _compute_drop_positions(base_pos, count)
 	for i in range(count):
+		var scenes := _eligible_drop_scenes()
+		if scenes.is_empty():
+			break
 		var scene: PackedScene = scenes[rng.randi_range(0, scenes.size() - 1)]
 		var item := scene.instantiate()
 		get_tree().current_scene.add_child(item)
 		if item is Node2D:
 			item.global_position = positions[i]
+		_register_buff_drop(scene)
 
 func _on_body_entered(body: Node) -> void:
 	if opened:
@@ -138,21 +174,74 @@ func _snap_tree_to_pixels(n: Node) -> void:
 	for ch in n.get_children():
 		_snap_tree_to_pixels(ch)
 
+func _ray_exclude_rids() -> Array[RID]:
+	var out: Array[RID] = []
+	var body := get_node_or_null("StaticBody2D") as CollisionObject2D
+	if body:
+		out.append(body.get_rid())
+	return out
+
+
+func _is_direction_blocked(from: Vector2, direction: Vector2, distance: float = DROP_WALL_PROBE_DIST) -> bool:
+	if direction.length_squared() < 0.0001:
+		return false
+	var space := get_world_2d().direct_space_state
+	if space == null:
+		return false
+	var dir := direction.normalized()
+	var query := PhysicsRayQueryParameters2D.create(from, from + dir * distance)
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	query.exclude = _ray_exclude_rids()
+	return not space.intersect_ray(query).is_empty()
+
+
+func _resolved_drop_offset() -> Vector2:
+	var off := drop_offset
+	if off.length_squared() < 1.0:
+		off = Vector2(0, DROP_RING_STEP)
+	var dist := off.length()
+	var dir := off.normalized()
+	if not _is_direction_blocked(global_position, dir):
+		return dir * dist
+	if not _is_direction_blocked(global_position, -dir):
+		return -dir * dist
+	for card in _CARDINAL_DIRS:
+		if not _is_direction_blocked(global_position, card):
+			return card * dist
+	return -dir * dist
+
+
+func _drop_offset_ring() -> Array[Vector2]:
+	var primary := _resolved_drop_offset().normalized()
+	if primary.length_squared() < 0.0001:
+		primary = Vector2.DOWN
+	var perp := Vector2(-primary.y, primary.x)
+	var s := DROP_RING_STEP
+	return [
+		Vector2.ZERO,
+		primary * s,
+		-primary * s,
+		perp * s,
+		-perp * s,
+		primary * s + perp * s,
+		primary * s - perp * s,
+		-primary * s + perp * s,
+		-primary * s - perp * s,
+		primary * s * 2.0,
+		-primary * s * 2.0,
+		perp * s * 2.0,
+		-perp * s * 2.0,
+	]
+
+
 func _compute_drop_positions(base: Vector2, count: int) -> Array[Vector2]:
 	var result: Array[Vector2] = []
 	var occupied: Array[Vector2] = []
 	for n in get_tree().get_nodes_in_group("tutorial_pickup"):
 		if n is Node2D and is_instance_valid(n):
 			occupied.append(n.global_position)
-	var offsets: Array[Vector2] = [
-		Vector2.ZERO,
-		Vector2(DROP_RING_STEP, 0), Vector2(-DROP_RING_STEP, 0),
-		Vector2(0, DROP_RING_STEP), Vector2(0, -DROP_RING_STEP),
-		Vector2(DROP_RING_STEP, DROP_RING_STEP), Vector2(-DROP_RING_STEP, DROP_RING_STEP),
-		Vector2(DROP_RING_STEP, -DROP_RING_STEP), Vector2(-DROP_RING_STEP, -DROP_RING_STEP),
-		Vector2(DROP_RING_STEP * 2, 0), Vector2(-DROP_RING_STEP * 2, 0),
-		Vector2(0, DROP_RING_STEP * 2),
-	]
+	var offsets: Array[Vector2] = _drop_offset_ring()
 	for i in range(count):
 		var placed := false
 		for off in offsets:
@@ -168,7 +257,10 @@ func _compute_drop_positions(base: Vector2, count: int) -> Array[Vector2]:
 				placed = true
 				break
 		if not placed:
-			var fallback: Vector2 = base + Vector2(DROP_RING_STEP * (i + 1), 0)
+			var away := _resolved_drop_offset().normalized()
+			if away.length_squared() < 0.0001:
+				away = Vector2.DOWN
+			var fallback: Vector2 = base + away * DROP_RING_STEP * float(i + 1)
 			result.append(fallback)
 			occupied.append(fallback)
 	return result

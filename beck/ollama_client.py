@@ -1,6 +1,17 @@
-from typing import Optional
+from __future__ import annotations
+
+import json
+from typing import Optional, Protocol
 
 import requests
+
+
+class OllamaAborted(Exception):
+    """HTTP к Ollama прерван (refill на паузе из-за /check_task)."""
+
+
+class _AbortLike(Protocol):
+    def is_set(self) -> bool: ...
 
 
 def ollama_chat(
@@ -13,12 +24,13 @@ def ollama_chat(
     force_json: bool = False,
     temperature: float = 0.1,
     extra_options: Optional[dict] = None,
+    abort_event: Optional[_AbortLike] = None,
 ) -> str:
     """
-    Query local Ollama model via /api/chat (non-streaming).
-    Returns assistant message content (string).
+    Query local Ollama via /api/chat (non-streaming response, stream=True read).
+    abort_event: при is_set() соединение закрывается (пауза refill).
     """
-    url = f"{ollama_base_url}/api/chat"
+    url = f"{ollama_base_url.rstrip('/')}/api/chat"
     opts = {
         "temperature": temperature,
         "num_predict": ollama_num_predict,
@@ -36,7 +48,27 @@ def ollama_chat(
     }
     if force_json:
         payload["format"] = "json"
-    resp = requests.post(url, json=payload, timeout=timeout_s)
-    resp.raise_for_status()
-    data = resp.json()
-    return str(data.get("message", {}).get("content", "")).strip()
+    connect_s = min(5, max(2, timeout_s // 4))
+    resp = requests.post(
+        url,
+        json=payload,
+        timeout=(connect_s, timeout_s),
+        stream=True,
+    )
+    try:
+        resp.raise_for_status()
+        chunks: list[bytes] = []
+        for chunk in resp.iter_content(chunk_size=8192):
+            if abort_event and abort_event.is_set():
+                raise OllamaAborted("refill aborted")
+            if chunk:
+                chunks.append(chunk)
+        raw = b"".join(chunks).decode("utf-8", errors="replace")
+        data = json.loads(raw)
+        return str(data.get("message", {}).get("content", "")).strip()
+    except OllamaAborted:
+        raise
+    except Exception:
+        raise
+    finally:
+        resp.close()

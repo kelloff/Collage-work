@@ -1,6 +1,7 @@
 extends Node
 
-## Сбор метрик прохождения и расчёт итоговой оценки 0–100.
+## Сбор метрик прохождения и расчёт итоговой оценки 0–100 (обучающая игра).
+## Блоки: задания 50 + скорость 25 + точность 15 + самостоятельность 10.
 
 const BEST_SCORE_PATH := "user://best_run_score.json"
 
@@ -15,10 +16,13 @@ var completed_tasks: int = 0
 
 var failed_attempts: int = 0
 var successful_checks: int = 0
+## Успешные проверки без ошибок с прошлого сданного задания (для блока «Самостоятельность»).
+var clean_successes: int = 0
 var death_count: int = 0
 
 var _solve_times_sec: Array[float] = []
 var _attempt_started_ms: int = 0
+var _failed_since_last_success: int = 0
 
 func start_level(level: int = 1) -> void:
 	level_number = level
@@ -26,9 +30,11 @@ func start_level(level: int = 1) -> void:
 	completed_tasks = 0
 	failed_attempts = 0
 	successful_checks = 0
+	clean_successes = 0
 	death_count = 0
 	_solve_times_sec.clear()
 	_attempt_started_ms = 0
+	_failed_since_last_success = 0
 
 
 func reset_session() -> void:
@@ -38,9 +44,11 @@ func reset_session() -> void:
 	completed_tasks = 0
 	failed_attempts = 0
 	successful_checks = 0
+	clean_successes = 0
 	death_count = 0
 	_solve_times_sec.clear()
 	_attempt_started_ms = 0
+	_failed_since_last_success = 0
 
 
 func set_total_tasks_on_level(count: int) -> void:
@@ -77,11 +85,15 @@ func begin_task_attempt() -> void:
 
 func record_task_failure() -> void:
 	failed_attempts += 1
+	_failed_since_last_success += 1
 	_attempt_started_ms = 0
 
 
 func record_task_success() -> void:
 	successful_checks += 1
+	if _failed_since_last_success == 0:
+		clean_successes += 1
+	_failed_since_last_success = 0
 	if _attempt_started_ms > 0:
 		var dt := float(Time.get_ticks_msec() - _attempt_started_ms) / 1000.0
 		_solve_times_sec.append(maxf(dt, MIN_SOLVE_SECONDS))
@@ -119,9 +131,6 @@ func get_score_breakdown(victory: bool = false) -> Dictionary:
 	refresh_from_db()
 	var total: int = maxi(total_tasks_on_level, 1)
 	var done: int = mini(completed_tasks, total)
-	var deaths: int = death_count
-	if typeof(GameState) != TYPE_NIL and GameState.death_count > deaths:
-		deaths = GameState.death_count
 
 	var task_pts: float = 50.0 * float(done) / float(total)
 	if victory and done >= total:
@@ -144,9 +153,16 @@ func get_score_breakdown(victory: bool = false) -> Dictionary:
 	elif done > 0:
 		accuracy_pts = 12.0
 
-	var survival_pts: float = clampf(10.0 - float(deaths) * 4.0, 0.0, 10.0)
+	# Самостоятельность: сдали задание с первой успешной проверки (без ошибок перед ней).
+	var independence_pts: float = 0.0
+	if successful_checks > 0:
+		independence_pts = 10.0 * float(clean_successes) / float(successful_checks)
+	elif done > 0:
+		independence_pts = 4.0
 
-	var total_score: int = int(round(clampf(task_pts + speed_pts + accuracy_pts + survival_pts, 0.0, 100.0)))
+	var total_score: int = int(round(
+		clampf(task_pts + speed_pts + accuracy_pts + independence_pts, 0.0, 100.0)
+	))
 
 	return {
 		"total_score": total_score,
@@ -154,14 +170,14 @@ func get_score_breakdown(victory: bool = false) -> Dictionary:
 		"task_points": int(round(task_pts)),
 		"speed_points": int(round(speed_pts)),
 		"accuracy_points": int(round(accuracy_pts)),
-		"survival_points": int(round(survival_pts)),
+		"independence_points": int(round(independence_pts)),
 		"tasks_done": done,
 		"tasks_total": total,
 		"failed_attempts": failed_attempts,
 		"successful_checks": successful_checks,
+		"clean_successes": clean_successes,
 		"avg_solve_seconds": avg_solve,
 		"elapsed_text": get_elapsed_text(),
-		"deaths": deaths,
 		"victory": victory,
 	}
 
@@ -197,7 +213,14 @@ func build_report_text(victory: bool = false) -> String:
 	else:
 		lines.append("Скорость: +%d баллов" % b.speed_points)
 
-	lines.append("Смерти: %d  (+%d баллов выживание)" % [b.deaths, b.survival_points])
+	if b.successful_checks > 0:
+		lines.append(
+			"Самостоятельность: %d из %d с первой попытки  (+%d баллов)" % [
+				b.clean_successes, b.successful_checks, b.independence_points
+			]
+		)
+	else:
+		lines.append("Самостоятельность: +%d баллов" % b.independence_points)
 	lines.append("")
 	lines.append(_score_hint(b.total_score, victory))
 
@@ -263,9 +286,9 @@ func _grade_label(score: int) -> String:
 
 func _score_hint(score: int, victory: bool) -> String:
 	if victory and score >= 90:
-		return "Ты прошёл игру блестяще. Попробуй ускориться или пройти без ошибок?"
+		return "Ты прошёл игру блестяще. Попробуй решать задания с первой проверки?"
 	if victory:
-		return "Пройди быстрее, с меньшим числом ошибок и без смертей — оценка вырастет."
+		return "Доделай все компы, меньше ошибок при проверке кода — оценка вырастет."
 	if score < 50:
 		return "Доделай задания на компьютерах и ищи выход."
 	return "Ты уже близко — выполни оставшиеся задания и доберись до выхода."

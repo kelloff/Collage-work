@@ -4,6 +4,8 @@ import re
 
 import requests
 
+from tasks_fallback_catalog import catalog_tasks_for_level
+
 
 BACKEND_URL = "http://127.0.0.1:8000"
 # Какие уровни заданий хотим сгенерировать
@@ -81,6 +83,16 @@ def to_gd_string(value):
     if isinstance(value, str):
         return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
     return str(value)
+
+
+def _catalog_tasks_flat() -> list[dict]:
+    rows: list[dict] = []
+    for lvl in LEVELS:
+        for obj in catalog_tasks_for_level(lvl, TASKS_PER_LEVEL):
+            row = dict(obj)
+            row["level"] = lvl
+            rows.append(row)
+    return rows
 
 
 def build_task_data_gd(all_tasks):
@@ -172,6 +184,9 @@ def main():
         print("Fetching all levels via /generate_tasks_multi …")
         multi_tasks, multi_src = fetch_tasks_multi(LEVELS, TASKS_PER_LEVEL)
         target_total = len(LEVELS) * TASKS_PER_LEVEL
+        if multi_src == "fallback":
+            multi_tasks = _catalog_tasks_flat()
+            multi_src = "catalog_fallback"
         if len(multi_tasks) == target_total:
             gd_text = build_task_data_gd(multi_tasks)
             OUTPUT_GD_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -202,8 +217,13 @@ def main():
 
             level_source = source
             if source == "fallback":
-                print(f"  level {lvl} attempt {attempt}/{MAX_LEVEL_RETRIES}: fallback, retrying...")
-                continue
+                print(f"  level {lvl}: server fallback → canonical catalog")
+                level_tasks = []
+                for obj in catalog_tasks_for_level(lvl, TASKS_PER_LEVEL):
+                    row = dict(obj)
+                    row["level"] = lvl
+                    level_tasks.append(row)
+                break
 
             # Накапливаем задачи между попытками и убираем дубликаты.
             for t in tasks:
@@ -241,9 +261,9 @@ def main():
             "Generation incomplete: "
             f"got {len(all_tasks)}/{target_total} AI tasks. "
             f"Per-level success: {per_level_ok}. "
-            "Abort without rewriting task_data.gd."
+            "Using canonical fallback catalog instead."
         )
-        raise SystemExit(1)
+        all_tasks = _catalog_tasks_flat()
 
     gd_text = build_task_data_gd(all_tasks)
 

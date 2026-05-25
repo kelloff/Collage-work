@@ -45,11 +45,23 @@ Python-зависимости backend:
 
 ## Запуск
 
-Основной запуск:
-- `run_game_with_ai_tasks.bat`
+Основной запуск (разработка):
+- `run_game_with_ai_tasks.bat` — нужен **Godot 4.x в PATH** (`godot`) или переменная `GODOT_EXE` с путём к редактору.
 
 Скрипт:
 - поднимает backend,
 - проверяет `/health`,
 - (на первом запуске) генерирует AI-задачи,
-- запускает игру.
+- запускает проект через `godot --path`.
+
+Сборка для игроков:
+- Godot → Export → пресет `Windows Desktop 2` (`export_presets.cfg`).
+- Скомпилированные `.exe` не хранятся в репозитории (см. `.gitignore`).
+
+## Бэкенд (API + деплой)
+
+- Код: `beck/` (FastAPI + Ollama).
+- Продакшен: `https://kellofff.me` (см. `scripts/backend_urls.gd`).
+- Деплой и проверка: [docs/DEPLOY_BACKEND.md](docs/DEPLOY_BACKEND.md), скрипты в `deploy/`.
+- Тест с ПК: `powershell -File scripts/test_backend_remote.ps1`
+- **Учебный каталог (20 заданий):** [docs/EDUCATION.md](docs/EDUCATION.md), источник `beck/tasks_fallback_catalog.py`, синхронизация в Godot: `python beck/sync_task_data_gd.py`

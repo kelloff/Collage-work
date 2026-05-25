@@ -15,6 +15,8 @@ var _running: bool = false
 
 
 func _ready() -> void:
+	# Работает при открытом терминале (gameplay freeze / paused tree).
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	randomize()
 
 	var abs_tmp_dir := ProjectSettings.globalize_path(tmp_dir)
@@ -108,7 +110,7 @@ func _thread_run_code(args: Dictionary) -> void:
 		})
 		return
 
-	f.store_string(code_text)
+	f.store_buffer(code_text.to_utf8_buffer())
 	f.close()
 
 	# --------- execute python ----------
@@ -230,9 +232,16 @@ func _run_with_redirect_files(abs_py_file: String, timeout: float) -> Dictionary
 	var args: Array
 
 	if OS.get_name() == "Windows":
-		# cmd /c python file 1>out 2>err
+		# cmd /c python file 1>out 2>err (UTF-8 для кириллицы в stdout)
 		cmd = "cmd"
-		args = ["/c", python_cmd] + _python_args(abs_py_file) + ["1>", out_path, "2>", err_path]
+		var py_exe := python_cmd.replace("\"", "")
+		var py_file := abs_py_file.replace("\"", "")
+		var py_line := '%s -X utf8 -B -u "%s"' % [py_exe, py_file]
+		args = [
+			"/c",
+			"set PYTHONIOENCODING=utf-8&& set PYTHONUTF8=1&& %s 1>\"%s\" 2>\"%s\""
+			% [py_line, out_path.replace("\"", ""), err_path.replace("\"", "")]
+		]
 	else:
 		# sh -lc 'python file 1>out 2>err'
 		cmd = "sh"
@@ -253,8 +262,8 @@ func _run_with_redirect_files(abs_py_file: String, timeout: float) -> Dictionary
 
 # ---------------- UTIL ----------------
 func _python_args(abs_py_file: String) -> Array:
-	# -B не пишет .pyc, -u делает вывод построчным
-	return ["-B", "-u", abs_py_file]
+	# -B не пишет .pyc, -u — unbuffered, -X utf8 — кириллица в print() на Windows
+	return ["-X", "utf8", "-B", "-u", abs_py_file]
 
 
 func _detect_python_command() -> String:
@@ -305,9 +314,13 @@ func _read_text_file(path: String) -> String:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return ""
-	var t := f.get_as_text()
+	var raw: PackedByteArray = f.get_buffer(f.get_length())
 	f.close()
-	return t
+	if raw.is_empty():
+		return ""
+	if raw.size() >= 3 and raw[0] == 0xEF and raw[1] == 0xBB and raw[2] == 0xBF:
+		raw = raw.slice(3)
+	return raw.get_string_from_utf8()
 
 
 func _try_delete(path: String) -> void:

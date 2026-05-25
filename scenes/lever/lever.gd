@@ -93,17 +93,35 @@ func register_links() -> void:
 				DbManager.link_lever_to_door(lever_id, did)
 
 func _apply_linked_doors() -> void:
-	var should_open := ((not is_on) if open_doors_on_down else is_on)
-
-	for d in get_tree().get_nodes_in_group("doors"):
-		# берём только двери
-		if not (d is Door):
+	# Несколько рычагов на одну дверь: открыть только когда ВСЕ связанные рычаги
+	# в нужном положении (та же логика, что DbManager.is_door_accessible).
+	var seen: Dictionary = {}
+	for raw_id in linked_doors:
+		var door_id := int(raw_id)
+		if door_id <= 0 or seen.has(door_id):
 			continue
-		if int(d.door_id) in linked_doors:
+		seen[door_id] = true
+		_sync_linked_door(door_id)
+
+
+func _sync_linked_door(door_id: int) -> void:
+	var should_open := _door_should_be_open_by_levers(door_id)
+	for d in get_tree().get_nodes_in_group("doors"):
+		if d is Door and int(d.door_id) == door_id:
 			if should_open:
 				d.open(true)
 			else:
 				d.close(true)
+
+
+func _door_should_be_open_by_levers(door_id: int) -> bool:
+	if door_id <= 0:
+		return false
+	if DbManager.has_method("is_door_accessible"):
+		var all_satisfied := DbManager.is_door_accessible(door_id)
+		return all_satisfied if open_doors_on_down else not all_satisfied
+	# Fallback: только этот рычаг (если БД недоступна)
+	return (not is_on) if open_doors_on_down else is_on
 
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):

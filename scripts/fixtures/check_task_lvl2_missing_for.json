@@ -1,0 +1,8 @@
+{
+  "level": 2,
+  "description": "Вычисли сумму чисел от 1 до 5 с помощью цикла for и выведи результат.",
+  "expected_output": "15",
+  "required_patterns": "for;range",
+  "user_code": "total = 0\ntotal = 1 + 2 + 3 + 4 + 5\nprint(total)",
+  "allow_direct_print": 0
+}

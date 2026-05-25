@@ -1,17 +1,35 @@
 from typing import List
+import os
 import time
 
 from fastapi import APIRouter, HTTPException
 
 import task_pool
 from app_context import AppContext
-from generate_service import strip_fallback_tasks
+from generate_service import fallback_generate_tasks, strip_fallback_tasks
 from models import (
     GenerateTasksMultiRequest,
     GenerateTasksRequest,
     GenerateTasksResponse,
     TaskSpec,
 )
+
+
+def _fallback_on_miss_enabled() -> bool:
+    """1 = отдать шаблонные задачи (200), если пул+Ollama не успели. 0 = HTTP 503."""
+    v = os.getenv("GENERATE_FALLBACK_ON_MISS", "1")
+    return v.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _fallback_multi(levels: List[int], count_per_level: int) -> GenerateTasksResponse:
+    tasks: List[TaskSpec] = []
+    for lvl in levels:
+        tasks.extend(fallback_generate_tasks(int(lvl), count_per_level))
+    print(
+        f"generate_tasks_multi: serving built-in fallback "
+        f"{len(tasks)} tasks (levels={levels}, n={count_per_level})"
+    )
+    return GenerateTasksResponse(tasks=tasks, source="fallback")
 
 
 def _serial_per_level(
@@ -140,6 +158,9 @@ def _serve_multi_from_pool_and_llm(
     if len(merged3) >= expected:
         return GenerateTasksResponse(tasks=merged3[:expected], source="ollama_serial")
 
+    if _fallback_on_miss_enabled():
+        return _fallback_multi(levels, n)
+
     raise HTTPException(
         status_code=503,
         detail=(
@@ -190,6 +211,10 @@ def create_generate_router(ctx: AppContext) -> APIRouter:
         tasks = strip_fallback_tasks(tasks)
         if tasks:
             return GenerateTasksResponse(tasks=tasks[: req.count], source=source)
+
+        if _fallback_on_miss_enabled():
+            fb = fallback_generate_tasks(req.level, req.count)
+            return GenerateTasksResponse(tasks=fb, source="fallback")
 
         raise HTTPException(
             status_code=503,
