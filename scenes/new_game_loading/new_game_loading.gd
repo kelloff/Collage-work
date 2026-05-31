@@ -1,5 +1,5 @@
-extends Control
-## Экран загрузки: HTTP /generate_tasks_multi (или 4× /generate_tasks) → wipe БД → вставка задач.
+﻿extends Control
+## Экран загрузки: over-fetch с сервера → фильтр на клиенте → дозапрос → локальный добор → БД.
 
 @onready var _status: Label = $BottomRight/VBox/Status
 @onready var _tip_prefix: Label = $BottomTips/VBox/TipPrefix
@@ -15,17 +15,21 @@ var _tip_index: int = 0
 var _tip_tween: Tween
 
 ## Пул на сервере — секунды; при пустом пуле ответ fallback обычно < 5 с.
-const SERVER_TASK_TIMEOUT_S: float = 120.0
+const SERVER_TASK_TIMEOUT_S: float = 25.0
+const FLOW_WATCHDOG_S: float = 55.0
 const LOCAL_TASKS_PATH := "res://db/task_data.gd"
 const TIP_ROTATE_SEC: float = 5.5
 
+var _flow_finished: bool = false
+var _watchdog: Timer
+
 const LOADING_TIPS: PackedStringArray = [
-	"«Новая игра» берёт задания с сервера (пул kellofff.me); при сбое — локальный запас.",
+	"«Новая игра»: при интернете — задания с сервера; без сети — встроенный набор.",
 	"В терминале пиши код на Python: print(), переменные, if и циклы пригодятся сразу.",
 	"Если застрял — открой журнал (B): вкладки «Руководство» и «Python: база», записки на уровне.",
 	"Маньяк слышит шум: беги тихо, когда нужно спрятаться.",
 	"Баффы в коридорах дают скорость, невидимость или лечение — не проходи мимо.",
-	"Уровни 0–1: проверка на твоём ПК. Уровни 2–3: проверка на сервере — решения в записках note_03.",
+	"Уровни 0–1: проверка на ПК. Уровни 2–3: обычно сервер; без сети — тоже на ПК (нужен Python).",
 	"Сохраняйся у компьютера, когда нашёл безопасное место.",
 	"Инвентарь ограничен — бери только то, что реально пригодится.",
 	"Рычаги и двери часто связаны: ищи, что открылось после действия.",
@@ -34,19 +38,50 @@ const LOADING_TIPS: PackedStringArray = [
 
 
 func _ready() -> void:
-	_error.visible = false
-	_btn_menu.visible = false
-	_btn_menu.pressed.connect(_on_to_menu)
-	_style_ui()
+	if _error:
+		_error.visible = false
+	if _btn_menu:
+		_btn_menu.visible = false
+		_btn_menu.pressed.connect(_on_to_menu)
+	_set_status("Подключение к серверу…")
 	_start_loading_tips()
 	_run_flow.call_deferred()
+	call_deferred("_style_ui")
+	_start_watchdog()
 
 
 func _exit_tree() -> void:
+	if _watchdog and is_instance_valid(_watchdog):
+		_watchdog.stop()
 	if _tip_timer and is_instance_valid(_tip_timer):
 		_tip_timer.stop()
 	if _tip_tween and _tip_tween.is_valid():
 		_tip_tween.kill()
+	_cancel_http()
+
+
+func _start_watchdog() -> void:
+	_watchdog = Timer.new()
+	_watchdog.wait_time = FLOW_WATCHDOG_S
+	_watchdog.one_shot = true
+	_watchdog.timeout.connect(_on_flow_watchdog)
+	add_child(_watchdog)
+	_watchdog.start()
+
+
+func _on_flow_watchdog() -> void:
+	if _flow_finished:
+		return
+	push_warning("new_game_loading: watchdog — принудительно локальные задания")
+	_cancel_http()
+	_finish_new_game_with_local_tasks.call_deferred()
+
+
+func _cancel_http() -> void:
+	if _http and is_instance_valid(_http):
+		_http.cancel_request()
+		_http.queue_free()
+		_http = null
 
 
 func _style_ui() -> void:
@@ -162,6 +197,130 @@ func _load_local_tasks_into_db() -> bool:
 	return false
 
 
+func _load_local_tasks_array() -> Array:
+	if not ResourceLoader.exists(LOCAL_TASKS_PATH):
+		return []
+	var scr: Script = load(LOCAL_TASKS_PATH) as Script
+	if scr == null:
+		return []
+	var inst: Object = scr.new()
+	if inst == null or not ("default_tasks" in inst):
+		return []
+	var raw: Variant = inst.get("default_tasks")
+	if typeof(raw) != TYPE_ARRAY:
+		return []
+	return raw.duplicate(true)
+
+
+func _fetch_tasks_multi(levels: Array, count_per_level: int) -> Dictionary:
+	var url_multi := BackendUrls.url("/generate_tasks_multi")
+	var payload_multi := JSON.stringify({
+		"levels": levels,
+		"count_per_level": count_per_level,
+	})
+	for attempt in range(2):
+		if attempt > 0:
+			_set_status("Повтор запроса заданий…")
+			await get_tree().process_frame
+		var r: Dictionary = await _http_post_json(url_multi, payload_multi)
+		if r.get("ok", false) and int(r.get("code", 0)) == 200:
+			var parsed: Dictionary = _parse_tasks_response(str(r.get("text", "")), "/generate_tasks_multi")
+			var batch: Array = parsed.get("tasks", [])
+			if not batch.is_empty():
+				if typeof(BackendUrls) != TYPE_NIL:
+					BackendUrls.mark_server_online()
+				return {"tasks": batch, "source": str(parsed.get("source", "server"))}
+		elif int(r.get("code", 0)) == 503:
+			push_warning("new_game_loading: server 503 (pool/LLM busy), attempt=%d" % attempt)
+		elif int(r.get("code", 0)) == 404:
+			break
+	return {"tasks": [], "source": ""}
+
+
+func _fetch_tasks_one_level(level: int, count: int) -> Array:
+	var url_one := BackendUrls.url("/generate_tasks")
+	var payload := JSON.stringify({"level": int(level), "count": count})
+	var rr: Dictionary = await _http_post_json(url_one, payload)
+	if not rr.get("ok", false):
+		return []
+	if int(rr.get("code", 0)) != 200:
+		return []
+	var batch_parsed: Dictionary = _parse_tasks_response(str(rr.get("text", "")), "/generate_tasks")
+	return batch_parsed.get("tasks", [])
+
+
+func _merge_filtered_tasks(
+	accum: Array,
+	incoming: Array,
+	levels: Array,
+	per_level: int,
+) -> Array:
+	var merged: Array = accum.duplicate(true)
+	for t in incoming:
+		if typeof(t) != TYPE_DICTIONARY:
+			continue
+		merged.append(t)
+	return TaskClientFilter.filter_playable_tasks(merged, per_level)
+
+
+func _fill_missing_from_local(tasks_arr: Array, levels: Array, per_level: int) -> Array:
+	var local_all: Array = _load_local_tasks_array()
+	if local_all.is_empty():
+		return tasks_arr
+	var out: Array = tasks_arr.duplicate(true)
+	var missing: Dictionary = TaskClientFilter.missing_per_level(out, levels, per_level)
+	for lv_raw in levels:
+		var lv: int = int(lv_raw)
+		var need: int = int(missing.get(lv, 0))
+		if need <= 0:
+			continue
+		var picked: Array = TaskClientFilter.pick_local_for_level(local_all, lv, out, need)
+		if picked.is_empty():
+			push_warning("new_game_loading: local fill lvl=%d need=%d got=0" % [lv, need])
+			continue
+		print("new_game_loading: local fill lvl=%d +%d" % [lv, picked.size()])
+		out.append_array(picked)
+	return TaskClientFilter.filter_playable_tasks(out, per_level)
+
+
+func _fetch_server_tasks_filtered(levels: Array, per_level: int) -> Dictionary:
+	var request_n: int = NewGameConfig.server_request_count_per_level()
+	_set_status("Запрос заданий у сервера (×%d на уровень)…" % request_n)
+	await get_tree().process_frame
+
+	var multi: Dictionary = await _fetch_tasks_multi(levels, request_n)
+	var raw: Array = multi.get("tasks", [])
+	var source: String = str(multi.get("source", ""))
+	var filtered: Array = TaskClientFilter.filter_playable_tasks(raw, per_level)
+	print(
+		"new_game_loading: multi raw=%d filtered=%d need=%d/level"
+		% [raw.size(), filtered.size(), per_level]
+	)
+
+	var missing: Dictionary = TaskClientFilter.missing_per_level(filtered, levels, per_level)
+	if not missing.is_empty():
+		_set_status("Дозапрос недостающих заданий…")
+		await get_tree().process_frame
+		for lv in missing.keys():
+			var need: int = int(missing[lv])
+			var ask: int = NewGameConfig.server_topup_request_count(need)
+			_set_status("Дозапрос: уровень %d (+%d)…" % [int(lv), need])
+			await get_tree().process_frame
+			var batch: Array = await _fetch_tasks_one_level(int(lv), ask)
+			filtered = _merge_filtered_tasks(filtered, batch, levels, per_level)
+			missing = TaskClientFilter.missing_per_level(filtered, levels, per_level)
+			if missing.is_empty():
+				break
+
+	missing = TaskClientFilter.missing_per_level(filtered, levels, per_level)
+	if not missing.is_empty():
+		_set_status("Добиваем из локального набора…")
+		await get_tree().process_frame
+		filtered = _fill_missing_from_local(filtered, levels, per_level)
+
+	return {"tasks": filtered, "source": source if not source.is_empty() else "server+client_filter"}
+
+
 func _parse_tasks_response(text: String, err_ctx: String) -> Dictionary:
 	## { "tasks": Array, "source": String }
 	var empty := {"tasks": [], "source": ""}
@@ -177,81 +336,75 @@ func _parse_tasks_response(text: String, err_ctx: String) -> Dictionary:
 	return {"tasks": tasks_raw, "source": source}
 
 
+func _finish_new_game_with_local_tasks() -> void:
+	_set_status("Локальные задания (запасной режим)…")
+	await get_tree().process_frame
+	if DbManager.has_method("new_game_database_wipe"):
+		DbManager.new_game_database_wipe()
+	if not _load_local_tasks_into_db():
+		_fail("Не удалось загрузить локальные задания")
+		return
+	GameState.reset_all()
+	RunStats.reset_session()
+	_enter_level()
+
+
+func _enter_level() -> void:
+	_flow_finished = true
+	if _watchdog and is_instance_valid(_watchdog):
+		_watchdog.stop()
+	_set_status("Готово")
+	await get_tree().process_frame
+	var next := NewGameConfig.next_level_scene
+	if next.is_empty():
+		next = NewGameConfig.DEFAULT_LEVEL_SCENE
+	get_tree().change_scene_to_file(next)
+
+
 func _run_flow() -> void:
 	if NewGameConfig.use_local_tasks_only:
-		await _run_flow_local_only()
+		await _run_flow_local_only("Локальные задания (режим без сервера)…")
+		return
+
+	_set_status("Проверка связи с сервером…")
+	await get_tree().process_frame
+	var online := true
+	if typeof(BackendUrls) != TYPE_NIL and BackendUrls.has_method("probe_backend_async"):
+		online = await BackendUrls.probe_backend_async(4.0, true)
+	if not online:
+		push_warning("new_game_loading: offline — skip server, use local tasks")
+		await _run_flow_local_only("Офлайн: встроенный набор заданий…")
 		return
 
 	var levels: Array = NewGameConfig.GENERATE_LEVELS
 	var per_level: int = NewGameConfig.generate_task_count
 
-	_set_status("Запрос заданий у сервера…")
-	await get_tree().process_frame
-
 	var tasks_arr: Array = []
 	var task_source: String = ""
-	var url_multi := BackendUrls.url("/generate_tasks_multi")
-	var payload_multi := JSON.stringify({
-		"levels": levels,
-		"count_per_level": per_level,
-	})
 
-	for attempt in range(2):
-		if attempt > 0:
-			_set_status("Повтор запроса заданий…")
-			await get_tree().process_frame
-
-		var r: Dictionary = await _http_post_json(url_multi, payload_multi)
-		if r.get("ok", false) and int(r.get("code", 0)) == 200:
-			var parsed: Dictionary = _parse_tasks_response(str(r.get("text", "")), "/generate_tasks_multi")
-			tasks_arr = parsed.get("tasks", [])
-			task_source = str(parsed.get("source", ""))
-			if not tasks_arr.is_empty():
-				print("new_game_loading: tasks from server source=", task_source, " count=", tasks_arr.size())
-				var src_hint := task_source
-				if src_hint.is_empty():
-					src_hint = "server"
-				_set_status("Задания с сервера (%s), %d шт.…" % [src_hint, tasks_arr.size()])
-				await get_tree().process_frame
-				break
-		elif int(r.get("code", 0)) == 503:
-			push_warning("new_game_loading: server 503 (pool/LLM busy), attempt=%d" % attempt)
-		elif int(r.get("code", 0)) == 404:
-			break
-		else:
-			push_warning("new_game_loading: /generate_tasks_multi failed. r=%s" % str(r))
+	var fetched: Dictionary = await _fetch_server_tasks_filtered(levels, per_level)
+	tasks_arr = fetched.get("tasks", [])
+	task_source = str(fetched.get("source", ""))
 
 	if tasks_arr.is_empty():
-		_set_status("Батч недоступен, запрос по уровням…")
+		_set_status("Сервер не дал пригодных заданий, запрос по уровням…")
 		await get_tree().process_frame
-		var url_one := BackendUrls.url("/generate_tasks")
-		var idx := 0
 		for lvl in levels:
-			idx += 1
-			_set_status("Запрос заданий: уровень %s (%d/%d)…" % [str(lvl), idx, levels.size()])
-			await get_tree().process_frame
-			var payload := JSON.stringify({"level": int(lvl), "count": per_level})
-			var rr: Dictionary = await _http_post_json(url_one, payload)
-			if not rr.get("ok", false):
-				push_warning("new_game_loading: level=%s request failed -> local fallback" % str(lvl))
-				tasks_arr.clear()
+			var ask: int = NewGameConfig.server_request_count_per_level()
+			var batch: Array = await _fetch_tasks_one_level(int(lvl), ask)
+			tasks_arr = _merge_filtered_tasks(tasks_arr, batch, levels, per_level)
+			if TaskClientFilter.missing_per_level(tasks_arr, levels, per_level).is_empty():
 				break
-			var code := int(rr.get("code", 0))
-			if code == 503:
-				push_warning("new_game_loading: level=%s 503 -> local fallback" % str(lvl))
-				tasks_arr.clear()
-				break
-			if code != 200:
-				push_warning("new_game_loading: level=%s non-200=%d -> local fallback" % [str(lvl), code])
-				tasks_arr.clear()
-				break
-			var batch_parsed: Dictionary = _parse_tasks_response(str(rr.get("text", "")), "/generate_tasks")
-			var batch: Array = batch_parsed.get("tasks", [])
-			if batch.is_empty():
-				push_warning("new_game_loading: level=%s returned 0 tasks -> local fallback" % str(lvl))
-				tasks_arr.clear()
-				break
-			tasks_arr.append_array(batch)
+		tasks_arr = _fill_missing_from_local(tasks_arr, levels, per_level)
+		task_source = "server_serial+client_filter"
+
+	if not tasks_arr.is_empty():
+		print(
+			"new_game_loading: final tasks source=%s count=%d by_level=%s"
+			% [task_source, tasks_arr.size(), str(TaskClientFilter.count_by_level(tasks_arr))]
+		)
+		_set_status("Задания готовы (%d шт.)…" % tasks_arr.size())
+		await get_tree().process_frame
 
 	if tasks_arr.is_empty():
 		_set_status("Сервер недоступен, загружаем локальные задания…")
@@ -278,18 +431,11 @@ func _run_flow() -> void:
 
 	GameState.reset_all()
 	RunStats.reset_session()
-
-	_set_status("Готово")
-	await get_tree().process_frame
-
-	var next := NewGameConfig.next_level_scene
-	if next.is_empty():
-		next = NewGameConfig.DEFAULT_LEVEL_SCENE
-	get_tree().change_scene_to_file(next)
+	_enter_level()
 
 
-func _run_flow_local_only() -> void:
-	_set_status("Локальные задания (тест, без сервера)…")
+func _run_flow_local_only(status_msg: String = "Локальные задания (без сервера)…") -> void:
+	_set_status(status_msg)
 	await get_tree().process_frame
 	print("new_game_loading: use_local_tasks_only — ", LOCAL_TASKS_PATH)
 
@@ -308,17 +454,13 @@ func _run_flow_local_only() -> void:
 
 	GameState.reset_all()
 	RunStats.reset_session()
-
-	_set_status("Готово")
-	await get_tree().process_frame
-
-	var next := NewGameConfig.next_level_scene
-	if next.is_empty():
-		next = NewGameConfig.DEFAULT_LEVEL_SCENE
-	get_tree().change_scene_to_file(next)
+	_enter_level()
 
 
 func _fail(msg: String) -> void:
+	_flow_finished = true
+	if _watchdog and is_instance_valid(_watchdog):
+		_watchdog.stop()
 	push_error("new_game_loading: %s" % msg)
 	_set_status("Ошибка")
 	if _error:
@@ -326,3 +468,4 @@ func _fail(msg: String) -> void:
 		_error.visible = true
 	if _btn_menu:
 		_btn_menu.visible = true
+

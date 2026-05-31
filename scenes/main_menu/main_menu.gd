@@ -56,6 +56,8 @@ func _connect_pressed_once(btn: Button, handler: Callable) -> void:
 
 
 func _style_ui() -> void:
+	if GameUiTheme.theme and get_tree().root.theme != GameUiTheme.theme:
+		get_tree().root.theme = GameUiTheme.theme
 	var title: Label = get_node_or_null("TextureRect/VBoxContainer/Label") as Label
 	if title:
 		title.label_settings = GameUiTheme.make_title_settings(40)

@@ -13,6 +13,31 @@ var _outline_vis := InteractionOutline.new()
 @export var linked_doors: Array[int] = []
 @export var open_doors_on_down: bool = true
 
+
+## null — в сцене нет рычагов на эту дверь (используйте DbManager); иначе true/false.
+static func door_lever_requirement_met(tree: SceneTree, door_id: int) -> Variant:
+	if door_id <= 0:
+		return true
+	var found := false
+	var open_on_down := true
+	for node in tree.get_nodes_in_group("levers"):
+		if not (node is Lever):
+			continue
+		var lev := node as Lever
+		if door_id not in lev.linked_doors or lev.lever_id <= 0:
+			continue
+		found = true
+		open_on_down = lev.open_doors_on_down
+		if open_on_down:
+			if lev.is_on:
+				return false
+		elif not lev.is_on:
+			return false
+	if found:
+		return true
+	return null
+
+
 func _enter_tree() -> void:
 	if not is_in_group("levers"):
 		add_to_group("levers")
@@ -104,7 +129,22 @@ func _apply_linked_doors() -> void:
 		_sync_linked_door(door_id)
 
 
+func sync_visual_from_db() -> void:
+	_restore_from_db()
+	_update_visual()
+
+
+func _refresh_sibling_levers_for_door(door_id: int) -> void:
+	for node in get_tree().get_nodes_in_group("levers"):
+		if node == self or not (node is Lever):
+			continue
+		var lev := node as Lever
+		if door_id in lev.linked_doors:
+			lev.sync_visual_from_db()
+
+
 func _sync_linked_door(door_id: int) -> void:
+	_refresh_sibling_levers_for_door(door_id)
 	var should_open := _door_should_be_open_by_levers(door_id)
 	for d in get_tree().get_nodes_in_group("doors"):
 		if d is Door and int(d.door_id) == door_id:
@@ -117,10 +157,12 @@ func _sync_linked_door(door_id: int) -> void:
 func _door_should_be_open_by_levers(door_id: int) -> bool:
 	if door_id <= 0:
 		return false
+	var scene_ok: Variant = door_lever_requirement_met(get_tree(), door_id)
+	if scene_ok != null:
+		return bool(scene_ok)
 	if DbManager.has_method("is_door_accessible"):
 		var all_satisfied := DbManager.is_door_accessible(door_id)
 		return all_satisfied if open_doors_on_down else not all_satisfied
-	# Fallback: только этот рычаг (если БД недоступна)
 	return (not is_on) if open_doors_on_down else is_on
 
 func _on_body_entered(body: Node) -> void:

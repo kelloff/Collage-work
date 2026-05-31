@@ -122,9 +122,30 @@ def _serve_multi_from_pool_and_llm(
         ctx.trigger_async_refill_once()
         return GenerateTasksResponse(tasks=base[:expected], source="pool")
 
-    merged = _top_up_after_partial(ctx, base, levels, n, expected)
+    combined: List[TaskSpec] = list(base)
+    one_src = ""
+
+    if ctx.settings.multi_oneshot_first:
+        print(
+            f"generate_tasks_multi: pool {len(base)}/{expected} → "
+            f"one_shot 3b ({ctx.settings.ollama_model})"
+        )
+        one, one_src = ctx.generate_all_levels_via_ollama_one_shot(levels, n)
+        one = strip_fallback_tasks(one)
+        if one:
+            combined.extend(one)
+            print(f"generate_tasks_multi: one_shot got {len(one)} tasks ({one_src})")
+
+    merged = _top_up_after_partial(ctx, combined, levels, n, expected)
     if len(merged) >= expected:
-        src = "pool+ollama" if base else "ollama"
+        if base and one_src:
+            src = f"pool+ollama_{one_src}"
+        elif base:
+            src = "pool+ollama"
+        elif one_src:
+            src = f"ollama_{one_src}"
+        else:
+            src = "ollama"
         print(f"generate_tasks_multi: {src} {len(merged[:expected])}/{expected}")
         ctx.trigger_async_refill_once()
         return GenerateTasksResponse(tasks=merged[:expected], source=src)
@@ -144,17 +165,18 @@ def _serve_multi_from_pool_and_llm(
         if len(out) >= expected:
             return GenerateTasksResponse(tasks=out[:expected], source="openai_multi")
 
-    one, src = ctx.generate_all_levels_via_ollama_one_shot(levels, n)
-    one = strip_fallback_tasks(one)
-    merged2 = _top_up_after_partial(ctx, merged + one, levels, n, expected)
-    if len(merged2) >= expected:
-        return GenerateTasksResponse(
-            tasks=merged2[:expected],
-            source="pool+ollama" if base else f"ollama_{src}",
-        )
+    if not ctx.settings.multi_oneshot_first:
+        one, one_src = ctx.generate_all_levels_via_ollama_one_shot(levels, n)
+        one = strip_fallback_tasks(one)
+        merged2 = _top_up_after_partial(ctx, merged + one, levels, n, expected)
+        if len(merged2) >= expected:
+            return GenerateTasksResponse(
+                tasks=merged2[:expected],
+                source="pool+ollama" if base else f"ollama_{one_src}",
+            )
 
     out2 = _serial_per_level(ctx, levels, n, expected)
-    merged3 = _top_up_after_partial(ctx, merged2 + out2, levels, n, expected)
+    merged3 = _top_up_after_partial(ctx, merged + out2, levels, n, expected)
     if len(merged3) >= expected:
         return GenerateTasksResponse(tasks=merged3[:expected], source="ollama_serial")
 

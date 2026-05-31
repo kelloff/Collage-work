@@ -229,12 +229,16 @@ def can_accept_catalog_task(
     task: dict[str, Any],
     pool_tasks: list[dict[str, Any]] | None = None,
     batch_tasks: list[dict[str, Any]] | None = None,
+    *,
+    allow_repeat: bool = False,
 ) -> bool:
     """Каталог: только точный дубликат expected_output на том же уровне — не режем «похожие»."""
     lv = int(task.get("level", 0))
     out = str(task.get("expected_output", "")).strip()
     if not str(task.get("description", "")).strip() or not out:
         return False
+    if allow_repeat:
+        return True
     combined: list[dict[str, Any]] = []
     if pool_tasks:
         combined.extend(pool_tasks)

@@ -49,10 +49,17 @@ func _hide_hint() -> void:
 	if hud and hud.has_method("hide_hint"):
 		hud.hide_hint(self)
 
+func _is_accessible_for_player() -> bool:
+	var lever_ok: Variant = Lever.door_lever_requirement_met(get_tree(), door_id)
+	if lever_ok != null:
+		return bool(lever_ok)
+	return DbManager.is_door_accessible(door_id)
+
+
 func _update_hint_for_state() -> void:
 	if not player_in_range:
 		return
-	if DbManager.is_door_accessible(door_id):
+	if _is_accessible_for_player():
 		_show_hint("E — открыть/закрыть дверь")
 	else:
 		_show_hint("❌ Дверь заблокирована")
@@ -231,13 +238,13 @@ func _set_collision_shapes_recursive(root: Node, open_state: bool) -> void:
 		_set_collision_shapes_recursive(c, open_state)
 
 func try_toggle_by_player() -> void:
-	if not DbManager.is_door_accessible(door_id):
+	if not _is_accessible_for_player():
 		_show_hint("❌ Дверь заблокирована", 1.5)
 		return
 	toggle(false)
 
 func toggle(by_system: bool = false) -> void:
-	if not DbManager.is_door_accessible(door_id):
+	if not by_system and not _is_accessible_for_player():
 		_show_hint("❌ Дверь заблокирована", 1.5)
 		return
 	# Если маньяк уже за/у двери (в ManiacTrigger), игрок не должен

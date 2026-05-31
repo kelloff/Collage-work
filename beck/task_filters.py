@@ -45,8 +45,6 @@ def is_date_related_task(task: TaskSpec | dict) -> bool:
 
 # Эхо промпта / плейсхолдеры — не должны попадать игроку.
 _META_DESC_MARKERS = (
-    "сгенерируй",
-    "сгенерируйте",
     "фонов",
     "пул игр",
     "пул игры",
@@ -108,6 +106,46 @@ def is_invalid_expected_output(expected_output: str) -> bool:
     if len(o) <= 2 and not re.search(r"\d", o) and o not in ("Да", "Нет", "Odd", "Even"):
         if o in ("..", "…", "?"):
             return True
+    if o.startswith("[") and o.endswith("]"):
+        if "'" in o or '"' in o:
+            return True
+        if re.fullmatch(r"\[[\d,\s\-]+\]", o):
+            return False
+        return True
+    if "\n" in o:
+        lines = [ln.strip() for ln in o.splitlines() if ln.strip()]
+        if not lines:
+            return True
+        if all(re.fullmatch(r"\d+", ln) for ln in lines):
+            return False
+        if all(re.fullmatch(r"[a-zA-Z]", ln) for ln in lines):
+            return False
+        if any(re.match(r"^-\s", ln) for ln in lines):
+            return True
+        if len(lines) > 10:
+            return True
+        return False
+    return False
+
+
+def is_vague_description(desc: str) -> bool:
+    d = (desc or "").strip().lower()
+    if not d:
+        return True
+    actions = (
+        "выведи", "посчитай", "сложи", "умнож", "раздел", "вычти", "найди",
+        "создай", "напиши", "определи", "провер", "сравни", "отсортиру", "print",
+    )
+    if not any(a in d for a in actions):
+        return True
+    if re.search(r"(?i)^(сделай|сделайте|создай|создайте)\s+\d+\s+задач", d):
+        return True
+    if re.search(r"(?i)^\d+\s+(прост|задач)", d):
+        return True
+    if "массив tasks" in d or "массиве tasks" in d:
+        return True
+    if re.search(r"(?i)\blevel=\d+", d) and "задач" in d:
+        return True
     return False
 
 
@@ -117,13 +155,22 @@ def is_prompt_echo_task(task: TaskSpec | dict) -> bool:
         return True
     d = desc.lower()
     combined = f"{d} {out.lower()} {pat.lower()}"
+    # Эхо инструкции модели (не путать с «Выведи число 5» для ученика)
+    if re.search(r"(?i)^сгенерируй(?:те)?\s+(?:ровно\s+)?\d*\s*задач", d):
+        return True
+    if re.search(r"(?i)^сгенерируй(?:те)?\s+.*\b(json|пул|массив tasks)\b", d):
+        return True
+    if re.search(r"(?i)^(сделай|сделайте|создай|создайте)\s+\d+\s+задач", d):
+        return True
+    if "массив tasks" in d or "массиве tasks" in d:
+        return True
+    if re.search(r"(?i)\blevel=\d+", d) and "задач" in d:
+        return True
     if any(m in d for m in _META_DESC_MARKERS):
         return True
     if "задач" in d and ("пул" in d or "фонов" in d):
         return True
     if re.search(r"уровн[ьяе]\s*[0-3]?\s*$", d) and len(d) < 80:
-        return True
-    if is_invalid_expected_output(out):
         return True
     return False
 
@@ -222,8 +269,8 @@ def task_uses_forbidden_advanced(task: TaskSpec | dict, level: int) -> bool:
     return False
 
 
-def is_valid_playable_task(task: TaskSpec | dict, level: int | None = None) -> bool:
-    """Задача пригодна для игрока (не мусор LLM, не вне программы)."""
+def is_valid_pool_refill_task(task: TaskSpec | dict, level: int | None = None) -> bool:
+    """Мягкая проверка для фонового refill: явный мусор, без жёсткой coherence/clarity."""
     if is_date_related_task(task):
         return False
     if is_prompt_echo_task(task):
@@ -242,6 +289,26 @@ def is_valid_playable_task(task: TaskSpec | dict, level: int | None = None) -> b
     desc, out, _ = _task_text_parts(task)
     if len(desc) < 8:
         return False
+    if is_vague_description(desc):
+        return False
+    if is_invalid_expected_output(out):
+        return False
+    return True
+
+
+def is_valid_playable_task(task: TaskSpec | dict, level: int | None = None) -> bool:
+    """Задача пригодна для игрока (не мусор LLM, не вне программы)."""
+    if not is_valid_pool_refill_task(task, level):
+        return False
+    lv = level
+    if lv is None:
+        if isinstance(task, TaskSpec):
+            lv = int(task.level)
+        else:
+            try:
+                lv = int(task.get("level", 0))
+            except Exception:
+                lv = 0
     if not description_output_coherent(task, lv):
         return False
     return True

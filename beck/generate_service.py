@@ -21,6 +21,20 @@ def _no_date_tasks_prompt_block() -> str:
     )
 
 
+def _stdout_clarity_block(level: int) -> str:
+    from task_clarity import stdout_clarity_prompt_block
+
+    return stdout_clarity_prompt_block(level)
+
+
+def _apply_stdout_clarity(desc: str, out: str) -> Optional[str]:
+    from task_clarity import clarify_description, is_stdout_description_ambiguous
+
+    if is_stdout_description_ambiguous(desc, out):
+        return None
+    return clarify_description(desc, out)
+
+
 def _normalize_task_list(tasks: List[TaskSpec]) -> List[TaskSpec]:
     return [t for t in tasks if not is_date_related_task(t)]
 
@@ -105,7 +119,8 @@ def generate_tasks_via_ollama(
         "required_keywords обычно пустая строка.\n"
         "description внутри ответа должен быть уникальным.\n"
         "Не фиксируй имена переменных (name/x/age), формулируй нейтрально.\n"
-        "Для многострочного expected_output используй символы '\\n' внутри строки."
+        "Для многострочного expected_output используй символы '\\n' внутри строки.\n"
+        + _stdout_clarity_block(level)
     )
 
     def _build_user_msg(need_count: int, avoid: List[str]) -> str:
@@ -160,6 +175,10 @@ def generate_tasks_via_ollama(
                 out = str(obj.get("expected_output", "")).strip()
                 if not desc or desc in seen_desc:
                     continue
+                desc_clear = _apply_stdout_clarity(desc, out)
+                if desc_clear is None:
+                    continue
+                desc = desc_clear
                 if any(task_diversity.descriptions_too_similar(desc, p) for p in seen_desc):
                     continue
                 task = TaskSpec(
@@ -322,6 +341,11 @@ def normalize_tasks_multi(objs: List[dict], levels: List[int], count_per_level: 
                 continue
         if remaining.get(lv, 0) <= 0:
             continue
+        out_raw = str(obj.get("expected_output", "")).strip()
+        desc_clear = _apply_stdout_clarity(desc, out_raw)
+        if desc_clear is None:
+            continue
+        desc = desc_clear
         remaining[lv] -= 1
         try:
             out.append(
@@ -329,7 +353,7 @@ def normalize_tasks_multi(objs: List[dict], levels: List[int], count_per_level: 
                     level=lv,
                     category=str(obj.get("category", "easy")),
                     description=desc,
-                    expected_output=str(obj.get("expected_output", "")),
+                    expected_output=out_raw,
                     required_patterns=str(obj.get("required_patterns", "")),
                     check_type=str(obj.get("check_type", "stdout_exact")),
                     required_keywords=str(obj.get("required_keywords", "")),
@@ -372,7 +396,8 @@ def generate_all_levels_via_ollama_one_shot(
         "required_keywords обычно пустая строка.\n"
         "Каждое description уникально.\n"
         "Не фиксируй имена переменных (name/x/age), формулируй нейтрально.\n"
-        "Для многострочного expected_output используй символы '\\n' внутри строки."
+        "Для многострочного expected_output используй символы '\\n' внутри строки.\n"
+        + _stdout_clarity_block(max(levels) if levels else 0)
     )
     user_msg = (
         f"Нужны задачи для уровней сложности: {lv_str}.\n"

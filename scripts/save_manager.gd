@@ -184,9 +184,6 @@ func reset_save() -> void:
 
 
 const _LOCAL_TASKS_PATH := "res://db/task_data.gd"
-const _TERMINAL_CODE_SNAPSHOT := "user://terminal_last_code.txt"
-
-
 func reset_run_after_death() -> void:
 	## После смерти: прогресс/двери/сейв сбрасываются, **задания из БД с префиксом AI: остаются**;
 	## заново подставятся на компы через `assign_task` (случайный выбор из свободных id).
@@ -200,7 +197,6 @@ func reset_run_after_death() -> void:
 		reset_save()
 		if DbManager.tasks and DbManager.tasks.has_method("load_default_tasks_from_file"):
 			DbManager.tasks.load_default_tasks_from_file(_LOCAL_TASKS_PATH)
-	_erase_user_snapshot(_TERMINAL_CODE_SNAPSHOT)
 	if typeof(GameState) != TYPE_NIL and GameState.has_method("reset_all"):
 		GameState.reset_all()
 	if typeof(RunStats) != TYPE_NIL and RunStats.has_method("reset_session"):

@@ -52,11 +52,23 @@ def _build_mismatch_feedback(expected: str, actual: str) -> str:
     exp_preview = _normalize_out(expected)[:180] or "<пусто>"
     act_preview = _normalize_out(actual)[:180] or "<пусто>"
     if len(exp_lines) != len(act_lines):
+        hint = ""
+        if len(exp_lines) == 1 and len(act_lines) > 1:
+            hint = (
+                "\nПодсказка: возможно, нужна одна склеенная строка "
+                "(print(\"а\" + \"б\")), а не два print.\n"
+            )
+        elif len(exp_lines) > 1 and len(act_lines) == 1:
+            hint = (
+                "\nПодсказка: нужно несколько строк вывода "
+                "(отдельный print на каждую или \\n).\n"
+            )
         return (
             "Вывод не совпадает: разное количество строк.\n"
             f"Ожидалось строк: {len(exp_lines)}, получено: {len(act_lines)}.\n"
             f"Ожидалось: {exp_preview}\n"
             f"Получено: {act_preview}"
+            + hint
         )
     return (
         "Вывод не совпадает с ожидаемым (проверь пробелы, запятые и переносы строк).\n"

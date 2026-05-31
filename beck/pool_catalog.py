@@ -17,6 +17,35 @@ def _outputs_on_level(tasks: list[dict[str, Any]] | None, level: int) -> set[str
     return outs
 
 
+def catalog_allow_repeat(
+    level: int,
+    pool_tasks: list[dict[str, Any]] | None = None,
+    *,
+    pool_total: int | None = None,
+) -> bool:
+    """Повтор шаблонов каталога: lvl 2+ или все шаблоны уровня уже в пуле."""
+    import os
+
+    lv = int(level)
+    repeat_from = int(os.getenv("TASK_POOL_CATALOG_REPEAT_FROM_LEVEL", "2"))
+    if pool_total is None:
+        try:
+            import task_pool
+
+            pool_total = task_pool.total()
+        except Exception:
+            pool_total = 0
+    if pool_total >= int(os.getenv("TASK_POOL_MIN_TOTAL", "300")):
+        return False
+    if lv >= repeat_from:
+        return True
+    catalog = FALLBACK_TASKS_BY_LEVEL.get(lv, [])
+    if not catalog:
+        return False
+    have = _outputs_on_level(pool_tasks, lv)
+    return len(have) >= len(catalog)
+
+
 def all_catalog_pool_tasks() -> List[dict[str, Any]]:
     out: List[dict[str, Any]] = []
     for lv, items in FALLBACK_TASKS_BY_LEVEL.items():
@@ -33,22 +62,26 @@ def catalog_refill_batch(
     pool_tasks: list[dict[str, Any]] | None = None,
 ) -> List[dict[str, Any]]:
     """Задачи каталога, которых ещё нет в пуле (по expected_output на уровне)."""
+    import os
     import task_diversity
 
     lv = int(level)
     need = max(1, count)
     have = _outputs_on_level(pool_tasks, lv)
     out: List[dict[str, Any]] = []
+    allow_repeat = catalog_allow_repeat(lv, pool_tasks)
     for t in FALLBACK_TASKS_BY_LEVEL.get(lv, []):
         if len(out) >= need:
             break
         out_str = str(t.get("expected_output", "")).strip()
-        if not out_str or out_str in have:
+        if not out_str or (out_str in have and not allow_repeat):
             continue
         d = dict(t)
         d["level"] = lv
         d["_from_catalog"] = True
-        if not task_diversity.can_accept_catalog_task(d, pool_tasks, out):
+        if not task_diversity.can_accept_catalog_task(
+            d, pool_tasks, out, allow_repeat=allow_repeat
+        ):
             continue
         out.append(d)
         have.add(out_str)

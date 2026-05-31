@@ -1,0 +1,40 @@
+Сравнение черновика (lasdldflasfa.drawio.png) с текущим репозиторием
+====================================================================
+
+СЕРВЕР (главные расхождения)
+----------------------------
+Черновик                          | Сейчас в коде
+----------------------------------|----------------------------------------------
+GameLifter, C# .NET Backend       | beck/ — Python FastAPI (main.py)
+Architecture → Python отдельно    | Вся логика API в beck/*.py
+API Parser / Steam                | Нет в репозитории
+task_post_start (неясный endpoint)| POST /generate_tasks_multi + /generate_tasks
+generate_tasks_wait               | Клиент: new_game_loading.gd ждёт HTTP-ответ
+check_task + status               | POST /check_task → check_service.py
+Local DB manager на сервере       | Пул: tasks_pool.json (task_pool.py), не SQLite
+
+Актуальная цепочка «Новая игра»:
+  main_menu → new_game_loading → BackendUrls → /generate_tasks_multi
+  → generate_routes: pool → Ollama topup → fallback → Godot wipe БД → level_1
+
+Фон сервера (не на черновике явно):
+  startup → task_pool.load → bulk_seed → schedule_refill_if_low
+  pool_refill + Ollama :11434; /check_task на :11435; ollama_coordinator паузит refill
+
+КЛИЕНТ (совпадает с черновиком / уточнено)
+------------------------------------------
+Фоновые autoload — project.godot: BackendUrls, DbManager, CodeRunner,
+  AiCheckerSingleton, SaveManager, GameState, DeathFlow, TutorialManager и др.
+
+Игровой уровень — сцены scenes/: player, door, lever, computer/terminal_ui,
+  level_1.tscn; проверка кода через AiChecker → /check_task.
+
+Настройки — audio_manager, pause_menu, JournalData, SQLite через DbManager.
+
+Файлы схемы
+-----------
+  scheme/original_reference.png     — исходный черновик
+  scheme/collage_functional_scheme.drawio — обновлённая схема (открыть в draw.io)
+  scheme/gen_functional_scheme.py   — пересборка схемы после правок
+
+Открыть: https://app.diagrams.net → File → Open → collage_functional_scheme.drawio

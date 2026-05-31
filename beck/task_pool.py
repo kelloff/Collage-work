@@ -16,6 +16,7 @@ POOL_PATH = os.getenv(
     "TASK_POOL_PATH",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks_pool.json"),
 )
+# Целевой запас на диске (не «за ночь»): пока total < MIN — фоновый refill.
 POOL_MIN_TOTAL = int(os.getenv("TASK_POOL_MIN_TOTAL", "300"))
 POOL_MAX_TOTAL = int(os.getenv("TASK_POOL_MAX_TOTAL", "320"))
 POOL_TARGET_PER_LEVEL = int(os.getenv("TASK_POOL_TARGET_PER_LEVEL", "75"))
@@ -25,6 +26,7 @@ REFILL_PAUSE_SEC = float(os.getenv("TASK_POOL_REFILL_PAUSE_SEC", "2"))
 REFILL_ZERO_ADDED_WAIT_SEC = int(os.getenv("TASK_POOL_REFILL_ZERO_ADDED_WAIT", "8"))
 REFILL_MAX_EMPTY_STREAK = int(os.getenv("TASK_POOL_REFILL_MAX_EMPTY_STREAK", "48"))
 REFILL_GAVE_UP_RESTART_SEC = int(os.getenv("TASK_POOL_REFILL_GAVE_UP_RESTART_SEC", "600"))
+REFILL_SKIP_LEVEL_AFTER = int(os.getenv("TASK_POOL_REFILL_SKIP_LEVEL_AFTER", "8"))
 
 _lock = threading.Lock()
 _refill_lock = threading.Lock()
@@ -32,6 +34,7 @@ _buckets: Dict[int, List[dict]] = defaultdict(list)
 _refill_fn: Optional[Callable[[], List[dict]]] = None
 _check_lock = threading.Lock()
 _check_active_count = 0
+_refill_level_miss: Dict[int, int] = {}
 
 
 def refill_target_total() -> int:
@@ -198,16 +201,45 @@ def try_pop_for_level(level: int, count: int) -> List[dict]:
 
 
 def pick_level_for_refill(levels: List[int]) -> Optional[int]:
-    """Уровень с наименьшим запасом ниже POOL_TARGET_PER_LEVEL (равномерный refill)."""
-    best: Optional[tuple[int, int]] = None
+    """Уровень с наименьшим запасом; застрявшие (N пустых батчей) временно пропускаются."""
+    below: list[tuple[int, int, int]] = []
     for lvl in levels:
         lv = int(lvl)
         cur = count_by_level(lv)
         if cur >= POOL_TARGET_PER_LEVEL:
             continue
-        if best is None or cur < best[0] or (cur == best[0] and lv < best[1]):
-            best = (cur, lv)
-    return best[1] if best else None
+        below.append((cur, lv, _refill_level_miss.get(lv, 0)))
+    if not below:
+        return None
+    eligible = [x for x in below if x[2] < REFILL_SKIP_LEVEL_AFTER]
+    if not eligible:
+        for _, lv, _ in below:
+            _refill_level_miss[lv] = 0
+        print(f"task_pool: refill unstuck levels {[x[1] for x in below]}")
+        eligible = below
+    eligible.sort(key=lambda x: (x[0], x[1]))
+    return eligible[0][1]
+
+
+def note_refill_level_miss(level: int) -> None:
+    lv = int(level)
+    n = _refill_level_miss.get(lv, 0) + 1
+    _refill_level_miss[lv] = n
+    if n == REFILL_SKIP_LEVEL_AFTER:
+        print(f"task_pool: refill lvl={lv} stuck ({n} misses), skipping to other levels")
+
+
+def note_refill_level_success(level: int) -> None:
+    _refill_level_miss.pop(int(level), None)
+
+
+def _refill_batch_level(batch: List[dict]) -> Optional[int]:
+    for t in batch:
+        try:
+            return int(t.get("level", -1))
+        except (TypeError, ValueError):
+            continue
+    return None
 
 
 def add_tasks(tasks: List[dict]) -> int:
@@ -216,6 +248,7 @@ def add_tasks(tasks: List[dict]) -> int:
         return 0
     from task_filters import is_date_related_task
     import task_diversity
+    from pool_catalog import catalog_allow_repeat
 
     with _lock:
         if total_unlocked() >= POOL_MAX_TOTAL:
@@ -232,13 +265,21 @@ def add_tasks(tasks: List[dict]) -> int:
                 lv_chk = int(t.get("level", 0))
             except Exception:
                 continue
-            from task_filters import is_valid_playable_task
+            from task_filters import is_valid_playable_task, is_valid_pool_refill_task
 
-            if not is_valid_playable_task(t, lv_chk):
+            playable_ok = (
+                is_valid_pool_refill_task(t, lv_chk)
+                if pool_total < refill_target_total()
+                else is_valid_playable_task(t, lv_chk)
+            )
+            if not playable_ok:
                 continue
             from_catalog = bool(t.get("_from_catalog"))
             if from_catalog:
-                ok = task_diversity.can_accept_catalog_task(t, pool_snap, batch_buf)
+                allow_cat_repeat = catalog_allow_repeat(lv_chk, pool_snap, pool_total=pool_total)
+                ok = task_diversity.can_accept_catalog_task(
+                    t, pool_snap, batch_buf, allow_repeat=allow_cat_repeat
+                )
             else:
                 ok = task_diversity.can_accept_task(
                     t, pool_snap, batch_buf, pool_total=pool_total
@@ -286,7 +327,10 @@ def end_check() -> None:
         _check_active_count = max(0, _check_active_count - 1)
         idle = _check_active_count == 0
     if idle:
-        ollama_coordinator.resume_refill_after_check()
+        try:
+            ollama_coordinator.resume_refill_after_check()
+        except Exception as e:
+            print(f"task_pool: resume_refill_after_check error: {e}")
 
 
 @contextmanager
@@ -410,8 +454,11 @@ def schedule_refill_if_low() -> None:
                     time.sleep(wait)
                     continue
                 added_n = add_tasks(batch)
+                batch_lv = _refill_batch_level(batch)
                 if added_n:
                     empty_streak = 0
+                    if batch_lv is not None:
+                        note_refill_level_success(batch_lv)
                     print(
                         f"task_pool: refill +{added_n} added "
                         f"(batch={len(batch)}), total={total()}"
@@ -420,6 +467,8 @@ def schedule_refill_if_low() -> None:
                         time.sleep(REFILL_PAUSE_SEC)
                 else:
                     empty_streak += 1
+                    if batch_lv is not None:
+                        note_refill_level_miss(batch_lv)
                     print(
                         f"task_pool: refill batch={len(batch)} but 0 added "
                         f"(dup/filter), streak={empty_streak}, total={total()}"

@@ -8,6 +8,7 @@ var db: SQLite = null
 var tasks = null
 var levers = null
 var doors = null
+var terminal_code = null
 var debug = null
 var _completed_computers := {} # key: "%d:%d" % [level, computer_id] -> true
 var _assigned_tasks := {} # key: "%d:%d" % [level, computer_id] -> Dictionary task
@@ -37,6 +38,7 @@ func _load_modules() -> void:
 	tasks = preload("res://db/db_tasks.gd").new()
 	levers = preload("res://db/db_levers.gd").new()
 	doors = preload("res://db/db_doors.gd").new()
+	terminal_code = preload("res://db/db_terminal_code.gd").new()
 	debug = preload("res://db/db_debug.gd").new()
 	# Инициализируем модули, передаём ссылку на этот singleton
 	if tasks and tasks.has_method("init"):
@@ -45,6 +47,8 @@ func _load_modules() -> void:
 		levers.init(self)
 	if doors and doors.has_method("init"):
 		doors.init(self)
+	if terminal_code and terminal_code.has_method("init"):
+		terminal_code.init(self)
 	if debug and debug.has_method("init"):
 		debug.init(self)
 	save = preload("res://db/db_save.gd").new()
@@ -141,6 +145,17 @@ func get_doors_for_computer(computer_id: int) -> Array:
 		return doors.get_doors_for_computer(computer_id)
 	return []
 
+
+func get_terminal_code(level: int, computer_id: int) -> String:
+	if terminal_code and terminal_code.has_method("get_code"):
+		return terminal_code.get_code(level, computer_id)
+	return ""
+
+
+func set_terminal_code(level: int, computer_id: int, code_text: String) -> void:
+	if terminal_code and terminal_code.has_method("set_code"):
+		terminal_code.set_code(level, computer_id, code_text)
+
 func is_door_accessible(door_id: int) -> bool:
 	if TutorialManager.is_active() and TutorialManager.allows_tutorial_door(door_id):
 		return true
@@ -218,6 +233,7 @@ func new_game_database_wipe() -> void:
 	db.query("DELETE FROM door_states")
 	db.query("DELETE FROM computer_doors")
 	db.query("DELETE FROM save_state")
+	db.query("DELETE FROM terminal_code")
 
 	db.query("VACUUM")
 	print("DbMeneger: wipe complete")
@@ -242,6 +258,7 @@ func new_game_database_wipe_keep_ai_tasks() -> void:
 	db.query("DELETE FROM door_states")
 	db.query("DELETE FROM computer_doors")
 	db.query("DELETE FROM save_state")
+	db.query("DELETE FROM terminal_code")
 
 	db.query("VACUUM")
 	print("DbMeneger: wipe_keep_ai_tasks complete (tasks rows=", _count_tasks_rows(), ")")

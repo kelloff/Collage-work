@@ -4,7 +4,7 @@
 
 Единый учебный каталог для:
 - локального fallback в Godot (new_game_loading)
-- server source=fallback (те же 20 шаблонов)
+- server source=fallback и refill каталога lvl 2+
 - документации notes / EDUCATION.md
 
 Запуск из корня репозитория:
@@ -19,7 +19,6 @@ from tasks_fallback_catalog import FALLBACK_TASKS_BY_LEVEL
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_GD_PATH = PROJECT_ROOT / "db" / "task_data.gd"
 LEVELS = [0, 1, 2, 3]
-TASKS_PER_LEVEL = 5
 
 
 def to_gd_string(value: str) -> str:
@@ -35,8 +34,10 @@ def build_gd() -> str:
         "extends Node\n\n",
         "var default_tasks = [\n",
     ]
+    total = 0
     for lvl in LEVELS:
-        for obj in FALLBACK_TASKS_BY_LEVEL.get(lvl, [])[:TASKS_PER_LEVEL]:
+        for obj in FALLBACK_TASKS_BY_LEVEL.get(lvl, []):
+            total += 1
             desc = str(obj.get("description", "")).strip()
             if not desc.startswith("AI:"):
                 desc = "AI: " + desc
@@ -54,13 +55,13 @@ def build_gd() -> str:
             ]
             lines.append("\n".join(row) + "\n")
     lines.append("]\n")
-    return "".join(lines)
+    return "".join(lines), total
 
 
 def main() -> None:
-    gd = build_gd()
+    gd, total = build_gd()
     OUTPUT_GD_PATH.write_text(gd, encoding="utf-8")
-    print(f"Wrote {len(LEVELS) * TASKS_PER_LEVEL} tasks to {OUTPUT_GD_PATH}")
+    print(f"Wrote {total} tasks to {OUTPUT_GD_PATH}")
 
 
 if __name__ == "__main__":

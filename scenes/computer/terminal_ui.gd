@@ -1,4 +1,4 @@
-extends CanvasLayer
+﻿extends CanvasLayer
 
 @onready var code_edit = get_node_or_null("PanelContainer/HBoxContainer/CodeEditor")
 @onready var run_button = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/RunButton")
@@ -9,13 +9,13 @@ extends CanvasLayer
 @onready var sfx_player: AudioStreamPlayer = get_node_or_null("SfxPlayer")
 @onready var panel_root: PanelContainer = get_node_or_null("PanelContainer")
 
-const SAVE_PATH := "user://terminal_last_code.txt"
 const YES_SFX_PATH := "res://audio/sounds/yes.mp3"
 const NO_SFX_PATH := "res://audio/sounds/no.mp3"
 
 var current_task: Dictionary = {}
 ## Уровень компьютера на карте (для БД), не путать со сложностью задания.
 var current_level: int = 1
+var current_computer_id: int = 0
 var _running := false
 var _local_check_pending: bool = false
 var _use_ai_checker: bool = true
@@ -51,13 +51,17 @@ func _ready() -> void:
 
 	hide()
 
-func open_with_task(level: int, task: Dictionary) -> void:
+func open_with_task(level: int, computer_id: int, task: Dictionary) -> void:
 	var tid = task.get("id", -1)
 	var desc = task.get("description", "<no desc>")
-	print("TerminalUI.open_with_task: level=%d id=%s desc=%s" % [level, str(tid), desc])
+	print(
+		"TerminalUI.open_with_task: level=%d computer=%d id=%s desc=%s"
+		% [level, computer_id, str(tid), desc]
+	)
 
 	current_task = task
 	current_level = level
+	current_computer_id = computer_id
 	_mount_to_root()
 	if not _gameplay_frozen_by_terminal and GameState.has_method("push_gameplay_freeze"):
 		GameState.push_gameplay_freeze()
@@ -67,12 +71,8 @@ func open_with_task(level: int, task: Dictionary) -> void:
 	if output_label:
 		_set_output("")
 
-	# Восстановим последний код (если редактор пустой)
-	if code_edit and code_edit.text.strip_edges() == "" and FileAccess.file_exists(SAVE_PATH):
-		var f = FileAccess.open(SAVE_PATH, FileAccess.READ)
-		if f:
-			code_edit.text = f.get_as_text()
-			f.close()
+	if code_edit:
+		code_edit.text = _load_saved_code()
 
 	# Заголовок
 	if current_task.has("message"):
@@ -99,6 +99,22 @@ func open_with_task(level: int, task: Dictionary) -> void:
 	if hint_label:
 		hint_label.text = "Подсказка: print(), переменные, if/for, функции. Файлы/удаление запрещены."
 
+
+func _load_saved_code() -> String:
+	if current_computer_id <= 0:
+		return ""
+	if DbManager.has_method("get_terminal_code"):
+		return DbManager.get_terminal_code(current_level, current_computer_id)
+	return ""
+
+
+func _save_code(code_text: String) -> void:
+	if current_computer_id <= 0:
+		return
+	if DbManager.has_method("set_terminal_code"):
+		DbManager.set_terminal_code(current_level, current_computer_id, code_text)
+
+
 func close() -> void:
 	_release_ui_focus()
 	set_pause_input_passthrough(false)
@@ -108,14 +124,11 @@ func close() -> void:
 	hide()
 	_restore_parent()
 	current_task = {}
+	current_computer_id = 0
 	_running = false
 
-	# Сохраняем код на будущее
 	if code_edit:
-		var f = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-		if f:
-			f.store_string(code_edit.text)
-			f.close()
+		_save_code(code_edit.text)
 
 	if run_button:
 		run_button.text = "Проверить решение"
@@ -170,9 +183,19 @@ func _run_with_ai_checker(code_text: String) -> void:
 	if diff < 2:
 		_set_output("Проверка решения…")
 		_run_local_check_async(code_text)
-	else:
-		_set_output("Проверка решения ИИ…")
-		_run_remote_check_async(code_text)
+		return
+	if _prefer_local_check_offline():
+		_set_output("Офлайн: проверка на этом компьютере (нужен Python)…")
+		_run_local_check_async(code_text)
+		return
+	_set_output("Проверка на сервере…")
+	_run_remote_check_async(code_text)
+
+
+func _prefer_local_check_offline() -> bool:
+	if typeof(BackendUrls) == TYPE_NIL:
+		return false
+	return not BackendUrls.is_server_likely_online()
 
 
 func _run_local_check_async(code_text: String) -> void:
@@ -247,9 +270,12 @@ func _evaluate_local_check(run_result: Dictionary) -> Dictionary:
 				"В коде не хватает обязательных фрагментов:\n- " + "\n- ".join(missing)
 			)
 
+	var ok_msg := "Решение корректное."
+	if _task_difficulty() >= 2 and _prefer_local_check_offline():
+		ok_msg += "\n(офлайн: без проверки ИИ на сервере)"
 	return {
 		"success": true,
-		"feedback": "Решение корректное.",
+		"feedback": ok_msg,
 		"stdout": stdout,
 		"stderr": stderr,
 	}
@@ -290,6 +316,13 @@ func _run_remote_check_async(code_text: String) -> void:
 	)
 	if not is_inside_tree() or not visible:
 		_running = false
+		return
+	if AiChecker.is_network_failure(result):
+		_running = false
+		_local_check_pending = false
+		_set_output("Сервер недоступен — проверяем на этом ПК (Python)…")
+		await get_tree().process_frame
+		_run_local_check_async(code_text)
 		return
 	_finish_check(result)
 

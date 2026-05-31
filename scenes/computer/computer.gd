@@ -128,7 +128,7 @@ func open_terminal() -> void:
 			DbManager.set_assigned_task(level, computer_id, current_task)
 
 	if terminal_ui and terminal_ui.has_method("open_with_task"):
-		terminal_ui.call("open_with_task", level, current_task)
+		terminal_ui.call("open_with_task", level, computer_id, current_task)
 		if TutorialManager.is_active() and computer_id == TutorialManager.tutorial_computer_id:
 			TutorialManager.notify_terminal_opened()
 

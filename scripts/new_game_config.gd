@@ -12,6 +12,18 @@ const GENERATE_LEVELS: Array[int] = [0, 1, 2, 3]
 ## Сколько задач запросить на каждый уровень (отдельный POST /generate_tasks на уровень).
 @export var generate_task_count: int = 5
 
+## Запас к запросу: сервер отдаёт больше, клиент фильтрует и берёт generate_task_count.
+const GENERATE_OVERFETCH_EXTRA: int = 3
+
+
+func server_request_count_per_level() -> int:
+	var base := maxi(1, generate_task_count)
+	return base + GENERATE_OVERFETCH_EXTRA
+
+
+func server_topup_request_count(need: int) -> int:
+	return maxi(need, need + 2)
+
 ## true — только res://db/task_data.gd (офлайн-тест). false — POST /generate_tasks_multi на BackendUrls.
 var use_local_tasks_only: bool = false
 
@@ -22,3 +34,6 @@ func _ready() -> void:
 		use_local_tasks_only = true
 	elif e == "0" or e == "false" or e == "no":
 		use_local_tasks_only = false
+	var off := OS.get_environment("COLLAGE_OFFLINE").strip_edges().to_lower()
+	if off in ["1", "true", "yes", "on"]:
+		use_local_tasks_only = true

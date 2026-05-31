@@ -95,13 +95,16 @@ def resume_refill_after_check() -> None:
         return
     _refill_abort.clear()
     pending = take_pending_refill()
-    if pending:
-        lv, n = pending
-        print(f"ollama_coordinator: retry pending refill lvl={lv} n={n}")
-        if _retry_pending_fn:
-            _retry_pending_fn(lv, n)
-    if _schedule_refill_fn:
-        _schedule_refill_fn()
+    try:
+        if pending:
+            lv, n = pending
+            print(f"ollama_coordinator: retry pending refill lvl={lv} n={n}")
+            if _retry_pending_fn:
+                _retry_pending_fn(lv, n)
+        if _schedule_refill_fn:
+            _schedule_refill_fn()
+    except Exception as e:
+        print(f"ollama_coordinator: resume refill error: {e}")
     print("ollama_coordinator: refill resumed")
 
 

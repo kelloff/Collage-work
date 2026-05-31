@@ -289,7 +289,6 @@ autowrap_mode = 2
 position = Vector2(751, 4450)
 
 [node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=1128019219]
-visible = false
 color = Color(0.039215688, 0.039215688, 0.039215688, 1)
 
 [node name="Vaza1" parent="." unique_id=1032219073 instance=ExtResource("17_leimv")]
@@ -883,12 +882,12 @@ linked_doors = Array[int]([7775])
 
 [node name="Lever16" parent="." unique_id=1860467386 instance=ExtResource("20_5n6ds")]
 position = Vector2(1002, 3641)
-lever_id = 7771
+lever_id = 7772
 linked_doors = Array[int]([7775])
 
 [node name="Lever17" parent="." unique_id=930853042 instance=ExtResource("20_5n6ds")]
 position = Vector2(1995, 4245)
-lever_id = 7771
+lever_id = 7773
 linked_doors = Array[int]([7775])
 
 [node name="Lever9" parent="." unique_id=17409917 instance=ExtResource("20_5n6ds")]
