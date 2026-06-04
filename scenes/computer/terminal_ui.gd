@@ -123,12 +123,11 @@ func close() -> void:
 		_gameplay_frozen_by_terminal = false
 	hide()
 	_restore_parent()
+	if code_edit:
+		_save_code(code_edit.text)
 	current_task = {}
 	current_computer_id = 0
 	_running = false
-
-	if code_edit:
-		_save_code(code_edit.text)
 
 	if run_button:
 		run_button.text = "Проверить решение"

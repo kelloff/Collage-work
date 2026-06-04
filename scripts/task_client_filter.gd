@@ -180,6 +180,18 @@ static func _has_digit(s: String) -> bool:
 	return false
 
 
+static func _regex_escape(text: String) -> String:
+	var out := ""
+	const SPECIAL := "\\.*?+[]{}()|^$-"
+	for i in text.length():
+		var c: String = text[i]
+		if c in SPECIAL:
+			out += "\\" + c
+		else:
+			out += c
+	return out
+
+
 static func _regex_search(pattern: String, text: String) -> RegExMatch:
 	var re := RegEx.new()
 	if re.compile(pattern) != OK:
@@ -279,7 +291,7 @@ static func _description_output_coherent(desc: String, out: String, level: int) 
 				if str(n) == o:
 					found = true
 					break
-			if not found and not _regex_search("\\b" + RegEx.escape(o) + "\\b", desc):
+			if not found and not _regex_search("\\b" + _regex_escape(o) + "\\b", desc):
 				if add_m and str(int(add_m.get_string(1)) + int(add_m.get_string(2))) == o:
 					return true
 				if mul_m and str(int(mul_m.get_string(1)) * int(mul_m.get_string(2))) == o:
