@@ -22,7 +22,10 @@ func _ready() -> void:
 	db = SQLite.new()
 	db.path = "user://tasks.db"
 	if not db.open_db():
-		push_error("DbMeneger: cannot open DB at %s" % db.path)
+		push_error(
+			"DbMeneger: cannot open DB at %s — проверьте libgdsqlite.windows.template_release.x86_64.dll рядом с .exe"
+			% db.path
+		)
 		db = null
 		return
 	# Загружаем модули

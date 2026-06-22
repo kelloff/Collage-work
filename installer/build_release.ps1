@@ -23,6 +23,8 @@ $SqliteDllInProject = Join-Path $ProjectRoot "addons\godot-sqlite\bin\$SqliteDll
 $ExportPreset = "Windows Desktop 2"
 $AppExe = "TheLastCode.exe"
 $AppPck = "TheLastCode.pck"
+$PythonVersion = "3.12.10"
+$PythonInstallerFile = "python-$PythonVersion-amd64.exe"
 
 function Ensure-Dir([string]$p) {
     if (-not (Test-Path $p)) { New-Item -ItemType Directory -Path $p -Force | Out-Null }
@@ -165,6 +167,7 @@ function Invoke-GodotExport([string]$godot) {
         if (-not (Test-Path $exportOut)) {
             throw "Godot export failed: $exportOut not created (exit $LASTEXITCODE)"
         }
+        Assert-ExportContainsDocs $exportLog
         Write-Host "Export OK: $exportOut"
     } finally {
         if ($proj.Cleanup -and (Test-Path "C:\collage-work-export")) {
@@ -177,6 +180,10 @@ function Copy-ReleaseExtras {
     $dll = $SqliteDllInProject
     if (-not (Test-Path $dll)) { throw "SQLite DLL missing: $dll" }
     Copy-Item $dll (Join-Path $Staging $SqliteDllName) -Force
+    $sqliteBin = Join-Path $Staging "addons\godot-sqlite\bin"
+    Ensure-Dir $sqliteBin
+    Copy-Item $dll (Join-Path $sqliteBin $SqliteDllName) -Force
+    Write-Host "SQLite DLL: staging root + addons/godot-sqlite/bin"
     Copy-Item (Join-Path $InstallerRoot "PLAYER_README_RU.txt") (Join-Path $Staging "README.txt") -Force
     Copy-Item (Join-Path $InstallerRoot "SYSTEM_REQUIREMENTS_RU.txt") (Join-Path $Staging "SYSTEM_REQUIREMENTS.txt") -Force
     # Удалить dev-артефакты, если попали в staging (см. client_export_excludes.txt)
@@ -238,6 +245,23 @@ function Ensure-InnoSetup {
     return Resolve-InnoSetup
 }
 
+function Ensure-PythonInstaller {
+    Ensure-Dir $ToolsDir
+    $dest = Join-Path $ToolsDir $PythonInstallerFile
+    if (Test-Path $dest) {
+        Write-Host "Python installer OK: $dest"
+        return $dest
+    }
+    $url = "https://www.python.org/ftp/python/$PythonVersion/$PythonInstallerFile"
+    Write-Host "Downloading Python $PythonVersion from python.org (~25 MB) ..."
+    Invoke-WebRequest -Uri $url -OutFile $dest -UseBasicParsing
+    if (-not (Test-Path $dest)) {
+        throw "Python installer download failed: $url"
+    }
+    Write-Host "Python installer: $dest"
+    return $dest
+}
+
 function Invoke-InnoSetup {
     $iscc = Ensure-InnoSetup
     if (-not $iscc) {
@@ -269,7 +293,50 @@ function New-PortableZip {
     return $zipPath
 }
 
+function Assert-ExportContainsDocs {
+    param([object]$ExportLog)
+    $joined = ($ExportLog | Out-String)
+    foreach ($needle in @("docs/guide.txt", "docs/python_basics.txt", "docs/notes/note_01.txt")) {
+        if ($joined -notmatch [regex]::Escape($needle)) {
+            throw "Export missing journal/notes file in pack: $needle (check export_presets include_filter)"
+        }
+    }
+    Write-Host "Export docs OK (guide, python_basics, notes in pack)"
+}
+
+function Verify-ExportPrerequisites {
+    $shader = Join-Path $ProjectRoot "shaders\outline.gdshader"
+    if (-not (Test-Path $shader)) {
+        throw "Missing critical asset: shaders/outline.gdshader (tutorial highlights)"
+    }
+    foreach ($rel in @(
+        "docs\guide.txt",
+        "docs\python_basics.txt",
+        "docs\notes\note_01.txt",
+        "docs\notes\note_02.txt",
+        "docs\notes\note_03.txt"
+    )) {
+        $p = Join-Path $ProjectRoot $rel
+        if (-not (Test-Path $p)) {
+            throw "Missing critical asset: $rel (journal / notes)"
+        }
+    }
+    $font = Join-Path $ProjectRoot "ui\fonts\game_display.ttf"
+    if (-not (Test-Path $font)) {
+        throw "Missing critical asset: ui/fonts/game_display.ttf"
+    }
+    $gdext = Join-Path $ProjectRoot "addons\godot-sqlite\gdsqlite.gdextension"
+    if (-not (Test-Path $gdext)) {
+        throw "Missing godot-sqlite GDExtension (addons/godot-sqlite)"
+    }
+    if (-not (Test-Path $SqliteDllInProject)) {
+        throw "Missing SQLite DLL: $SqliteDllInProject"
+    }
+    Write-Host "Export prerequisites OK (shader, font, SQLite)"
+}
+
 Write-Host "Project: $ProjectRoot"
+Verify-ExportPrerequisites
 Prepare-SqliteAddon
 
 if (-not $SkipExport) {
@@ -294,6 +361,7 @@ Write-Host "Portable ZIP: $zip"
 
 if (-not $SkipInstaller) {
     Build-InstallerIcon
+    Ensure-PythonInstaller
     if (Invoke-InnoSetup) {
         Get-ChildItem (Join-Path $InstallerRoot "output") -Filter "TheLastCode_Setup_*.exe" |
             ForEach-Object { Write-Host "Installer: $($_.FullName)" }

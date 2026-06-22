@@ -49,17 +49,11 @@ func _process(_delta: float) -> void:
 
 func _pickup() -> void:
 	_hide_hint()
-	var text := _load_text(text_path)
+	var text := JournalData.read_project_text(text_path)
 	JournalData.add_note(note_id, text)
 	if tutorial_step != "":
 		TutorialManager.notify_note_collected(note_id)
 	queue_free()
-
-func _load_text(path: String) -> String:
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return "Файл не найден:\n" + path
-	return f.get_as_text()
 
 func _on_body_entered(body: Node) -> void:
 	if body.is_in_group("player"):

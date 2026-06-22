@@ -96,9 +96,15 @@ func open_terminal() -> void:
 	if computer_id == 0:
 		return
 
+	if terminal_ui and terminal_ui.visible:
+		return
+
 	if not DbManager.is_computer_accessible(computer_id):
 		_show_hint("❌ Терминал заблокирован", 1.5)
 		return
+
+	if _terminal_session_open:
+		_terminal_closed_cleanup()
 
 	_hide_hint()
 	_terminal_session_open = true
@@ -128,7 +134,7 @@ func open_terminal() -> void:
 			DbManager.set_assigned_task(level, computer_id, current_task)
 
 	if terminal_ui and terminal_ui.has_method("open_with_task"):
-		terminal_ui.call("open_with_task", level, computer_id, current_task)
+		terminal_ui.call("open_with_task", level, computer_id, current_task, self)
 		if TutorialManager.is_active() and computer_id == TutorialManager.tutorial_computer_id:
 			TutorialManager.notify_terminal_opened()
 
@@ -139,11 +145,13 @@ func close_terminal() -> void:
 
 
 func _terminal_closed_cleanup() -> void:
-	if not _terminal_session_open:
-		return
-	_terminal_session_open = false
-	if GameState.has_method("pop_world_input_block"):
+	if _terminal_session_open and GameState.has_method("pop_world_input_block"):
 		GameState.pop_world_input_block()
+	_terminal_session_open = false
+	_restore_player_after_terminal()
+
+
+func _restore_player_after_terminal() -> void:
 	var p := player_node
 	if p == null or not is_instance_valid(p):
 		for node in get_tree().get_nodes_in_group("player"):

@@ -1,5 +1,8 @@
 # Паттерны exclude_filter для релиза (только клиент Godot).
 # Не экспортировать: beck, deploy, dev-скрипты, тесты, документация для разработчиков.
+#
+# Обязательно ВКЛЮЧАТЬ в export_presets include_filter (журнал и записки):
+#   docs/guide.txt, docs/python_basics.txt, docs/notes/*.txt
 
 beck/*
 deploy/*

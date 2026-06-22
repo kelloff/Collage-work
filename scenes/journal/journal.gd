@@ -75,7 +75,7 @@ func _on_tab_selected(index: int) -> void:
 		return
 
 	var path: String = str(base_pages.get(key, ""))
-	text.text = _load_text(path)
+	text.text = JournalData.read_project_text(path)
 
 func _show_notes() -> void:
 	var notes := JournalData.get_notes()
@@ -88,15 +88,6 @@ func _show_notes() -> void:
 		out += "=== " + id + " ===\n"
 		out += notes[id] + "\n\n"
 	text.text = out
-
-func _load_text(path: String) -> String:
-	if path == "":
-		return ""
-	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return "Файл не найден:\n" + path
-	return f.get_as_text()
-	
 
 func is_open() -> bool:
 	return _open

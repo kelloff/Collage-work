@@ -16,7 +16,7 @@ var _tip_tween: Tween
 
 ## Пул на сервере — секунды; при пустом пуле ответ fallback обычно < 5 с.
 const SERVER_TASK_TIMEOUT_S: float = 25.0
-const FLOW_WATCHDOG_S: float = 55.0
+const FLOW_WATCHDOG_S: float = 35.0
 const LOCAL_TASKS_PATH := "res://db/task_data.gd"
 const TIP_ROTATE_SEC: float = 5.5
 
@@ -38,6 +38,9 @@ const LOADING_TIPS: PackedStringArray = [
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("clear_gameplay_freeze"):
+		GameState.clear_gameplay_freeze()
 	if _error:
 		_error.visible = false
 	if _btn_menu:
@@ -168,10 +171,17 @@ func _set_status(t: String) -> void:
 		_status.text = t
 
 
+func _db_ready() -> bool:
+	return typeof(DbManager) != TYPE_NIL and DbManager.db != null
+
+
 func _http_post_json(url: String, payload: String) -> Dictionary:
 	## { "ok": bool, "code": int, "text": String }
+	if not is_inside_tree():
+		return {"ok": false, "code": -1, "text": ""}
 	_http = HTTPRequest.new()
 	_http.timeout = SERVER_TASK_TIMEOUT_S
+	_http.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(_http)
 	var err := _http.request(
 		url,
@@ -184,6 +194,8 @@ func _http_post_json(url: String, payload: String) -> Dictionary:
 		_http = null
 		return {"ok": false, "code": err, "text": ""}
 	var result: Array = await _http.request_completed
+	if not is_inside_tree():
+		return {"ok": false, "code": -1, "text": ""}
 	_http.queue_free()
 	_http = null
 	if result.size() < 4:
@@ -362,6 +374,16 @@ func _enter_level() -> void:
 
 
 func _run_flow() -> void:
+	if not _db_ready():
+		push_error("new_game_loading: SQLite DB not ready (libgdsqlite DLL?)")
+		_fail(
+			"Не удалось открыть базу данных (SQLite).\n"
+			+ "Переустановите игру или проверьте, что файл\n"
+			+ "libgdsqlite.windows.template_release.x86_64.dll\n"
+			+ "лежит рядом с TheLastCode.exe"
+		)
+		return
+
 	if NewGameConfig.use_local_tasks_only:
 		await _run_flow_local_only("Локальные задания (режим без сервера)…")
 		return

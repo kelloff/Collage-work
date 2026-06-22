@@ -22,7 +22,10 @@ var _use_ai_checker: bool = true
 var _yes_sfx: AudioStream = null
 var _no_sfx: AudioStream = null
 var _host_parent: Node = null
+var _host_computer: Node = null
 var _gameplay_frozen_by_terminal: bool = false
+var _suppressed_for_pause: bool = false
+var _is_closing: bool = false
 
 const TERM_GREEN := Color(0.45, 1.0, 0.58, 1.0)
 const TERM_TEXT := Color(0.95, 0.98, 0.95, 1.0)
@@ -51,7 +54,7 @@ func _ready() -> void:
 
 	hide()
 
-func open_with_task(level: int, computer_id: int, task: Dictionary) -> void:
+func open_with_task(level: int, computer_id: int, task: Dictionary, host: Node = null) -> void:
 	var tid = task.get("id", -1)
 	var desc = task.get("description", "<no desc>")
 	print(
@@ -59,9 +62,15 @@ func open_with_task(level: int, computer_id: int, task: Dictionary) -> void:
 		% [level, computer_id, str(tid), desc]
 	)
 
+	if host != null and is_instance_valid(host):
+		_host_computer = host
+	elif get_parent() != null and get_parent() != get_tree().root:
+		_host_computer = get_parent()
+
 	current_task = task
 	current_level = level
 	current_computer_id = computer_id
+	_is_closing = false
 	_mount_to_root()
 	if not _gameplay_frozen_by_terminal and GameState.has_method("push_gameplay_freeze"):
 		GameState.push_gameplay_freeze()
@@ -116,15 +125,21 @@ func _save_code(code_text: String) -> void:
 
 
 func close() -> void:
+	if _is_closing:
+		return
+	_is_closing = true
+
+	_local_check_pending = false
 	_release_ui_focus()
+	_suppressed_for_pause = false
 	set_pause_input_passthrough(false)
 	if _gameplay_frozen_by_terminal and GameState.has_method("pop_gameplay_freeze"):
 		GameState.pop_gameplay_freeze()
 		_gameplay_frozen_by_terminal = false
-	hide()
-	_restore_parent()
 	if code_edit:
 		_save_code(code_edit.text)
+	hide()
+	_restore_parent()
 	current_task = {}
 	current_computer_id = 0
 	_running = false
@@ -139,10 +154,11 @@ func close() -> void:
 	if hint_label:
 		hint_label.text = ""
 
-	# Кнопка «Закрыть» вызывает только close(), без Computer.close_terminal() — снимаем блок ввода здесь.
-	var host: Node = _host_parent if _host_parent != null else get_parent()
+	var host := _resolve_host_computer()
 	if host and host.has_method("_terminal_closed_cleanup"):
-		host._terminal_closed_cleanup()
+		host.call_deferred("_terminal_closed_cleanup")
+
+	_is_closing = false
 
 func _on_run_button_pressed() -> void:
 	if _running:
@@ -341,7 +357,7 @@ func _finish_check(result: Dictionary) -> void:
 		RunStats.record_task_success()
 		_set_output("Задание выполнено!\n" + feedback)
 		_play_result_sfx(true)
-		var computer = _host_parent if _host_parent != null else get_parent()
+		var computer := _resolve_host_computer()
 		if computer and computer.has_method("unassign_task_if_completed"):
 			computer.unassign_task_if_completed()
 	else:
@@ -398,26 +414,48 @@ func _set_output(text: String) -> void:
 	output_label.text = text
 	output_label.queue_redraw()
 
+func _cache_host_from_parent() -> void:
+	var parent := get_parent()
+	if parent == null or parent == get_tree().root:
+		return
+	if parent.is_in_group("computers") or parent.has_method("_terminal_closed_cleanup"):
+		_host_computer = parent
+		_host_parent = parent
+
+
+func _resolve_host_computer() -> Node:
+	if _host_computer != null and is_instance_valid(_host_computer):
+		return _host_computer
+	if _host_parent != null and is_instance_valid(_host_parent):
+		return _host_parent
+	for computer in get_tree().get_nodes_in_group("computers"):
+		if computer.get_node_or_null("TerminalUI") == self:
+			_host_computer = computer
+			return computer
+	return null
+
+
 func _mount_to_root() -> void:
 	var root := get_tree().root
+	_cache_host_from_parent()
 	if get_parent() == root:
 		return
-	if _host_parent == null or not is_instance_valid(_host_parent):
-		_host_parent = get_parent()
 	var parent := get_parent()
 	if parent:
 		parent.remove_child(self)
 	root.add_child(self)
 
 func _restore_parent() -> void:
-	if _host_parent == null or not is_instance_valid(_host_parent):
+	var host := _resolve_host_computer()
+	if host == null:
 		return
-	if get_parent() == _host_parent:
+	if get_parent() == host:
 		return
 	var parent := get_parent()
 	if parent:
 		parent.remove_child(self)
-	_host_parent.add_child(self)
+	host.add_child(self)
+	_host_parent = host
 
 func _release_ui_focus() -> void:
 	if code_edit:
@@ -428,26 +466,37 @@ func _release_ui_focus() -> void:
 
 
 func set_pause_input_passthrough(enabled: bool) -> void:
-	if not visible:
+	if not visible and not _suppressed_for_pause:
 		return
+	if enabled:
+		_suppressed_for_pause = true
+		if panel_root:
+			panel_root.visible = false
+		_release_ui_focus()
+	elif _suppressed_for_pause:
+		_suppressed_for_pause = false
+		if visible and panel_root:
+			panel_root.visible = true
+
 	if panel_root:
 		panel_root.mouse_filter = (
 			Control.MOUSE_FILTER_IGNORE if enabled else Control.MOUSE_FILTER_STOP
 		)
-	if enabled:
-		_release_ui_focus()
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Allow pause menu while terminal is focused/open.
-	if not visible:
+	if not visible or _suppressed_for_pause:
 		return
 	if event.is_action_pressed("pause_menu"):
+		var root: Node = get_tree().current_scene
+		if root == null:
+			return
+		var pause_menu: Node = root.find_child("PauseMenu", true, false)
+		if pause_menu and pause_menu.has_method("is_open") and pause_menu.is_open():
+			return
 		_release_ui_focus()
 		set_pause_input_passthrough(true)
-		var root: Node = get_tree().current_scene
-		if root:
-			var pause_menu: Node = root.find_child("PauseMenu", true, false)
-			if pause_menu and pause_menu.has_method("toggle_menu"):
-				pause_menu.toggle_menu()
-				get_viewport().set_input_as_handled()
+		if pause_menu and pause_menu.has_method("toggle_menu"):
+			pause_menu.toggle_menu()
+			get_viewport().set_input_as_handled()

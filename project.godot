@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="The Last Code"
 run/main_scene="res://scenes/main_menu/main_menu.tscn"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://assets/fav.png"
 
 [audio]
@@ -29,8 +29,8 @@ GameUiTheme="*res://scripts/game_ui_theme.gd"
 BackendUrls="*res://scripts/backend_urls.gd"
 NewGameConfig="*res://scripts/new_game_config.gd"
 DbManager="*res://db/db_meneger.gd"
-CodeRunner="*res://scripts/code_runner.gd"
 audio_manager="*uid://b8gfvuu0ytv5"
+CodeRunner="*res://scripts/code_runner.gd"
 JournalData="*uid://bbcymcxuj8j65"
 SaveMeneger="*res://scripts/save_meneger.gd"
 GameState="*uid://dygiqou1xy76e"

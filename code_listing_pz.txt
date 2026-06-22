@@ -1,0 +1,4986 @@
+#project.godot
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+config_version=5
+[animation]
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+[application]
+config/name="The Last Code"
+run/main_scene="res://scenes/main_menu/main_menu.tscn"
+config/features=PackedStringArray("4.6", "Forward Plus")
+config/icon="res://assets/fav.png"
+[audio]
+buses/default_bus_layout="uid://53fbbn6l3ab0"
+[autoload]
+GameUiTheme="*res://scripts/game_ui_theme.gd"
+BackendUrls="*res://scripts/backend_urls.gd"
+NewGameConfig="*res://scripts/new_game_config.gd"
+DbManager="*res://db/db_meneger.gd"
+CodeRunner="*res://scripts/code_runner.gd"
+audio_manager="*uid://b8gfvuu0ytv5"
+JournalData="*uid://bbcymcxuj8j65"
+SaveMeneger="*res://scripts/save_meneger.gd"
+GameState="*uid://dygiqou1xy76e"
+Savemeneger="*uid://31i6j70qj2jg"
+RunStats="*uid://cj0smsq1p7c3p"
+DeathFlow="*uid://ccnmcobyohqyu"
+AiCheckerSingleton="*uid://0peo6r2o4dtt"
+TutorialManager="*res://scripts/tutorial_manager.gd"
+[display]
+window/size/viewport_width=680
+window/size/viewport_height=360
+window/size/mode=3
+window/size/window_width_override=1280
+window/size/window_height_override=920
+[editor_plugins]
+enabled=PackedStringArray()
+[global_group]
+player=""
+inventory=""
+rooms=""
+[input]
+left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":65,"key_label":0,"unicode":97,"location":0,"echo":false,"script":null)
+]
+}
+up={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":87,"key_label":0,"unicode":119,"location":0,"echo":false,"script":null)
+]
+}
+down={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":83,"key_label":0,"unicode":115,"location":0,"echo":false,"script":null)
+]
+}
+right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":68,"key_label":0,"unicode":100,"location":0,"echo":false,"script":null)
+]
+}
+interact={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":69,"key_label":0,"unicode":1091,"location":0,"echo":false,"script":null)
+]
+}
+pause_menu={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194305,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+close_terminal={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194341,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+journal={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":66,"key_label":0,"unicode":98,"location":0,"echo":false,"script":null)
+]
+}
+inventory={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194306,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+[rendering]
+textures/canvas_textures/default_texture_filter=0
+
+#scenes/player/player.gd
+extends CharacterBody2D
+signal became_invisible
+signal became_visible
+signal hp_changed(current: int, maximum: int)
+enum {
+	DOWN,
+	UP,
+	LEFT,
+	RIGHT
+}
+@onready var hint: Label = $Label
+@onready var animations: AnimatedSprite2D = $AnimatedSprite2D
+@onready var cam: Camera2D = $Camera2D
+@onready var damage_sfx_player: AudioStreamPlayer = get_node_or_null("DamageSfxPlayer")
+const BASE_RESOLUTION := Vector2(1280, 720)
+const DAMAGE_SFX_PATH := "res://audio/sounds/урон.mp3"
+var speed := 140.0
+var idle_dir := DOWN
+var idle_time := 0.0
+const IDLE_DELAY := 0.25
+var control_enabled: bool = true
+# --- HP / DAMAGE ---
+@export var max_hp: int = 3
+var hp: int
+var invuln_time: float = 0.8
+var _invuln_timer: Timer
+var _is_invulnerable: bool = false
+# --- BUFFS ---
+var _base_speed: float
+var _speed_buff_timer: Timer
+var _invis_timer: Timer
+var _saved_modulate: Color
+# invisibility flag
+var is_invisible: bool = false
+# --- HINT ---
+var _hint_timer: Timer
+var _damage_sfx: AudioStream = null
+func _ready() -> void:
+	add_to_group("player")
+	# HP init
+	hp = max_hp
+	call_deferred("_emit_hp_changed")
+	_invuln_timer = Timer.new()
+	_invuln_timer.one_shot = true
+	add_child(_invuln_timer)
+	_invuln_timer.timeout.connect(_on_invuln_end)
+	_base_speed = float(speed)
+	_saved_modulate = modulate
+	# --- Hint ---
+	hint.visible = false
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint_timer = Timer.new()
+	_hint_timer.one_shot = true
+	_hint_timer.wait_time = 1.5
+	add_child(_hint_timer)
+	_hint_timer.timeout.connect(_hide_hint)
+	# --- Buff timers ---
+	_speed_buff_timer = Timer.new()
+	_speed_buff_timer.one_shot = true
+	add_child(_speed_buff_timer)
+	_speed_buff_timer.timeout.connect(_on_speed_buff_end)
+	_invis_timer = Timer.new()
+	_invis_timer.one_shot = true
+	add_child(_invis_timer)
+	_invis_timer.timeout.connect(_on_invis_end)
+	if damage_sfx_player == null:
+		damage_sfx_player = AudioStreamPlayer.new()
+		damage_sfx_player.name = "DamageSfxPlayer"
+		add_child(damage_sfx_player)
+	if ResourceLoader.exists(DAMAGE_SFX_PATH):
+		_damage_sfx = load(DAMAGE_SFX_PATH)
+	if cam:
+		cam.make_current()
+		_update_camera_zoom()
+		get_viewport().size_changed.connect(_update_camera_zoom)
+# =========================
+# ПОДСКАЗКИ
+# =========================
+func show_hint(text: String) -> void:
+	hint.text = text
+	hint.visible = true
+	_hint_timer.start()
+func _hide_hint() -> void:
+	hint.visible = false
+# =========================
+# ДВИЖЕНИЕ
+# =========================
+func _physics_process(delta: float) -> void:
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("is_world_input_blocked"):
+		if GameState.is_world_input_blocked():
+			velocity = Vector2.ZERO
+			move_and_slide()
+			return
+	if not control_enabled:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		return
+	var dir := Vector2.ZERO
+	if Input.is_action_pressed("up"):
+		dir.y -= 1
+	if Input.is_action_pressed("down"):
+		dir.y += 1
+	if Input.is_action_pressed("left"):
+		dir.x -= 1
+	if Input.is_action_pressed("right"):
+		dir.x += 1
+	if dir != Vector2.ZERO:
+		dir = dir.normalized()
+		velocity = dir * speed
+		idle_time = 0.0
+		update_animation(dir)
+	else:
+		velocity = Vector2.ZERO
+		idle_time += delta
+		idle()
+	move_and_slide()
+func update_animation(dir: Vector2) -> void:
+	if dir.y < 0:
+		animations.play("Idle_up")
+		idle_dir = UP
+	elif dir.y > 0:
+		animations.play("Idle_down")
+		idle_dir = DOWN
+	elif dir.x < 0:
+		animations.flip_h = true
+		animations.play("Idle_front")
+		idle_dir = LEFT
+	elif dir.x > 0:
+		animations.flip_h = false
+		animations.play("Idle_front")
+		idle_dir = RIGHT
+func idle() -> void:
+	if idle_time >= IDLE_DELAY:
+		animations.play("idle")
+		return
+	match idle_dir:
+		DOWN: animations.play("Idle_down")
+		UP: animations.play("Idle_up")
+		LEFT:
+			animations.flip_h = true
+			animations.play("Idle_front")
+		RIGHT:
+			animations.flip_h = false
+			animations.play("Idle_front")
+# =========================
+# КАМЕРА
+# =========================
+func _update_camera_zoom() -> void:
+	var s: Vector2 = get_viewport().get_visible_rect().size
+	var scale: float = min(
+		s.x / BASE_RESOLUTION.x,
+		s.y / BASE_RESOLUTION.y
+)
+	cam.zoom = Vector2(scale, scale) * 2
+# =========================
+# BUFFS
+# =========================
+func apply_speed_buff(multiplier: float, duration: float) -> void:
+	speed = int(_base_speed * multiplier)
+	_speed_buff_timer.start(duration)
+func _on_speed_buff_end() -> void:
+	speed = int(_base_speed)
+func apply_invisibility(duration: float) -> void:
+	_saved_modulate = modulate
+	modulate.a = 0.25
+	is_invisible = true
+	add_to_group("invisible")
+	emit_signal("became_invisible")
+	_invis_timer.start(duration)
+func _on_invis_end() -> void:
+	modulate = _saved_modulate
+	is_invisible = false
+	if is_in_group("invisible"):
+		remove_from_group("invisible")
+	emit_signal("became_visible")
+	_notify_nearby_maniacs_on_reveal(160.0)
+func _notify_nearby_maniacs_on_reveal(radius: float) -> void:
+	for m in get_tree().get_nodes_in_group("maniac"):
+		if not m:
+			continue
+		if not m.has_method("on_player_revealed"):
+			continue
+		if global_position.distance_to(m.global_position) <= radius:
+			# вызов напрямую; маньяк сам проверит видимость/дистанцию
+			m.on_player_revealed(self)
+# =========================
+# DAMAGE API
+# =========================
+func take_damage(amount: int = 1, from_maniac: bool = false) -> void:
+	if _is_invulnerable:
+		return
+	hp -= amount
+	_emit_hp_changed()
+	_play_damage_sfx()
+	if hp <= 0:
+		die(from_maniac)
+		return
+	_become_invulnerable()
+	_flash_on_damage()
+func _become_invulnerable() -> void:
+	_is_invulnerable = true
+	_invuln_timer.start(invuln_time)
+func _on_invuln_end() -> void:
+	_is_invulnerable = false
+	modulate = _saved_modulate
+func get_hp() -> int:
+	return hp
+func set_hp(value: int) -> void:
+	hp = int(clamp(value, 0, max_hp))
+	_emit_hp_changed()
+func heal(amount: int = 1) -> bool:
+	if hp >= max_hp:
+		return false
+	hp = min(hp + amount, max_hp)
+	_emit_hp_changed()
+	modulate = Color(0.75, 1.0, 0.82, 1.0)
+	var tween := create_tween()
+	tween.tween_property(self, "modulate", _saved_modulate, 0.35)
+	return true
+func _emit_hp_changed() -> void:
+	hp_changed.emit(hp, max_hp)
+func _flash_on_damage() -> void:
+	modulate = Color(1, 0.6, 0.6, 1)
+func _play_damage_sfx() -> void:
+	if damage_sfx_player == null:
+		return
+	if _damage_sfx == null:
+		return
+	damage_sfx_player.stream = _damage_sfx
+	damage_sfx_player.play()
+func die(killed_by_maniac: bool = false) -> void:
+	control_enabled = false
+	var tree: SceneTree = get_tree()
+	if tree == null:
+		return
+	var level_path: String = tree.current_scene.scene_file_path
+	var cause: int = DeathFlow.DeathCause.MANIAC if killed_by_maniac else DeathFlow.DeathCause.OTHER
+	DeathFlow.start_death_flow(level_path, cause)
+	queue_free()
+# =========================
+# Утилиты
+# =========================
+func get_speed() -> float:
+	return speed
+func set_control_enabled(enabled: bool) -> void:
+	control_enabled = enabled
+	if not enabled:
+		velocity = Vector2.ZERO
+
+#scenes/maniac/maniac.gd
+extends CharacterBody2D
+enum State { PATROL, CHASE, INVESTIGATE }
+@export var speed: float = 99.0 # ~10% медленнее
+@export var chase_speed: float = 117.0 # ~10% медленнее
+@export var detection_radius: float = 220.0
+@export var attack_range: float = 20.0
+@export var acceleration: float = 900.0
+@export var target_update_interval: float = 0.15
+@export var rooms_group_name: String = "rooms"
+@export var room_pick_attempts: int = 28
+@export var room_id_meta_key: String = "room_id"
+@export var room_patrol_min_time_s: float = 10.0
+@export var room_patrol_max_time_s: float = 15.0
+@export var door_open_attempt_max_dist_px: float = 140.0
+@export var debug_collision_prints: bool = true
+@export var debug_collision_cooldown: float = 0.6
+@export var debug_collision_distance_to_target: float = 500
+@export var stuck_move_epsilon_px: float = 1.5
+@export var stuck_time_before_reset_s: float = 1.2
+@export var wall_escape_min_stuck_s: float = 0.12
+@export var wall_escape_blocked_velocity_ratio: float = 0.35
+@export var wall_escape_probe_px: float = 14.0
+@export var wall_escape_distance_to_target_px: float = 6.0
+@export var wall_escape_speed: float = 180.0
+@export var wall_escape_cooldown_s: float = 0.35
+@export var attack_anim_duration_s: float = 0.35
+@export var attack_move_speed_while_anim: float = 0.0
+@export var attack_hit_frame_index: int = 11
+@export var attack_recovery_s: float = 0.15
+@export var hunt_ping_interval_s: float = 30.0
+@export var hunt_enabled: bool = true
+@export var hunt_arrival_dist_px: float = 48.0
+@export var investigate_points_min: int = 4
+@export var investigate_points_max: int = 8
+@export var arrive_last_seen_dist_px: float = 72.0
+@export var debug_intel_logs: bool = true
+## Во время обследования комнаты не открывать двери «мимо хода» (навводит к порогу случайной точки).
+@export var door_trigger_suppress_in_investigate: bool = true
+## В погоне с прямой видимостью и вплотную к игроку — не цеплять соседние двери триггером.
+@export var door_trigger_suppress_when_chasing_close_px: float = 96.0
+@export var attack_swing_sfx: AudioStream
+@export var footstep_sfx: AudioStream
+@export var ambient_sfx: AudioStream
+@export var footstep_min_interval_s: float = 0.32
+@export var ambient_interval_min_s: float = 10.0
+@export var ambient_interval_max_s: float = 22.0
+@onready var nav_agent: NavigationAgent2D = get_node_or_null("NavigationAgent2D")
+@onready var detection_area: Area2D = get_node_or_null("DetectionArea")
+@onready var anim: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D")
+@onready var body_collision: CollisionShape2D = get_node_or_null("CollisionShape2D")
+@export var door_collision_radius_scale: float = 0.78
+@export var door_collision_height_scale: float = 1.0
+var state: State = State.PATROL
+var player: Node = null
+var last_player_pos: Vector2 = Vector2.ZERO
+var _target_update_time_left: float = 0.0
+var _last_target_pos: Vector2 = Vector2.ZERO
+var _orig_collision_mask: int = 0
+var _debug_collision_timer: float = 0.0
+var _last_known_player_room_id: int = -1
+## Последняя комната игрока, куда «зашли» (обновляется в погоне по видимости) — обследование вслепую.
+var _committed_search_room_id: int = -1
+var _intel_travel_active: bool = false
+var _intel_room_id: int = -1
+var _investigate_room_area: Area2D = null
+var _investigate_points_remaining: int = 0
+var _door_override_active: bool = false
+var _door_exit_target: Vector2 = Vector2.ZERO
+@export var door_override_reach_dist: float = 12.0
+var _stuck_last_pos: Vector2 = Vector2.ZERO
+var _stuck_elapsed: float = 0.0
+var _wall_escape_cooldown_left: float = 0.0
+var _wall_escape_side: float = 1.0
+var _forced_patrol_room: Area2D = null
+var _room_patrol_time_left: float = 0.0
+var _capsule_orig_radius: float = 0.0
+var _capsule_orig_height: float = 0.0
+var _door_collision_mode_active: bool = false
+var _last_facing_dir: Vector2 = Vector2.DOWN
+var _attack_anim_time_left: float = 0.0
+var _attack_damage_applied: bool = false
+var _is_attacking: bool = false
+var _attack_recovery_left: float = 0.0
+var _collision_exception_player: PhysicsBody2D = null
+var _hunt_ping_accum: float = 0.0
+var _footstep_cooldown: float = 0.0
+var _ambient_countdown: float = 0.0
+var _sfx_short: AudioStreamPlayer2D
+var _sfx_ambient: AudioStreamPlayer2D
+func _disable_physical_collision_with_player(p: Node) -> void:
+	if p == null:
+		return
+	if not (p is CollisionObject2D):
+		return
+	var player_layer: int = (p as CollisionObject2D).collision_layer
+	if player_layer == 0:
+		return
+	var new_mask := collision_mask & (~player_layer)
+	# Если все коллизии убьём — не делаем это.
+	if new_mask == 0 and _orig_collision_mask != 0:
+		return
+	collision_mask = new_mask
+func _restore_collision_mask() -> void:
+	collision_mask = _orig_collision_mask
+func _set_player_collision_passthrough(p: Node, enabled: bool) -> void:
+	# Двустороннее исключение коллизии, чтобы игрок и маньяк проходили друг через друга.
+	if p == null or not (p is PhysicsBody2D):
+		return
+	var pb := p as PhysicsBody2D
+	if enabled:
+		add_collision_exception_with(pb)
+		pb.add_collision_exception_with(self)
+		_collision_exception_player = pb
+	else:
+		remove_collision_exception_with(pb)
+		pb.remove_collision_exception_with(self)
+		if _collision_exception_player == pb:
+			_collision_exception_player = null
+func _reset_attack_state(start_recovery: bool = false) -> void:
+	_is_attacking = false
+	_attack_anim_time_left = 0.0
+	_attack_damage_applied = false
+	if start_recovery:
+		_attack_recovery_left = max(_attack_recovery_left, attack_recovery_s)
+func _set_player(p: Node) -> void:
+	player = p
+	if not is_instance_valid(player):
+		return
+	_clear_intel_travel()
+	_investigate_room_area = null
+	_investigate_points_remaining = 0
+	last_player_pos = player.global_position
+	_last_target_pos = player.global_position
+	_target_update_time_left = 0.0
+	state = State.CHASE
+	_disable_physical_collision_with_player(player)
+	_set_player_collision_passthrough(player, true)
+	_door_override_active = false
+	_set_door_collision_mode(false)
+	# Подписываемся на невидимость игрока, чтобы гарантированно прервать погоню.
+	# Сигналы объявлены в `player.gd`.
+	if player.has_signal("became_invisible") and not player.is_connected("became_invisible", Callable(self, "_on_player_became_invisible")):
+		player.became_invisible.connect(_on_player_became_invisible)
+	if player.has_signal("became_visible") and not player.is_connected("became_visible", Callable(self, "_on_player_became_visible")):
+		player.became_visible.connect(_on_player_became_visible)
+func _ready() -> void:
+	if not is_in_group("maniac"):
+		add_to_group("maniac")
+	if nav_agent:
+		nav_agent.max_speed = speed
+	_orig_collision_mask = collision_mask
+	# Подготавливаем коллизию маньяка для режима "проходим через дверь".
+	if body_collision and body_collision.shape is CapsuleShape2D:
+		var cap := body_collision.shape as CapsuleShape2D
+		# Делаем копию ресурса, чтобы не затрагивать другие инстансы маньяка.
+		body_collision.shape = cap.duplicate() as CapsuleShape2D
+		_capsule_store_original_values()
+	if detection_area:
+		detection_area.body_entered.connect(_on_detection_body_entered)
+		detection_area.body_exited.connect(_on_detection_body_exited)
+	if anim:
+		if not anim.is_connected("frame_changed", Callable(self, "_on_anim_frame_changed")):
+			anim.frame_changed.connect(_on_anim_frame_changed)
+		if not anim.is_connected("animation_finished", Callable(self, "_on_anim_finished")):
+			anim.animation_finished.connect(_on_anim_finished)
+	_sfx_short = AudioStreamPlayer2D.new()
+	_sfx_short.name = "ManiacSfxShort"
+	add_child(_sfx_short)
+	_sfx_ambient = AudioStreamPlayer2D.new()
+	_sfx_ambient.name = "ManiacSfxAmbient"
+	_sfx_ambient.max_distance = 520.0
+	add_child(_sfx_ambient)
+	_reset_ambient_countdown()
+	_start_patrol()
+func _reset_ambient_countdown() -> void:
+	_ambient_countdown = randf_range(ambient_interval_min_s, ambient_interval_max_s)
+func _play_short_sfx(stream: AudioStream) -> void:
+	if _sfx_short == null or stream == null:
+		return
+	_sfx_short.stream = stream
+	_sfx_short.play()
+func _resolve_hunt_player() -> Node:
+	for n in get_tree().get_nodes_in_group("player"):
+		if n != null and is_instance_valid(n):
+			return n
+	return null
+func _clear_intel_travel() -> void:
+	_intel_travel_active = false
+	_intel_room_id = -1
+## Пока идёт анимация удара, `_process_chase` не вызывается — без этого «последняя точка» не двигается вместе с игроком.
+func _update_chase_memory_from_player() -> void:
+	if state != State.CHASE or not is_instance_valid(player):
+		return
+	last_player_pos = player.global_position
+	var rid: int = _get_room_id_at_point_stable(player.global_position)
+	if rid != -1:
+		_last_known_player_room_id = rid
+		_committed_search_room_id = rid
+	if nav_agent:
+		nav_agent.target_position = last_player_pos
+func _log_intel(tag: String, room_id: int, world_pos: Vector2) -> void:
+	if not debug_intel_logs:
+		return
+	var rid_str: String = str(room_id) if room_id >= 0 else "?"
+	print("[Maniac/intel] %s | room_id=%s | pos=(%.0f, %.0f)" % [tag, rid_str, world_pos.x, world_pos.y])
+func _pick_nav_point_inside_room(room_area: Area2D) -> bool:
+	if nav_agent == null or room_area == null:
+		return false
+	var nav_map: RID = nav_agent.get_navigation_map()
+	if nav_map == RID():
+		return false
+	var navigation_layers: int = 1
+	for _i in range(room_pick_attempts):
+		var rnd_point: Vector2 = NavigationServer2D.map_get_random_point(nav_map, navigation_layers, true)
+		if rnd_point == Vector2.ZERO:
+			continue
+		if not _is_point_inside_room(room_area, rnd_point):
+			continue
+		var path: PackedVector2Array = NavigationServer2D.map_get_path(
+			nav_map,
+			global_position,
+			rnd_point,
+			true,
+			navigation_layers
+)
+		if path.size() > 1:
+			nav_agent.target_position = rnd_point
+			return true
+	return false
+func _try_pick_intel_travel_to_room(room_id: int) -> bool:
+	var area: Area2D = _get_room_area_by_id(room_id)
+	if area == null:
+		return false
+	return _pick_nav_point_inside_room(area)
+func _capsule_store_original_values() -> void:
+	if not body_collision or not (body_collision.shape is CapsuleShape2D):
+		return
+	var cap := body_collision.shape as CapsuleShape2D
+	_capsule_orig_radius = cap.radius
+	_capsule_orig_height = cap.height
+func _set_door_collision_mode(active: bool) -> void:
+	if not body_collision or not (body_collision.shape is CapsuleShape2D):
+		return
+	if active == _door_collision_mode_active:
+		return
+	_door_collision_mode_active = active
+	var cap := body_collision.shape as CapsuleShape2D
+	if active:
+		cap.radius = _capsule_orig_radius * door_collision_radius_scale
+		cap.height = _capsule_orig_height * door_collision_height_scale
+	else:
+		cap.radius = _capsule_orig_radius
+		cap.height = _capsule_orig_height
+func _physics_process(delta: float) -> void:
+	if get_tree().paused:
+		return
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("is_gameplay_frozen") and GameState.is_gameplay_frozen():
+		return
+	if _debug_collision_timer > 0.0:
+		_debug_collision_timer -= delta
+	if _attack_recovery_left > 0.0:
+		_attack_recovery_left = max(0.0, _attack_recovery_left - delta)
+	if _footstep_cooldown > 0.0:
+		_footstep_cooldown = max(0.0, _footstep_cooldown - delta)
+	if _attack_anim_time_left > 0.0:
+		_attack_anim_time_left = max(0.0, _attack_anim_time_left - delta)
+		# While attack animation is active, pause (or heavily slow) movement
+		# so the player has a chance to escape after a hit.
+		if attack_move_speed_while_anim <= 0.0:
+			velocity = Vector2.ZERO
+		else:
+			if velocity.length() > attack_move_speed_while_anim:
+				velocity = velocity.normalized() * attack_move_speed_while_anim
+			velocity = velocity.move_toward(Vector2.ZERO, acceleration * delta)
+		move_and_slide()
+		_play_anim_by_velocity()
+		_update_chase_memory_from_player()
+		return
+	elif _is_attacking:
+		# Failsafe: если по какой-то причине animation_finished не пришёл
+		# (переключение сцены/анимации, пауза и т.п.), не оставляем ИИ в вечной атаке.
+		_reset_attack_state(true)
+	# Отладка "залипания": если позиция не меняется достаточно долго,
+	# принудительно переподбираем цель/навигацию.
+	if _stuck_last_pos == Vector2.ZERO:
+		_stuck_last_pos = global_position
+	var moved_dist: float = global_position.distance_to(_stuck_last_pos)
+	if moved_dist <= stuck_move_epsilon_px:
+		_stuck_elapsed += delta
+	else:
+		_stuck_elapsed = 0.0
+		_stuck_last_pos = global_position
+	if _stuck_elapsed >= stuck_time_before_reset_s:
+		_stuck_elapsed = 0.0
+		_stuck_last_pos = global_position
+		_door_override_active = false
+		_set_door_collision_mode(false)
+		if nav_agent:
+			if state == State.PATROL:
+				_pick_new_wander_point()
+			elif state == State.INVESTIGATE and _investigate_room_area != null:
+				_pick_nav_point_inside_room(_investigate_room_area)
+			elif state == State.CHASE and player != null:
+				last_player_pos = player.global_position
+				nav_agent.target_position = last_player_pos
+	# Таймер "патруль целевой комнаты после двери" тикает только когда
+	# маньяк уже НЕ в режиме прохода через дверь (_door_override_active).
+	# Иначе он может быстро истечь прямо во время проталкивания через дверь.
+	if (state == State.PATROL or state == State.INVESTIGATE) and (not _door_override_active) and _room_patrol_time_left > 0.0:
+		_room_patrol_time_left -= delta
+		if _room_patrol_time_left <= 0.0:
+			_room_patrol_time_left = 0.0
+			_forced_patrol_room = null
+	match state:
+		State.PATROL:
+			_process_patrol(delta)
+		State.CHASE:
+			_process_chase(delta)
+		State.INVESTIGATE:
+			_process_investigate(delta)
+	_tick_maniac_ambient_sfx(delta)
+	_play_anim_by_velocity()
+# ---------- PATROL / CHASE ----------
+func _tick_maniac_ambient_sfx(delta: float) -> void:
+	if ambient_sfx == null or _sfx_ambient == null:
+		return
+	if state != State.PATROL and state != State.CHASE and state != State.INVESTIGATE:
+		return
+	if _attack_anim_time_left > 0.0 or _is_attacking:
+		return
+	if _door_override_active:
+		return
+	_ambient_countdown -= delta
+	if _ambient_countdown <= 0.0:
+		_reset_ambient_countdown()
+		if not _sfx_ambient.playing:
+			_sfx_ambient.stream = ambient_sfx
+			_sfx_ambient.play()
+func _process_patrol(delta: float) -> void:
+	if not nav_agent:
+		return
+	nav_agent.max_speed = speed
+	# Если маньяк открыл дверь, но должен гарантированно пройти через неё —
+	# удерживаем цель на точке выхода.
+	if _door_override_active:
+		# достигли выхода или путь закончился — возвращаемся к патрулю
+		if nav_agent.is_navigation_finished() or global_position.distance_to(_door_exit_target) <= door_override_reach_dist:
+			_door_override_active = false
+			_set_door_collision_mode(false)
+			_start_patrol()
+			return
+		_follow_nav_agent(delta, speed)
+		return
+	if hunt_enabled and _intel_travel_active:
+		var hp_intel: Node = _resolve_hunt_player()
+		if hp_intel != null and _can_see(hp_intel):
+			_clear_intel_travel()
+			_hunt_ping_accum = 0.0
+			_set_player(hp_intel)
+			state = State.CHASE
+			return
+		var arrived_intel: bool = nav_agent.is_navigation_finished() or global_position.distance_to(nav_agent.target_position) <= hunt_arrival_dist_px
+		if arrived_intel:
+			var saved_rid: int = _intel_room_id
+			_clear_intel_travel()
+			_hunt_ping_accum = 0.0
+			if saved_rid != -1:
+				_log_intel("прибыл_в_комнату", saved_rid, global_position)
+				var ra: Area2D = _get_room_area_by_id(saved_rid)
+				if ra != null:
+					_forced_patrol_room = ra
+					_room_patrol_time_left = randf_range(room_patrol_min_time_s, room_patrol_max_time_s)
+			_pick_new_wander_point()
+		else:
+			_follow_nav_agent(delta, speed)
+		if _detect_visible_player():
+			_clear_intel_travel()
+			state = State.CHASE
+		return
+	if hunt_enabled and not _intel_travel_active:
+		_hunt_ping_accum += delta
+		if _hunt_ping_accum >= hunt_ping_interval_s:
+			_hunt_ping_accum = 0.0
+			var hp_radar: Node = _resolve_hunt_player()
+			if hp_radar != null:
+				var r_id: int = _get_room_id_at_point_stable(hp_radar.global_position)
+				_log_intel("радар", r_id, hp_radar.global_position)
+				if r_id != -1 and _try_pick_intel_travel_to_room(r_id):
+					_intel_travel_active = true
+					_intel_room_id = r_id
+					refresh_navigation(false)
+					_follow_nav_agent(delta, speed)
+					if _detect_visible_player():
+						_clear_intel_travel()
+						state = State.CHASE
+					return
+				# Нет полигона комнаты или путь не строится — идём к точке на карте.
+				nav_agent.target_position = hp_radar.global_position
+				_intel_travel_active = true
+				_intel_room_id = -1
+				refresh_navigation(false)
+				_follow_nav_agent(delta, speed)
+				if _detect_visible_player():
+					_clear_intel_travel()
+					state = State.CHASE
+				return
+	if nav_agent.is_navigation_finished():
+		_start_patrol()
+	else:
+		var next_pos := nav_agent.get_next_path_position()
+		# Если путь есть, но следующий шаг не найден (например, после смены
+		# навлинка дверь/связность изменилась), агент может "стоять".
+		# В этом случае принудительно берём новую wander-точку.
+		if next_pos == Vector2.ZERO:
+			_pick_new_wander_point()
+		else:
+			_follow_nav_agent(delta, speed)
+	if _detect_visible_player():
+		state = State.CHASE
+func _start_investigate_room(room_id: int) -> void:
+	if not nav_agent:
+		return
+	var area: Area2D = _get_room_area_by_id(room_id)
+	if area == null:
+		_start_patrol()
+		return
+	_clear_intel_travel()
+	_investigate_room_area = area
+	_investigate_points_remaining = randi_range(investigate_points_min, investigate_points_max)
+	state = State.INVESTIGATE
+	_log_intel("обследование_начало", room_id, global_position)
+	if not _pick_nav_point_inside_room(_investigate_room_area):
+		_investigate_room_area = null
+		_investigate_points_remaining = 0
+		state = State.PATROL
+		_start_patrol()
+func _process_investigate(delta: float) -> void:
+	if not nav_agent:
+		return
+	nav_agent.max_speed = speed
+	if _door_override_active:
+		if nav_agent.is_navigation_finished() or global_position.distance_to(_door_exit_target) <= door_override_reach_dist:
+			_door_override_active = false
+			_set_door_collision_mode(false)
+			_investigate_room_area = null
+			_start_patrol()
+			return
+		_follow_nav_agent(delta, speed)
+		return
+	if hunt_enabled:
+		_hunt_ping_accum += delta
+		if _hunt_ping_accum >= hunt_ping_interval_s:
+			_hunt_ping_accum = 0.0
+			var hp_r: Node = _resolve_hunt_player()
+			if hp_r != null:
+				var r_id2: int = _get_room_id_at_point_stable(hp_r.global_position)
+				_log_intel("радар", r_id2, hp_r.global_position)
+				if r_id2 != -1 and _try_pick_intel_travel_to_room(r_id2):
+					_intel_travel_active = true
+					_intel_room_id = r_id2
+					_investigate_room_area = null
+					state = State.PATROL
+					refresh_navigation(false)
+					return
+				nav_agent.target_position = hp_r.global_position
+				_intel_travel_active = true
+				_intel_room_id = -1
+				_investigate_room_area = null
+				state = State.PATROL
+				refresh_navigation(false)
+				return
+	var vis_p: Node = _resolve_hunt_player()
+	if vis_p != null and _can_see(vis_p):
+		_investigate_room_area = null
+		_investigate_points_remaining = 0
+		_set_player(vis_p)
+		state = State.CHASE
+		return
+	var dist_t: float = global_position.distance_to(nav_agent.target_position)
+	var arrived_inv: bool = nav_agent.is_navigation_finished() or dist_t <= hunt_arrival_dist_px
+	if arrived_inv:
+		_investigate_points_remaining -= 1
+		if _investigate_points_remaining > 0 and _investigate_room_area != null:
+			if not _pick_nav_point_inside_room(_investigate_room_area):
+				_investigate_points_remaining = 0
+		if _investigate_points_remaining <= 0:
+			var end_rid: int = -1
+			if _investigate_room_area != null:
+				end_rid = _get_room_id_from_area(_investigate_room_area)
+			_log_intel("обследование_конец", end_rid, global_position)
+			_investigate_room_area = null
+			state = State.PATROL
+			_forced_patrol_room = null
+			_room_patrol_time_left = 0.0
+			_start_patrol()
+			return
+		return
+	_follow_nav_agent(delta, speed)
+func _process_chase(delta: float) -> void:
+	if not is_instance_valid(player):
+		if is_instance_valid(_collision_exception_player):
+			_set_player_collision_passthrough(_collision_exception_player, false)
+		player = null
+		_restore_collision_mask()
+		_reset_attack_state(true)
+		state = State.PATROL
+		_start_patrol()
+		return
+	# если игрок невидим, ведёмся так, будто его не видим
+	if "is_invisible" in player and player.is_invisible:
+		_set_player_collision_passthrough(player, false)
+		player = null
+		_door_override_active = false
+		_set_door_collision_mode(false)
+		_restore_collision_mask()
+		_reset_attack_state(true)
+		state = State.PATROL
+		_start_patrol()
+		return
+	# Даже если сейчас мы "не видим" игрока (закрытая дверь гасит raycast),
+	# DetectionArea всё ещё считает, что игрок рядом. Поэтому обновим
+	# last-known комнату/позицию, чтобы маньяк мог правильно открывать
+	# двери при повторном проталкивании.
+	var pl_room_id: int = _get_room_id_at_point_stable(player.global_position)
+	if pl_room_id != -1:
+		_last_known_player_room_id = pl_room_id
+	last_player_pos = player.global_position
+	if not _can_see(player):
+		# Потеряли линию видимости — идём к последней точке; в той же комнате — обследование.
+		_door_override_active = false
+		_set_door_collision_mode(false)
+		var pl_room_los: int = _get_room_id_at_point_stable(player.global_position)
+		if pl_room_los != -1:
+			_committed_search_room_id = pl_room_los
+		last_player_pos = player.global_position
+		if nav_agent:
+			nav_agent.target_position = last_player_pos
+		var dist_los: float = global_position.distance_to(last_player_pos)
+		var arrived_los: bool = dist_los <= arrive_last_seen_dist_px or (
+			nav_agent != null and nav_agent.is_navigation_finished() and dist_los <= arrive_last_seen_dist_px * 2.5
+)
+		if nav_agent and arrived_los:
+			# Сразу после удара луч/дистанция могут кратко «потерять» игрока — не уходить в обследование,
+			# а тянуться к актуальной позиции (она обновляется в анимации и здесь).
+			if _attack_recovery_left > 0.0:
+				if is_instance_valid(player):
+					last_player_pos = player.global_position
+					nav_agent.target_position = last_player_pos
+				_follow_nav_agent(delta, speed)
+				return
+			var my_room_los: int = _get_room_id_at_point_stable(global_position)
+			if _committed_search_room_id != -1 and my_room_los == _committed_search_room_id:
+				_start_investigate_room(_committed_search_room_id)
+				return
+			state = State.PATROL
+			if _committed_search_room_id != -1 and my_room_los != _committed_search_room_id:
+				if _try_pick_intel_travel_to_room(_committed_search_room_id):
+					_intel_travel_active = true
+					_intel_room_id = _committed_search_room_id
+					_log_intel("иду_в_комнату_после_потери_вида", _intel_room_id, last_player_pos)
+				else:
+					_start_patrol()
+			else:
+				_start_patrol()
+			return
+		_follow_nav_agent(delta, speed)
+		return
+	# видим игрока
+	var player_room_id: int = _get_room_id_at_point_stable(player.global_position)
+	if player_room_id != -1:
+		_last_known_player_room_id = player_room_id
+		_committed_search_room_id = player_room_id
+	last_player_pos = player.global_position
+	if global_position.distance_to(player.global_position) <= attack_range and (not _is_attacking) and _attack_recovery_left <= 0.0:
+		_last_facing_dir = (player.global_position - global_position).normalized()
+		_play_attack_anim()
+		_door_override_active = false
+		_set_door_collision_mode(false)
+		return
+	# Пока игрок в прямой видимости — только погоня к позиции (навигация + триггеры дверей).
+	# Ветка «разные room_id → принудительно open_for_maniac» давала байт у двери.
+	if nav_agent:
+		nav_agent.max_speed = chase_speed
+		_target_update_time_left -= delta
+		if _target_update_time_left <= 0.0:
+			_last_target_pos = player.global_position
+			nav_agent.target_position = _last_target_pos
+			_target_update_time_left = target_update_interval
+	_follow_nav_agent(delta, chase_speed)
+# ---------- Navigation ----------
+func _follow_nav_agent(delta: float, spd: float) -> void:
+	if not nav_agent:
+		return
+	var next_pos: Vector2 = nav_agent.get_next_path_position()
+	if next_pos == Vector2.ZERO:
+		return
+	var delta_pos: Vector2 = next_pos - global_position
+	if delta_pos.length() <= 0.001:
+		return
+	var desired_velocity: Vector2 = delta_pos.normalized() * spd
+	var pos_before: Vector2 = global_position
+	# Плавное изменение скорости убирает "прилипание" у цели
+	velocity = velocity.move_toward(desired_velocity, acceleration * delta)
+	move_and_slide()
+	if _wall_escape_cooldown_left > 0.0:
+		_wall_escape_cooldown_left -= delta
+	var collision := get_last_slide_collision()
+	if collision != null and _wall_escape_cooldown_left <= 0.0:
+		var moved_px: float = global_position.distance_to(pos_before)
+		var blocked: bool = (
+			_stuck_elapsed >= wall_escape_min_stuck_s
+			or moved_px <= stuck_move_epsilon_px * 0.5
+			or velocity.length() < desired_velocity.length() * wall_escape_blocked_velocity_ratio
+)
+		if blocked:
+			_try_wall_sidestep(collision, desired_velocity)
+	# Отладка: если маньяк встаёт у препятствия, печатаем коллайдер.
+	if debug_collision_prints and (state == State.PATROL or state == State.INVESTIGATE) and _debug_collision_timer <= 0.0:
+		var collision_dbg: KinematicCollision2D = get_last_slide_collision()
+		if collision_dbg != null:
+			var col_obj: Object = collision_dbg.get_collider()
+			# Печатаем только когда мы близки к нав. цели — меньше мусора в консоли.
+			var t: Vector2 = nav_agent.target_position
+			var dist_to_target: float = global_position.distance_to(t)
+			if dist_to_target <= debug_collision_distance_to_target:
+				if col_obj != null:
+					if col_obj is Door:
+						var d: Door = col_obj as Door
+						print(
+							"[Maniac] collision door:", d.name,
+							" door_id:", d.door_id,
+							" is_open:", d.is_open,
+							" at:", collision_dbg.get_position()
+)
+					else:
+						print("[Maniac] collision:", col_obj.name, " type:", col_obj.get_class(), " at:", collision_dbg.get_position())
+				else:
+					print("[Maniac] collision: null at:", collision_dbg.get_position())
+				_debug_collision_timer = debug_collision_cooldown
+func _pick_wall_sidestep_dir(normal: Vector2, desired_velocity: Vector2) -> Vector2:
+	var tangent_left: Vector2 = Vector2(-normal.y, normal.x).normalized()
+	var tangent_right: Vector2 = -tangent_left
+	var can_left: bool = not test_move(global_transform, tangent_left * wall_escape_probe_px)
+	var can_right: bool = not test_move(global_transform, tangent_right * wall_escape_probe_px)
+	if can_left and not can_right:
+		return tangent_left
+	if can_right and not can_left:
+		return tangent_right
+	if can_left and can_right:
+		if desired_velocity.length() <= 0.001:
+			return tangent_left if _wall_escape_side > 0.0 else tangent_right
+		return tangent_left if tangent_left.dot(desired_velocity) >= tangent_right.dot(desired_velocity) else tangent_right
+	return tangent_left * _wall_escape_side
+func _try_wall_sidestep(collision: KinematicCollision2D, desired_velocity: Vector2) -> void:
+	var normal: Vector2 = collision.get_normal()
+	if normal.length() <= 0.001:
+		return
+	var sidestep: Vector2 = _pick_wall_sidestep_dir(normal, desired_velocity)
+	var pos_before: Vector2 = global_position
+	velocity = sidestep * wall_escape_speed
+	move_and_slide()
+	if get_last_slide_collision() != null and global_position.distance_to(pos_before) <= stuck_move_epsilon_px:
+		_wall_escape_side *= -1.0
+		sidestep = -sidestep
+		pos_before = global_position
+		velocity = sidestep * wall_escape_speed
+		move_and_slide()
+		if get_last_slide_collision() != null and global_position.distance_to(pos_before) <= stuck_move_epsilon_px:
+			_wall_escape_side *= -1.0
+	_wall_escape_cooldown_left = wall_escape_cooldown_s
+func _start_patrol() -> void:
+	_pick_new_wander_point()
+func set_door_exit_target(exit_point: Vector2, use_chase_speed: bool = false) -> void:
+	if not nav_agent:
+		return
+	_clear_intel_travel()
+	_door_override_active = true
+	_set_door_collision_mode(true)
+	_door_exit_target = exit_point
+	state = State.PATROL
+	# Ставим целевую точку на выход через открытую дверь.
+	var spd: float = chase_speed if use_chase_speed else speed
+	nav_agent.max_speed = spd
+	# Если точка выхода оказалась недостижимой (иногда бывает из-за
+	# таймингов обновления NavigationLink2D или из-за небольшой ошибки
+	# положения), попробуем сдвинуть её немного дальше по направлению.
+	var nav_map: RID = nav_agent.get_navigation_map()
+	var navigation_layers: int = 1
+	var chosen_exit: Vector2 = exit_point
+	if nav_map != RID():
+		var dir: Vector2 = (exit_point - global_position)
+		if dir.length() > 0.001:
+			dir = dir.normalized()
+		else:
+			dir = Vector2.RIGHT
+		var candidates: Array[Vector2] = [
+			exit_point,
+			exit_point + dir * 12.0,
+			exit_point + dir * 24.0,
+			exit_point + dir * 36.0
+		]
+		for c in candidates:
+			var path: PackedVector2Array = NavigationServer2D.map_get_path(
+				nav_map,
+				global_position,
+				c,
+				true,
+				navigation_layers
+)
+			if path.size() > 1:
+				chosen_exit = c
+				break
+	_door_exit_target = chosen_exit
+	# Фиксируем комнату для патруля после двери.
+	# Надежнее брать комнату из точки выхода (exit_point), а не из last_known,
+	# потому что player мог отойти/перестать быть видимым сразу после открытия.
+	var forced_room_id: int = _get_room_id_at_point_stable(chosen_exit)
+	# Если выход оказался на границе полигона — пробуем сдвинуть точку
+	# чуть дальше по направлению “в комнату”.
+	if forced_room_id == -1:
+		var dir_to_exit: Vector2 = chosen_exit - global_position
+		if dir_to_exit.length() > 0.001:
+			dir_to_exit = dir_to_exit.normalized()
+		else:
+			dir_to_exit = Vector2.RIGHT
+		var tries: Array[float] = [6.0, 12.0, 18.0, 24.0]
+		for d in tries:
+			var id_try: int = _get_room_id_at_point_stable(chosen_exit + dir_to_exit * d)
+			if id_try != -1:
+				forced_room_id = id_try
+				break
+	if forced_room_id != -1:
+		_forced_patrol_room = _get_room_area_by_id(forced_room_id)
+	else:
+		# fallback: используем последнюю известную комнату игрока
+		if _last_known_player_room_id != -1:
+			_forced_patrol_room = _get_room_area_by_id(_last_known_player_room_id)
+		else:
+			_forced_patrol_room = _get_room_at_point(chosen_exit)
+	_room_patrol_time_left = randf_range(room_patrol_min_time_s, room_patrol_max_time_s)
+	nav_agent.target_position = chosen_exit
+	# На случай, если линк включился только что — принудительно перезапросим путь.
+	refresh_navigation(false)
+func is_targeting_door(door_node: Door) -> bool:
+	# Дверь будет открываться по триггеру только если маньяк уже
+	# принял решение "протиснуться" через именно эту дверь.
+	if not _door_override_active:
+		return false
+	if door_node == null:
+		return false
+	if door_node.nav_a == null or door_node.nav_b == null:
+		return false
+	# Door.gd дополнительно смещает exit_point внутрь комнаты на ~16px,
+	# поэтому даем запас по расстоянию.
+	var tol: float = max(door_override_reach_dist * 3.0, 40.0)
+	var a_pos: Vector2 = door_node.nav_a.global_position
+	var b_pos: Vector2 = door_node.nav_b.global_position
+	return _door_exit_target.distance_to(a_pos) <= tol or _door_exit_target.distance_to(b_pos) <= tol
+func can_open_door_from_trigger(door_node: Door) -> bool:
+	if door_node == null:
+		return false
+	if door_node.nav_a == null or door_node.nav_b == null:
+		return false
+	if door_node.is_open:
+		return false
+	if door_trigger_suppress_in_investigate and state == State.INVESTIGATE:
+		return false
+	if state == State.CHASE and is_instance_valid(player) and _can_see(player):
+		if global_position.distance_to(player.global_position) <= door_trigger_suppress_when_chasing_close_px:
+			return false
+	# Уже решили идти через конкретную дверь — только она.
+	if _door_override_active:
+		return is_targeting_door(door_node)
+	return true
+func _find_door_exit_between_rooms(from_room_id: int, to_room_id: int) -> Dictionary:
+	var best: Dictionary = {}
+	var best_dist: float = INF
+	for door in get_tree().get_nodes_in_group("doors"):
+		if not (door is Door):
+			continue
+		var door_node: Door = door as Door
+		if door_node.nav_a == null or door_node.nav_b == null:
+			continue
+		var a_pos: Vector2 = door_node.nav_a.global_position
+		var b_pos: Vector2 = door_node.nav_b.global_position
+		var a_id: int = _get_room_id_at_point(a_pos)
+		var b_id: int = _get_room_id_at_point(b_pos)
+		# Если маркеры A/B лежат прямо на границе RoomArea2D,
+		# point-in-polygon может вернуть -1. Тогда пробуем небольшой смещённый поиск.
+		if a_id == -1:
+			var offs: Array[Vector2] = [Vector2(6, 0), Vector2(-6, 0), Vector2(0, 6), Vector2(0, -6)]
+			for off in offs:
+				var id_try: int = _get_room_id_at_point(a_pos + off)
+				if id_try != -1:
+					a_id = id_try
+					break
+		if b_id == -1:
+			var offs2: Array[Vector2] = [Vector2(6, 0), Vector2(-6, 0), Vector2(0, 6), Vector2(0, -6)]
+			for off in offs2:
+				var id_try2: int = _get_room_id_at_point(b_pos + off)
+				if id_try2 != -1:
+					b_id = id_try2
+					break
+		if a_id == -1 or b_id == -1:
+			continue
+		var connects := (a_id == from_room_id and b_id == to_room_id) or (b_id == from_room_id and a_id == to_room_id)
+		if not connects:
+			continue
+		var entry_pos: Vector2 = a_pos if a_id == from_room_id else b_pos
+		var exit_pos: Vector2 = a_pos if a_id == to_room_id else b_pos
+		var dist: float = global_position.distance_to(entry_pos)
+		if dist < best_dist:
+			best_dist = dist
+			best = {
+				"door": door_node,
+			"entry_pos": entry_pos,
+				"exit_point": exit_pos,
+			"dist": dist,
+			}
+	return best
+func _pick_new_wander_point() -> void:
+	if not nav_agent:
+		return
+	# Без зависимости от наличия узла Navigation2D в сцене.
+	# Берём случайную точку по текущей navigation map агента.
+	var nav_map: RID = nav_agent.get_navigation_map()
+	if nav_map == RID():
+		return
+	# 1 - навигационный слой, на котором сейчас работает маньяк/линки (как у агента).
+	var navigation_layers: int = 1
+	# Ограничиваем выбор точек:
+	# - если недавно прошли дверь и задана "целeвая комната", бродим только в ней;
+	# - иначе — бродим в текущей комнате по RoomArea2D.
+	var current_room: Area2D = null
+	if _room_patrol_time_left > 0.0 and _forced_patrol_room != null:
+		current_room = _forced_patrol_room
+	else:
+		current_room = _get_room_at_point(global_position)
+	var max_attempts: int = room_pick_attempts
+	for i in range(max_attempts):
+		var rnd_point: Vector2 = NavigationServer2D.map_get_random_point(nav_map, navigation_layers, true)
+		if rnd_point == Vector2.ZERO:
+			continue
+		if current_room != null and not _is_point_inside_room(current_room, rnd_point):
+			continue
+		# Важно: выбираем ТОЛЬКО достижимую точку, иначе агент может "встать".
+		var path: PackedVector2Array = NavigationServer2D.map_get_path(
+			nav_map,
+			global_position,
+			rnd_point,
+			true,
+			navigation_layers
+)
+		if path.size() > 1:
+			nav_agent.target_position = rnd_point
+			return
+	# fallback
+	nav_agent.target_position = global_position
+func _get_room_at_point(world_point: Vector2) -> Area2D:
+	var rooms: Array = get_tree().get_nodes_in_group(rooms_group_name)
+	for r in rooms:
+		if not (r is Area2D):
+			continue
+		var room_area: Area2D = r as Area2D
+		if _is_point_inside_room(room_area, world_point):
+			return room_area
+	return null
+func _is_point_inside_room(room_area: Area2D, world_point: Vector2) -> bool:
+	# Проверяем попадание точки в CollisionPolygon2D из комнаты.
+	var polys: Array = []
+	_collect_collision_polygons(room_area, polys)
+	for p in polys:
+		if not (p is CollisionPolygon2D):
+			continue
+		var cp: CollisionPolygon2D = p as CollisionPolygon2D
+		var poly: PackedVector2Array = cp.polygon
+		if poly.size() < 3:
+			continue
+		# Приводим точку в локальную систему координат конкретного CollisionPolygon2D
+		var local_point: Vector2 = cp.to_local(world_point)
+		if Geometry2D.is_point_in_polygon(local_point, poly):
+			return true
+	return false
+func _get_room_id_from_area(room_area: Area2D) -> int:
+	if room_area == null:
+		return -1
+	if not room_area.has_meta(room_id_meta_key):
+		return -1
+	var v: Variant = room_area.get_meta(room_id_meta_key)
+	if v == null:
+		return -1
+	return int(v)
+func _get_room_area_by_id(id: int) -> Area2D:
+	if id < 0:
+		return null
+	var rooms: Array = get_tree().get_nodes_in_group(rooms_group_name)
+	for r in rooms:
+		if not (r is Area2D):
+			continue
+		var room_area: Area2D = r as Area2D
+		if _get_room_id_from_area(room_area) == id:
+			return room_area
+	return null
+func _get_room_id_at_point(world_point: Vector2) -> int:
+	var room_area: Area2D = _get_room_at_point(world_point)
+	if room_area == null:
+		return -1
+	return _get_room_id_from_area(room_area)
+func _get_room_id_at_point_stable(world_point: Vector2) -> int:
+	# RoomArea может содержать точку на границе. Тогда point-in-polygon
+	# иногда возвращает -1. Для AI это критично — подстрахуем смещениями.
+	var id: int = _get_room_id_at_point(world_point)
+	if id != -1:
+		return id
+	var offs: Array[Vector2] = [Vector2(6, 0), Vector2(-6, 0), Vector2(0, 6), Vector2(0, -6)]
+	for off in offs:
+		var id_try: int = _get_room_id_at_point(world_point + off)
+		if id_try != -1:
+			return id_try
+	return -1
+func _collect_collision_polygons(node: Node, out: Array) -> void:
+	for c in node.get_children():
+		if c is CollisionPolygon2D:
+			out.append(c)
+		_collect_collision_polygons(c, out)
+# ---------- Detection / vision ----------
+func _on_detection_body_entered(body: Node) -> void:
+	if body.is_in_group("player"):
+		_set_player(body)
+func _on_detection_body_exited(body: Node) -> void:
+	if body != player:
+		return
+	var saved_pos: Vector2 = player.global_position
+	var saved_room: int = _get_room_id_at_point_stable(saved_pos)
+	_set_player_collision_passthrough(player, false)
+	_restore_collision_mask()
+	_reset_attack_state(true)
+	player = null
+	_door_override_active = false
+	_set_door_collision_mode(false)
+	last_player_pos = saved_pos
+	if saved_room != -1:
+		_last_known_player_room_id = saved_room
+		_committed_search_room_id = saved_room
+	state = State.PATROL
+	if saved_room != -1:
+		var my_exit: int = _get_room_id_at_point_stable(global_position)
+		if my_exit == saved_room:
+			_start_investigate_room(saved_room)
+		else:
+			if _try_pick_intel_travel_to_room(saved_room):
+				_intel_travel_active = true
+				_intel_room_id = saved_room
+				_log_intel("потеря_контакта_иду_в_комнату", saved_room, saved_pos)
+			else:
+				_start_patrol()
+	else:
+		_start_patrol()
+func _detect_visible_player() -> bool:
+	if not is_instance_valid(player):
+		return false
+	# не видим игрока во время невидимости
+	if "is_invisible" in player and player.is_invisible:
+		return false
+	return _can_see(player)
+func _can_see(target: Node) -> bool:
+	if target == null:
+		return false
+	# дистанция
+	var to_target = target.global_position - global_position
+	if to_target.length() > detection_radius:
+		return false
+	# луч до игрока — стены/двери должны блокировать
+	var space_state = get_world_2d().direct_space_state
+	var query := PhysicsRayQueryParameters2D.create(global_position, target.global_position)
+	var result = space_state.intersect_ray(query)
+	if result.is_empty():
+		return false
+	var collider: Object = result.get("collider")
+	if collider == null:
+		return false
+	# 1) Если луч уперся в закрытую дверь — видимости нет.
+	var door_node: Door = null
+	if collider is Door:
+		door_node = collider
+	elif collider is Node:
+		var p := (collider as Node).get_parent()
+		if p is Door:
+			door_node = p as Door
+	if door_node != null and not door_node.is_open:
+		return false
+	# 2) Если луч попал в игрока (или в дочерние коллайдеры игрока) — видим.
+	if collider is Node:
+		var hit_node := collider as Node
+		# прямой матч
+		if hit_node == target:
+			return true
+		# или матч по группе/родителям
+		if hit_node.is_in_group("player"):
+			return true
+		var ancestor := hit_node.get_parent()
+		while ancestor != null:
+			if ancestor == target or ancestor.is_in_group("player"):
+				return true
+			ancestor = ancestor.get_parent()
+		return false
+	# 3) fallback
+	return collider == target
+# ---------- Navigation2D helper ----------
+func _get_navigation2d():
+	var root = get_tree().get_current_scene()
+	if root == null:
+		return null
+	var nav = root.get_node_or_null("Navigation2D")
+	if nav:
+		return nav
+	return _find_navigation2d_recursive(root)
+func _find_navigation2d_recursive(node):
+	if node == null:
+		return null
+	if node.get_class() == "Navigation2D":
+		return node
+	for child in node.get_children():
+		var found = _find_navigation2d_recursive(child)
+		if found:
+			return found
+	return null
+# ---------- Реакция, когда игрок стал видимым рядом ----------
+func on_player_revealed(p: Node) -> void:
+	_set_player(p)
+func _on_player_became_invisible() -> void:
+	var target_room_id: int = _last_known_player_room_id
+	var saved_inv_pos: Vector2 = last_player_pos
+	if is_instance_valid(player):
+		saved_inv_pos = player.global_position
+		var rr: int = _get_room_id_at_point_stable(saved_inv_pos)
+		if rr != -1:
+			target_room_id = rr
+			_last_known_player_room_id = rr
+			_committed_search_room_id = rr
+		_set_player_collision_passthrough(player, false)
+	player = null
+	_restore_collision_mask()
+	_reset_attack_state(true)
+	last_player_pos = saved_inv_pos
+	state = State.PATROL
+	if target_room_id != -1:
+		var cur_here: int = _get_room_id_at_point_stable(global_position)
+		if cur_here == target_room_id:
+			_start_investigate_room(target_room_id)
+		elif _try_pick_intel_travel_to_room(target_room_id):
+			_intel_travel_active = true
+			_intel_room_id = target_room_id
+			_log_intel("невидимость_иду_в_комнату", target_room_id, saved_inv_pos)
+			refresh_navigation(false)
+		else:
+			_start_patrol()
+	else:
+		_start_patrol()
+func _on_player_became_visible() -> void:
+	# Ничего не делаем: `player.gd` уже уведомляет маньяков напрямую через `on_player_revealed`.
+	pass
+# Door opens/links update are applied with defer / after physics.
+# When a door becomes traversable while we're PATROLLING, we need to force
+# NavigationAgent2D to re-query a path to its current target.
+func refresh_navigation(repick_wander: bool = true) -> void:
+	if not nav_agent:
+		return
+	var t: Vector2 = nav_agent.target_position
+	if t == Vector2.ZERO:
+		t = global_position
+	# Если мы в PATROL, то цель могла стать недостижимой при закрытой двери.
+	# Поэтому при открытии двери всегда надо переподобрать wander-точку.
+	var should_repick: bool = repick_wander and (state == State.PATROL or state == State.INVESTIGATE)
+	call_deferred("_refresh_navigation_deferred", should_repick, t)
+func _refresh_navigation_deferred(repick_wander: bool, t: Vector2) -> void:
+	if not nav_agent:
+		return
+	# NavigationLink changes usually take effect after the next physics frame.
+	await get_tree().physics_frame
+	if not nav_agent:
+		return
+	if repick_wander:
+		# Если мы патрулируем и дверь стала доступной, но наша текущая wander-цель
+		# была недостижима при закрытой двери — выбираем новую.
+		_pick_new_wander_point()
+		return
+	# Если мы в chase/когда репик не нужен — принудительно пересобираем путь.
+	nav_agent.target_position = t + Vector2(0.1, 0.0)
+	nav_agent.target_position = t
+# ---------- Animation ----------
+func _play_anim_by_velocity() -> void:
+	if anim == null:
+		return
+	if velocity.length() >= 1.0:
+		_last_facing_dir = velocity.normalized()
+	# Attack animation has priority while timer is active.
+	if _attack_anim_time_left > 0.0 and anim.sprite_frames and anim.sprite_frames.has_animation("attack"):
+		anim.flip_h = _last_facing_dir.x < -0.05
+		if anim.animation != "attack":
+			anim.play("attack")
+		return
+	var dir_name := _dir_to_anim_suffix(_last_facing_dir)
+	var next_anim := ""
+	if velocity.length() < 1.0:
+		next_anim = "idle_%s" % dir_name
+	else:
+		next_anim = "walk_%s" % dir_name
+	if dir_name == "side":
+		anim.flip_h = _last_facing_dir.x < -0.05
+	else:
+		anim.flip_h = false
+	if anim.sprite_frames and anim.sprite_frames.has_animation(next_anim):
+		if anim.animation != next_anim:
+			anim.play(next_anim)
+		return
+	# Fallback if a specific direction animation is missing.
+	if velocity.length() < 1.0:
+		if anim.sprite_frames and anim.sprite_frames.has_animation("idle_down") and anim.animation != "idle_down":
+			anim.play("idle_down")
+	else:
+		if anim.sprite_frames and anim.sprite_frames.has_animation("walk_down") and anim.animation != "walk_down":
+			anim.play("walk_down")
+func _dir_to_anim_suffix(dir: Vector2) -> String:
+	if absf(dir.x) > absf(dir.y):
+		return "side"
+	if dir.y < 0.0:
+		return "up"
+	return "down"
+func _play_attack_anim() -> void:
+	_is_attacking = true
+	_attack_anim_time_left = attack_anim_duration_s
+	_attack_damage_applied = false
+	velocity = Vector2.ZERO
+	if attack_swing_sfx != null:
+		_play_short_sfx(attack_swing_sfx)
+	if anim == null:
+		# Fallback: если спрайта/анимации нет, не зависаем в вечной атаке.
+		_is_attacking = false
+		_attack_recovery_left = attack_recovery_s
+		return
+	if anim.sprite_frames and anim.sprite_frames.has_animation("attack"):
+		anim.flip_h = _last_facing_dir.x < -0.05
+		anim.play("attack")
+		# Таймер синхронизируем с реальной длительностью анимации, чтобы не было спама атак.
+		var frames_count: float = float(anim.sprite_frames.get_frame_count("attack"))
+		var anim_speed: float = max(float(anim.sprite_frames.get_animation_speed("attack")), 0.001)
+		var anim_len: float = frames_count / anim_speed
+		_attack_anim_time_left = max(_attack_anim_time_left, anim_len)
+	else:
+		# Нет анимации attack — используем таймер и recovery как кулдаун.
+		_is_attacking = false
+		_attack_recovery_left = attack_recovery_s
+func _on_anim_finished() -> void:
+	if anim == null:
+		return
+	if anim.animation != "attack":
+		return
+	_reset_attack_state(true)
+func _on_anim_frame_changed() -> void:
+	if anim == null:
+		return
+	var anim_name: String = str(anim.animation)
+	if anim_name.begins_with("walk_") and velocity.length() > 28.0:
+		if _footstep_cooldown <= 0.0 and footstep_sfx != null:
+			_footstep_cooldown = footstep_min_interval_s
+			_play_short_sfx(footstep_sfx)
+	if _attack_anim_time_left <= 0.0:
+		return
+	if anim.animation != "attack":
+		return
+	if _attack_damage_applied:
+		return
+	if anim.frame != attack_hit_frame_index:
+		return
+	_attack_damage_applied = true
+	if not is_instance_valid(player):
+		return
+	if global_position.distance_to(player.global_position) > attack_range:
+		return
+	if player.has_method("take_damage"):
+		player.take_damage(1, true)
+
+#scenes/level_1/level_manager.gd
+extends Node2D
+class_name LevelManager
+@onready var pause_menu = $PauseMenu
+@onready var journal = $Journal
+@export var clear_existing: bool = true
+@export var verbose: bool = true
+@export var wait_frames: int = 2
+func _unhandled_input(event: InputEvent) -> void:
+	var pause_open: bool = pause_menu != null and pause_menu.is_open()
+	if TutorialManager.is_popup_open() and not event.is_action_pressed("pause_menu"):
+		return
+	var journal_open: bool = journal != null and journal.is_open()
+	if event.is_action_pressed("pause_menu"):
+		if journal_open:
+			return
+		pause_menu.toggle_menu()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("journal"):
+		if pause_open:
+			return
+		journal.toggle()
+		get_viewport().set_input_as_handled()
+		return
+func _ready() -> void:
+	set_process_mode(Node.PROCESS_MODE_ALWAYS)
+	set_process_unhandled_input(true)
+	RunStats.start_level(1)
+	_apply_loop_on_music_player_if_present()
+	call_deferred("_init_links")
+	call_deferred("_register_run_stats_quota")
+	call_deferred("_start_tutorial")
+	# Попробуем вызвать загрузку через SaveManager (поддерживаем старые/новые имена)
+	var save_singleton = _find_save_singleton()
+	if save_singleton != null and save_singleton.has_method("load_game"):
+		save_singleton.load_game()
+		if verbose:
+			print("-------------------------------------")
+	else:
+		if verbose:
+			print("LevelManager: Save singleton not found or has no load_game()")
+func _register_run_stats_quota() -> void:
+	RunStats.register_level_computers_from_tree(get_tree())
+# --- Поиск singleton SaveManager (поддерживает SaveManager и SaveMeneger) ---
+func _find_save_singleton() -> Object:
+	if Engine.has_singleton("SaveManager"):
+		return Engine.get_singleton("SaveManager")
+	if Engine.has_singleton("SaveMeneger"):
+		return Engine.get_singleton("SaveMeneger")
+	# также попробуем получить через root node (если автoload добавлен как node)
+	var root = get_tree().get_root()
+	if root.has_node("SaveManager"):
+		return root.get_node("SaveManager")
+	if root.has_node("SaveMeneger"):
+		return root.get_node("SaveMeneger")
+	return null
+# --- Поиск DB singleton / менеджера базы данных ---
+func _find_db_manager() -> Node:
+	# 1) Попробуем автолоады с разными именами
+	if Engine.has_singleton("DbManager"):
+		return Engine.get_singleton("DbManager")
+	if Engine.has_singleton("DbMeneger"):
+		return Engine.get_singleton("DbMeneger")
+	# 2) Попробуем root node по имени
+	var root = get_tree().get_root()
+	if root.has_node("DbManager"):
+		return root.get_node("DbManager")
+	if root.has_node("DbMeneger"):
+		return root.get_node("DbMeneger")
+	# 3) Группа db_managers (если менеджеры добавлены в группу)
+	var nodes = get_tree().get_nodes_in_group("db_managers")
+	if nodes.size() > 0:
+		return nodes[0]
+	return null
+func _start_tutorial() -> void:
+	await get_tree().process_frame
+	TutorialManager.start_on_level()
+func _init_links() -> void:
+	var db = _find_db_manager()
+	if db == null:
+		push_error("LevelManager: DbManager/DbMeneger not found.")
+		return
+	# Очистка существующих связей (рычаги и двери) при необходимости
+	if clear_existing:
+		if db.has_method("clear_lever_links"):
+			if verbose:
+				print("LevelManager: clearing existing lever_links...")
+			db.clear_lever_links()
+		if db.has_method("clear_computer_door_links"):
+			if verbose:
+				print("LevelManager: clearing existing computer_doors...")
+			db.clear_computer_door_links()
+	# компьютеры — собираем карту (id -> node)
+	var comp_map: Dictionary = {}
+	var comps = get_tree().get_nodes_in_group("computers")
+	for c in comps:
+		var cid_val = null
+		# если в скрипте Computer.gd есть @export var computer_id
+		if "computer_id" in c:
+			cid_val = c.computer_id
+		elif c.has_meta("computer_id"):
+			cid_val = c.get_meta("computer_id")
+		if cid_val != null:
+			comp_map[int(cid_val)] = c
+	if verbose:
+		print("LevelManager: found %d computer(s)." % comps.size())
+	# ждём несколько кадров, чтобы сцена полностью инициализировалась
+	for i in range(wait_frames):
+		await get_tree().process_frame
+	# рычаги — существующая логика
+	var levers = get_tree().get_nodes_in_group("levers")
+	if verbose:
+		print("LevelManager: found %d lever(s)." % levers.size())
+	for lever in levers:
+		if lever.has_method("register_links"):
+			lever.register_links()
+			continue
+		var lid_val = null
+		if "lever_id" in lever:
+			lid_val = lever.lever_id
+		elif lever.has_meta("lever_id"):
+			lid_val = lever.get_meta("lever_id")
+		var linked_val = null
+		if "linked_computers" in lever:
+			linked_val = lever.linked_computers
+		elif lever.has_meta("linked_computers"):
+			linked_val = lever.get_meta("linked_computers")
+		if lid_val == null or linked_val == null:
+			continue
+		var lid = int(lid_val)
+		for comp_id in linked_val:
+			if typeof(comp_id) == TYPE_INT and comp_id > 0 and db.has_method("link_lever_to_computer"):
+				db.link_lever_to_computer(lid, comp_id)
+	# Автоматическая привязка компьютеров <-> дверей по полям инспектора
+	_auto_link_computers_and_doors(db)
+	if verbose:
+		print("LevelManager: initialization complete.")
+	if db.has_method("debug_dump_all"):
+		db.debug_dump_all()
+func _apply_loop_on_music_player_if_present() -> void:
+	var p: AudioStreamPlayer = get_node_or_null("music_player") as AudioStreamPlayer
+	if p == null or p.stream == null:
+		return
+	var st: AudioStream = p.stream
+	if st is AudioStreamOggVorbis:
+		st.loop = true
+	elif st is AudioStreamWAV:
+		st.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	elif ClassDB.class_exists("AudioStreamMP3") and st is AudioStreamMP3:
+		st.loop = true
+# --- Вспомогательная функция: привязать компьютеры и двери по инспекторным полям ---
+func _auto_link_computers_and_doors(db: Node) -> void:
+	if db == null:
+		return
+	var comps = get_tree().get_nodes_in_group("computers")
+	for c in comps:
+		if not ("computer_id" in c):
+			continue
+		var cid = int(c.computer_id)
+		# Если linked_doors нет — пропускаем
+		if not ("linked_doors" in c):
+			continue
+		# Проходим по элементам массива linked_doors
+		for raw in c.linked_doors:
+			var did: int = -1
+			# 1) Если это число — используем напрямую
+			if typeof(raw) == TYPE_INT:
+				did = int(raw)
+			# 2) Если это строка — попробуем распарсить число
+			elif typeof(raw) == TYPE_STRING:
+				var s = String(raw).strip_edges()
+				if s.is_valid_integer():
+					did = int(s)
+			# 3) Если это NodePath — пытаемся получить узел и его door_id
+			elif typeof(raw) == TYPE_NODE_PATH:
+				var np = raw as NodePath
+				var node = get_node_or_null(np)
+				if node != null and ("door_id" in node):
+					did = int(node.door_id)
+			# 4) Если это Node (в инспекторе могли перетащить узел) — используем его door_id
+			elif typeof(raw) == TYPE_OBJECT and raw is Node:
+				var node2 = raw as Node
+				if ("door_id" in node2):
+					did = int(node2.door_id)
+			# 5) Если не получилось — пропускаем
+			if did <= 0:
+				if verbose:
+					print("LevelManager: skipping invalid linked_doors entry:", raw, "for computer", cid)
+				continue
+			# Наконец, создаём связь в БД
+			if db.has_method("link_computer_to_door"):
+				db.link_computer_to_door(cid, did)
+	if verbose:
+		print("LevelManager: auto-linking from computers -> computer_doors complete")
+
+#scenes/level_1/hud_ui.gd
+# res://ui/hint_ui.gd
+extends CanvasLayer
+@onready var panel: Panel = $HintPanel
+@onready var persistent_hint: Label = $HintPanel/PersistentHint
+@onready var dynamic_hint: Label = $HintPanel/HintLabel
+@onready var timer: Timer = $HintPanel/HintTimer
+var _owner: Object = null
+var _hp_panel: PanelContainer
+var _hearts_row: HBoxContainer
+var _hp_value_label: Label
+var _blood_bar: ProgressBar
+var _heart_labels: Array[Label] = []
+var _player: Node = null
+var _last_hp: int = -1
+var _low_hp_pulse: Tween
+var _heart_pulse_tweens: Array[Tween] = []
+const HUD_LAYER := 20
+const HP_OVERLAY_LAYER := 32
+const C_BLOOD := Color(0.78, 0.05, 0.08, 1.0)
+const C_BLOOD_GLOW := Color(1.0, 0.22, 0.18, 1.0)
+const C_BLOOD_EMPTY := Color(0.32, 0.28, 0.3, 0.72)
+const C_ASH := Color(0.82, 0.78, 0.8, 1.0)
+const C_PALE := Color(0.92, 0.88, 0.9, 1.0)
+var _hp_canvas: CanvasLayer
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	layer = HUD_LAYER
+	GameUiTheme.apply_horror_panel(panel)
+	panel.visible = true
+	persistent_hint.add_theme_color_override("font_color", GameUiTheme.C_TEXT)
+	persistent_hint.text = "B — руководство"
+	persistent_hint.visible = true
+	dynamic_hint.add_theme_color_override("font_color", GameUiTheme.C_HORROR_OUTLINE)
+	dynamic_hint.visible = false
+	timer.one_shot = true
+	timer.timeout.connect(hide_hint)
+	_setup_hp_display()
+	call_deferred("_bind_player")
+func _exit_tree() -> void:
+	if _hp_canvas and is_instance_valid(_hp_canvas):
+		_hp_canvas.queue_free()
+		_hp_canvas = null
+func _make_horror_hp_panel_style() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0.08, 0.04, 0.05, 0.94)
+	s.border_color = Color(0.72, 0.12, 0.14, 0.95)
+	s.border_width_left = 1
+	s.border_width_top = 1
+	s.border_width_right = 1
+	s.border_width_bottom = 2
+	s.corner_radius_top_left = 4
+	s.corner_radius_top_right = 4
+	s.corner_radius_bottom_right = 4
+	s.corner_radius_bottom_left = 4
+	s.content_margin_left = 12.0
+	s.content_margin_top = 10.0
+	s.content_margin_right = 12.0
+	s.content_margin_bottom = 10.0
+	s.shadow_color = Color(0.35, 0.0, 0.02, 0.45)
+	s.shadow_size = 10
+	s.shadow_offset = Vector2(0, 2)
+	return s
+func _make_blood_bar_styles() -> void:
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(0.06, 0.03, 0.04, 0.95)
+	track.border_color = Color(0.28, 0.03, 0.05, 0.6)
+	track.set_border_width_all(1)
+	track.set_corner_radius_all(2)
+	track.content_margin_left = 1.0
+	track.content_margin_top = 1.0
+	track.content_margin_right = 1.0
+	track.content_margin_bottom = 1.0
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = C_BLOOD
+	fill.set_corner_radius_all(1)
+	_blood_bar.add_theme_stylebox_override("background", track)
+	_blood_bar.add_theme_stylebox_override("fill", fill)
+func _setup_hp_display() -> void:
+	_hp_panel = PanelContainer.new()
+	_hp_panel.name = "HpPanel"
+	add_child(_hp_panel)
+	_hp_panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_hp_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_hp_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_hp_panel.offset_left = -188.0
+	_hp_panel.offset_top = -108.0
+	_hp_panel.offset_right = -12.0
+	_hp_panel.offset_bottom = -12.0
+	_hp_panel.add_theme_stylebox_override("panel", _make_horror_hp_panel_style())
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 4)
+	margin.add_theme_constant_override("margin_top", 2)
+	margin.add_theme_constant_override("margin_right", 4)
+	margin.add_theme_constant_override("margin_bottom", 2)
+	_hp_panel.add_child(margin)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	margin.add_child(vbox)
+	var title := Label.new()
+	title.text = "ЖИЗНЬ"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var title_ls := LabelSettings.new()
+	if ResourceLoader.exists(GameUiTheme.FONT_DISPLAY):
+		title_ls.font = load(GameUiTheme.FONT_DISPLAY)
+	title_ls.font_size = 14
+	title_ls.font_color = C_ASH
+	title_ls.outline_size = 2
+	title_ls.outline_color = Color(0.18, 0.02, 0.04, 0.9)
+	title.label_settings = title_ls
+	vbox.add_child(title)
+	_hearts_row = HBoxContainer.new()
+	_hearts_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_hearts_row.add_theme_constant_override("separation", 10)
+	vbox.add_child(_hearts_row)
+	_blood_bar = ProgressBar.new()
+	_blood_bar.custom_minimum_size = Vector2(148, 9)
+	_blood_bar.show_percentage = false
+	_blood_bar.max_value = 3.0
+	_blood_bar.value = 3.0
+	_make_blood_bar_styles()
+	vbox.add_child(_blood_bar)
+	_hp_value_label = Label.new()
+	_hp_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hp_value_label.add_theme_font_size_override("font_size", 13)
+	_hp_value_label.add_theme_color_override("font_color", C_PALE)
+	vbox.add_child(_hp_value_label)
+	_mount_hp_above_canvas_modulate()
+func _mount_hp_above_canvas_modulate() -> void:
+	if _hp_panel == null:
+		return
+	var parent := _hp_panel.get_parent()
+	if parent:
+		parent.remove_child(_hp_panel)
+	if _hp_canvas == null or not is_instance_valid(_hp_canvas):
+		_hp_canvas = CanvasLayer.new()
+		_hp_canvas.name = "HpHudOverlay"
+		_hp_canvas.layer = HP_OVERLAY_LAYER
+		_hp_canvas.process_mode = Node.PROCESS_MODE_ALWAYS
+		get_tree().root.add_child(_hp_canvas)
+	_hp_canvas.add_child(_hp_panel)
+	_hp_panel.self_modulate = Color.WHITE
+	_hp_panel.modulate = Color.WHITE
+func _bind_player() -> void:
+	var players := get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		return
+	_player = players[0]
+	if _player.has_signal("hp_changed"):
+		_player.hp_changed.connect(_on_hp_changed)
+	var max_hp := 3
+	if "max_hp" in _player:
+		max_hp = int(_player.max_hp)
+	var current_hp := max_hp
+	if _player.has_method("get_hp"):
+		current_hp = int(_player.get_hp())
+	_rebuild_hearts(max_hp)
+	_on_hp_changed(current_hp, max_hp)
+func _rebuild_hearts(max_hp: int) -> void:
+	for heart in _heart_labels:
+		heart.queue_free()
+	_heart_labels.clear()
+	for _i in range(max_hp):
+		var heart := Label.new()
+		heart.text = "♥"
+		heart.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		heart.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		heart.add_theme_font_size_override("font_size", 28)
+		heart.modulate = Color.WHITE
+		heart.add_theme_color_override("font_outline_color", Color(0.12, 0.02, 0.04, 0.95))
+		heart.add_theme_constant_override("outline_size", 2)
+		_hearts_row.add_child(heart)
+		_heart_labels.append(heart)
+func _on_hp_changed(current: int, maximum: int) -> void:
+	if _heart_labels.size() != maximum:
+		_rebuild_hearts(maximum)
+	for i in range(maximum):
+		var heart := _heart_labels[i]
+		var filled := i < current
+		heart.modulate = Color.WHITE
+		heart.add_theme_color_override(
+			"font_color",
+			C_BLOOD_GLOW if filled else C_BLOOD_EMPTY
+)
+		heart.scale = Vector2.ONE
+	if _blood_bar:
+		_blood_bar.max_value = float(maximum)
+		_blood_bar.value = float(current)
+		var fill_style := _blood_bar.get_theme_stylebox("fill") as StyleBoxFlat
+		if fill_style:
+			fill_style.bg_color = C_BLOOD_GLOW if current <= 1 else C_BLOOD
+	_hp_value_label.text = _format_hp_text(current, maximum)
+	_hp_value_label.add_theme_color_override(
+		"font_color",
+		C_BLOOD_GLOW if current <= 1 else C_PALE
+)
+	_update_low_hp_pulse(current)
+	if _last_hp >= 0 and current < _last_hp and current >= 0 and current < _heart_labels.size():
+		_pulse_heart(_heart_labels[current])
+		_pulse_hp_panel()
+	_last_hp = current
+func _format_hp_text(current: int, maximum: int) -> String:
+	var numerals: PackedStringArray = PackedStringArray(["0", "I", "II", "III", "IV", "V"])
+	var cur_s: String = numerals[current] if current >= 0 and current < numerals.size() else str(current)
+	var max_s: String = numerals[maximum] if maximum >= 0 and maximum < numerals.size() else str(maximum)
+	return "%s / %s" % [cur_s, max_s]
+func _update_low_hp_pulse(current: int) -> void:
+	if _low_hp_pulse and _low_hp_pulse.is_valid():
+		_low_hp_pulse.kill()
+		_low_hp_pulse = null
+	for ht in _heart_pulse_tweens:
+		if ht and ht.is_valid():
+			ht.kill()
+	_heart_pulse_tweens.clear()
+	if _hp_panel:
+		_hp_panel.modulate = Color.WHITE
+	if current > 1:
+		for heart in _heart_labels:
+			if heart.get_theme_color("font_color") != C_BLOOD_EMPTY:
+				heart.add_theme_color_override("font_color", C_BLOOD_GLOW)
+		return
+	_low_hp_pulse = create_tween()
+	_low_hp_pulse.set_loops()
+	_low_hp_pulse.set_trans(Tween.TRANS_SINE)
+	_low_hp_pulse.set_ease(Tween.EASE_IN_OUT)
+	_low_hp_pulse.tween_property(_hp_panel, "modulate", Color(1.0, 0.9, 0.9, 1.0), 0.55)
+	_low_hp_pulse.tween_property(_hp_panel, "modulate", Color(0.92, 0.86, 0.88, 1.0), 0.55)
+	for heart in _heart_labels:
+		if heart.get_theme_color("font_color") == C_BLOOD_EMPTY:
+			continue
+		var ht := create_tween()
+		ht.set_loops()
+		ht.set_trans(Tween.TRANS_SINE)
+		ht.set_ease(Tween.EASE_IN_OUT)
+		ht.tween_method(
+			func(c: Color) -> void: heart.add_theme_color_override("font_color", c),
+			C_BLOOD,
+			C_BLOOD_GLOW,
+			0.55
+)
+		ht.tween_method(
+			func(c: Color) -> void: heart.add_theme_color_override("font_color", c),
+			C_BLOOD_GLOW,
+			C_BLOOD,
+			0.55
+)
+		_heart_pulse_tweens.append(ht)
+func _pulse_heart(heart: Label) -> void:
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_ELASTIC)
+	tween.set_ease(Tween.EASE_OUT)
+	heart.add_theme_color_override("font_color", Color(1.0, 0.35, 0.28, 1.0))
+	heart.scale = Vector2(1.4, 1.4)
+	tween.tween_property(heart, "scale", Vector2.ONE, 0.35)
+	tween.parallel().tween_method(
+		func(c: Color) -> void: heart.add_theme_color_override("font_color", c),
+		Color(1.0, 0.35, 0.28, 1.0),
+		C_BLOOD_EMPTY,
+		0.45
+)
+func _pulse_hp_panel() -> void:
+	if _hp_panel == null:
+		return
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_EXPO)
+	tween.set_ease(Tween.EASE_OUT)
+	_hp_panel.modulate = Color(1.15, 0.35, 0.38, 1.0)
+	tween.tween_property(_hp_panel, "modulate", Color.WHITE, 0.5)
+func show_hint(text: String, duration: float = 0.0, owner: Object = null) -> void:
+	_owner = owner
+	dynamic_hint.text = text
+	dynamic_hint.visible = true
+	if duration > 0.0:
+		timer.stop()
+		timer.start(duration)
+func hide_hint(owner: Object = null) -> void:
+	if owner != null and _owner != owner:
+		return
+	dynamic_hint.visible = false
+	_owner = null
+	timer.stop()
+func hide_persistent_hint() -> void:
+	panel.visible = false
+	_owner = null
+	timer.stop()
+
+#scenes/computer/computer.gd
+extends Node2D
+@onready var area: Area2D = $InteractionArea
+@onready var terminal_ui: CanvasLayer = $TerminalUI
+@onready var sprite: Sprite2D = $Sprite2D
+@export var level: int = 0
+@export var computer_id: int = 0
+@export var linked_doors: Array = []
+var player_in_range: bool = false
+var player_node: Node = null
+var current_task: Dictionary = {}
+var _outline_vis := InteractionOutline.new()
+## true между успешным push_world_input_block в open_terminal и cleanup при закрытии UI
+var _terminal_session_open: bool = false
+func _enter_tree() -> void:
+	if not is_in_group("computers"):
+		add_to_group("computers")
+func _ready() -> void:
+	if computer_id == 0:
+		push_warning("Computer '%s' has computer_id = 0. Set it in inspector." % name)
+	if area:
+		area.body_entered.connect(_on_body_entered)
+		area.body_exited.connect(_on_body_exited)
+	else:
+		push_error("InteractionArea not found in Computer '%s'" % name)
+	if terminal_ui:
+		terminal_ui.visible = false
+	if sprite:
+		_outline_vis.setup(sprite)
+	_outline_vis.set_both(false)
+# ---------------- HUD helpers ----------------
+func _hud() -> Node:
+	return get_tree().current_scene.get_node_or_null("HUD")
+func _show_hint(text: String, duration: float = 0.0) -> void:
+	var hud = _hud()
+	if hud and hud.has_method("show_hint"):
+		hud.show_hint(text, duration, self)
+func _hide_hint() -> void:
+	var hud = _hud()
+	if hud and hud.has_method("hide_hint"):
+		hud.hide_hint(self)
+func _update_hint_for_state() -> void:
+	if not player_in_range:
+		return
+	if DbManager.is_computer_accessible(computer_id):
+		_show_hint("E — открыть терминал")
+	else:
+		_show_hint("❌ Терминал заблокирован")
+# --------------------------------------------
+func _process(_delta: float) -> void:
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		# Разрешаем только закрытие уже открытого терминала.
+		if terminal_ui and terminal_ui.visible and Input.is_action_just_pressed("close_terminal"):
+			close_terminal()
+		return
+	# Если терминал открыт — слушаем закрытие
+	if terminal_ui and terminal_ui.visible:
+		if Input.is_action_just_pressed("close_terminal"):
+			close_terminal()
+		return
+	if player_in_range and Input.is_action_just_pressed("interact"):
+		if TutorialManager.is_active():
+			if TutorialManager.try_lesson_then("computer", Callable(self, "open_terminal")):
+				return
+		open_terminal()
+func _on_body_entered(body: Node) -> void:
+	if body.is_in_group("player"):
+		player_in_range = true
+		player_node = body
+		_outline_vis.set_both(true)
+		_update_hint_for_state()
+func _on_body_exited(body: Node) -> void:
+	if body == player_node:
+		player_in_range = false
+		player_node = null
+		_outline_vis.set_both(false)
+		_hide_hint()
+func open_terminal() -> void:
+	if computer_id == 0:
+		return
+	if not DbManager.is_computer_accessible(computer_id):
+		_show_hint("❌ Терминал заблокирован", 1.5)
+		return
+	_hide_hint()
+	_terminal_session_open = true
+	if GameState.has_method("push_world_input_block"):
+		GameState.push_world_input_block()
+	if player_node and player_node.has_method("set_control_enabled"):
+		player_node.set_control_enabled(false)
+	# 1) Если компьютер уже выполнен — показываем сообщение и
+	#    НЕ выдаём новую задачу.
+	if DbManager.is_computer_done(level, computer_id):
+		current_task = {"message": "Ты уже выполнил это задание, продвигайся дальше"}
+	else:
+		# 2) Иначе если задача была закреплена ранее — используем её,
+		#    даже если БД/таблицы временно ведут себя нестабильно.
+		var cached: Dictionary = DbManager.get_assigned_task(level, computer_id)
+		if not cached.is_empty():
+			current_task = cached
+		else:
+			# 3) Пытаемся взять задачу из БД; если пусто — назначаем новую.
+			refresh_current_task()
+			if current_task.is_empty():
+				current_task = DbManager.assign_task(level, computer_id)
+			# Закрепляем задачу в памяти на время сессии, чтобы она не
+			# повторялась при повторном заходе.
+			DbManager.set_assigned_task(level, computer_id, current_task)
+	if terminal_ui and terminal_ui.has_method("open_with_task"):
+		terminal_ui.call("open_with_task", level, computer_id, current_task)
+		if TutorialManager.is_active() and computer_id == TutorialManager.tutorial_computer_id:
+			TutorialManager.notify_terminal_opened()
+func close_terminal() -> void:
+	if terminal_ui and terminal_ui.has_method("close"):
+		terminal_ui.call("close")
+	# Разблокировка мира и игрока — в terminal_ui.close() → _terminal_closed_cleanup()
+func _terminal_closed_cleanup() -> void:
+	if not _terminal_session_open:
+		return
+	_terminal_session_open = false
+	if GameState.has_method("pop_world_input_block"):
+		GameState.pop_world_input_block()
+	var p := player_node
+	if p == null or not is_instance_valid(p):
+		for node in get_tree().get_nodes_in_group("player"):
+			p = node
+			break
+	if p and p.has_method("set_control_enabled"):
+		var enable := true
+		if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+			enable = false
+		p.set_control_enabled(enable)
+	_update_hint_for_state()
+func set_outline(enabled: bool) -> void:
+	_outline_vis.set_outline(enabled)
+func set_highlight(enabled: bool) -> void:
+	_outline_vis.set_highlight(enabled)
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)
+func unassign_task_if_completed() -> void:
+	if computer_id == 0:
+		return
+	print("Computer.unassign_task_if_completed: level=%d computer_id=%d" % [level, computer_id])
+	var finished_task: Dictionary = current_task
+	DbManager.unassign_task(level, computer_id)
+	DbManager.mark_computer_done(level, computer_id)
+	RunStats.add_completed_task()
+	# Сохраняем последнюю задачу как закреплённую (на будущее сообщение/контекст).
+	if not finished_task.is_empty():
+		DbManager.set_assigned_task(level, computer_id, finished_task)
+	current_task = {}
+	var door_ids = DbManager.get_doors_for_computer(computer_id)
+	if door_ids.size() == 0:
+		if linked_doors.size() > 0:
+			door_ids = linked_doors.duplicate()
+		else:
+			return
+	var doors = get_tree().get_nodes_in_group("doors")
+	for did in door_ids:
+		for d in doors:
+			if ("door_id" in d) and int(d.door_id) == int(did):
+				if d.has_method("open"):
+					d.open()
+func refresh_current_task() -> void:
+	if computer_id == 0:
+		return
+	current_task = DbManager.get_current_task(level, computer_id)
+
+#scenes/computer/terminal_ui.gd
+﻿extends CanvasLayer
+@onready var code_edit = get_node_or_null("PanelContainer/HBoxContainer/CodeEditor")
+@onready var run_button = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/RunButton")
+@onready var close_button = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/CloseButton")
+@onready var output_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/OutputScroll/OutputCenter/OutputLabel")
+@onready var task_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/TaskLabel")
+@onready var hint_label = get_node_or_null("PanelContainer/HBoxContainer/VBoxContainer/HintLabelSyntax")
+@onready var sfx_player: AudioStreamPlayer = get_node_or_null("SfxPlayer")
+@onready var panel_root: PanelContainer = get_node_or_null("PanelContainer")
+const YES_SFX_PATH := "res://audio/sounds/yes.mp3"
+const NO_SFX_PATH := "res://audio/sounds/no.mp3"
+var current_task: Dictionary = {}
+## Уровень компьютера на карте (для БД), не путать со сложностью задания.
+var current_level: int = 1
+var current_computer_id: int = 0
+var _running := false
+var _local_check_pending: bool = false
+var _use_ai_checker: bool = true
+var _yes_sfx: AudioStream = null
+var _no_sfx: AudioStream = null
+var _host_parent: Node = null
+var _gameplay_frozen_by_terminal: bool = false
+var _suppressed_for_pause: bool = false
+const TERM_GREEN := Color(0.45, 1.0, 0.58, 1.0)
+const TERM_TEXT := Color(0.95, 0.98, 0.95, 1.0)
+func _ready() -> void:
+	add_to_group("gameplay_overlay_ui")
+	layer = 100
+	if panel_root:
+		panel_root.theme = Theme.new()
+		GameUiTheme.apply_horror_panel(panel_root)
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	if run_button:
+		run_button.pressed.connect(_on_run_button_pressed)
+	if close_button:
+		close_button.pressed.connect(close)
+	if sfx_player == null:
+		sfx_player = AudioStreamPlayer.new()
+		sfx_player.name = "SfxPlayer"
+		add_child(sfx_player)
+	if ResourceLoader.exists(YES_SFX_PATH):
+		_yes_sfx = load(YES_SFX_PATH)
+	if ResourceLoader.exists(NO_SFX_PATH):
+		_no_sfx = load(NO_SFX_PATH)
+	_apply_readability_scale()
+	set_process_unhandled_input(true)
+	hide()
+func open_with_task(level: int, computer_id: int, task: Dictionary) -> void:
+	var tid = task.get("id", -1)
+	var desc = task.get("description", "<no desc>")
+	print(
+		"TerminalUI.open_with_task: level=%d computer=%d id=%s desc=%s"
+		% [level, computer_id, str(tid), desc]
+)
+	current_task = task
+	current_level = level
+	current_computer_id = computer_id
+	_mount_to_root()
+	if not _gameplay_frozen_by_terminal and GameState.has_method("push_gameplay_freeze"):
+		GameState.push_gameplay_freeze()
+		_gameplay_frozen_by_terminal = true
+	show()
+	if output_label:
+		_set_output("")
+	if code_edit:
+		code_edit.text = _load_saved_code()
+	# Заголовок
+	if current_task.has("message"):
+		if task_label:
+			task_label.text = str(current_task["message"])
+		if code_edit and code_edit.text.strip_edges() == "":
+			code_edit.text = "# " + str(current_task["message"])
+		return
+	if task_label:
+		task_label.text = "Задание: " + current_task.get("description", "Нет описания")
+	# Подсказка по синтаксису (если пусто)
+	if code_edit and code_edit.text.strip_edges() == "":
+		code_edit.text = """# Подсказки по синтаксису Python:
+# ---------------------------------
+# Пример:
+# age = 20
+# print(age)
+#
+# Решение:
+"""
+	if hint_label:
+		hint_label.text = "Подсказка: print(), переменные, if/for, функции. Файлы/удаление запрещены."
+func _load_saved_code() -> String:
+	if current_computer_id <= 0:
+		return ""
+	if DbManager.has_method("get_terminal_code"):
+		return DbManager.get_terminal_code(current_level, current_computer_id)
+	return ""
+func _save_code(code_text: String) -> void:
+	if current_computer_id <= 0:
+		return
+	if DbManager.has_method("set_terminal_code"):
+		DbManager.set_terminal_code(current_level, current_computer_id, code_text)
+func close() -> void:
+	_release_ui_focus()
+	_suppressed_for_pause = false
+	set_pause_input_passthrough(false)
+	if _gameplay_frozen_by_terminal and GameState.has_method("pop_gameplay_freeze"):
+		GameState.pop_gameplay_freeze()
+		_gameplay_frozen_by_terminal = false
+	hide()
+	_restore_parent()
+	if code_edit:
+		_save_code(code_edit.text)
+	current_task = {}
+	current_computer_id = 0
+	_running = false
+	if run_button:
+		run_button.text = "Проверить решение"
+		run_button.disabled = false
+	if output_label:
+		_set_output("")
+	if task_label:
+		task_label.text = ""
+	if hint_label:
+		hint_label.text = ""
+	# Кнопка «Закрыть» вызывает только close(), без Computer.close_terminal() — снимаем блок ввода здесь.
+	var host: Node = _host_parent if _host_parent != null else get_parent()
+	if host and host.has_method("_terminal_closed_cleanup"):
+		host._terminal_closed_cleanup()
+func _on_run_button_pressed() -> void:
+	if _running:
+		_play_result_sfx(false)
+		return
+	if not code_edit:
+		_set_output("❌ Ошибка: CodeEditor не найден")
+		_play_result_sfx(false)
+		return
+	var code_text: String = code_edit.text as String
+	if code_text.strip_edges().is_empty():
+		_set_output("❌ Код пустой. Напиши решение и нажми «Проверить решение».")
+		_play_result_sfx(false)
+		return
+	if current_task.is_empty():
+		_set_output("❌ Нет активного задания для проверки.")
+		_play_result_sfx(false)
+		return
+	if _use_ai_checker:
+		_run_with_ai_checker(code_text)
+	else:
+		_set_output("❌ AI-проверка выключена и CodeRunner не настроен")
+		_play_result_sfx(false)
+func _task_difficulty() -> int:
+	## Сложность задания 0–3 из БД (для /check_task). Не computer.level на сцене.
+	if current_task.is_empty():
+		return 0
+	return int(current_task.get("level", 0))
+func _run_with_ai_checker(code_text: String) -> void:
+	var diff := _task_difficulty()
+	if diff < 2:
+		_set_output("Проверка решения…")
+		_run_local_check_async(code_text)
+		return
+	if _prefer_local_check_offline():
+		_set_output("Офлайн: проверка на этом компьютере (нужен Python)…")
+		_run_local_check_async(code_text)
+		return
+	_set_output("Проверка на сервере…")
+	_run_remote_check_async(code_text)
+func _prefer_local_check_offline() -> bool:
+	if typeof(BackendUrls) == TYPE_NIL:
+		return false
+	return not BackendUrls.is_server_likely_online()
+func _run_local_check_async(code_text: String) -> void:
+	if run_button:
+		run_button.disabled = true
+	_running = true
+	RunStats.begin_task_attempt()
+	if not CodeRunner.has_signal("run_finished"):
+		_finish_check(_fail_feedback("Локальный запуск кода недоступен"))
+		return
+	if _local_check_pending:
+		_finish_check(_fail_feedback("Подождите, идёт проверка…"))
+		return
+	_local_check_pending = true
+	if not CodeRunner.run_finished.is_connected(_on_local_run_finished):
+		CodeRunner.run_finished.connect(_on_local_run_finished)
+	CodeRunner.run_code_async(code_text, "terminal_check.py")
+func _on_local_run_finished(result: Dictionary) -> void:
+	if not _local_check_pending:
+		return
+	_local_check_pending = false
+	if not is_inside_tree() or not visible:
+		_running = false
+		_local_check_pending = false
+		return
+	_finish_check(_evaluate_local_check(result))
+func _evaluate_local_check(run_result: Dictionary) -> Dictionary:
+	var stdout := str(run_result.get("stdout", ""))
+	var stderr := str(run_result.get("stderr", ""))
+	if bool(run_result.get("timed_out", false)):
+		return _fail_feedback("Превышено время выполнения кода.")
+	if int(run_result.get("exit_code", -1)) != 0 and stderr.strip_edges() != "":
+		var err_line := stderr.strip_edges().split("\n")
+		return _fail_feedback("Ошибка выполнения: %s" % err_line[-1])
+	var expected := str(current_task.get("expected_output", "")).strip_edges()
+	var patterns_raw := str(current_task.get("required_patterns", "")).strip_edges()
+	var allow_direct := int(current_task.get("allow_direct_print", 0))
+	var code_text: String = code_edit.text if code_edit != null else ""
+	if expected != "":
+		if _normalize_out(stdout) != _normalize_out(expected):
+			return _fail_feedback(
+				"Вывод не совпадает с ожидаемым.\nОжидалось: %s\nПолучено: %s"
+				% [expected, stdout.strip_edges()]
+)
+		if allow_direct == 0 and _looks_like_direct_print(code_text, expected):
+			var has_logic := false
+			for kw in ["=", "if", "for", "while"]:
+				if kw in code_text:
+					has_logic = true
+					break
+			if not has_logic:
+				return _fail_feedback(
+					"Нельзя просто печатать готовый ответ. Используй переменные, условия или циклы."
+)
+	if patterns_raw != "":
+		var missing: PackedStringArray = []
+		for p in patterns_raw.split(";"):
+			p = p.strip_edges()
+			if p != "" and p not in code_text:
+				missing.append(p)
+		if not missing.is_empty():
+			return _fail_feedback(
+				"В коде не хватает обязательных фрагментов:\n- " + "\n- ".join(missing)
+)
+	var ok_msg := "Решение корректное."
+	if _task_difficulty() >= 2 and _prefer_local_check_offline():
+		ok_msg += "\n(офлайн: без проверки ИИ на сервере)"
+	return {
+		"success": true,
+		"feedback": ok_msg,
+		"stdout": stdout,
+		"stderr": stderr,
+	}
+func _normalize_out(text: String) -> String:
+	var t := text.replace("\r", "").strip_edges()
+	var lines: PackedStringArray = []
+	for ln in t.split("\n"):
+		lines.append(ln.strip_edges())
+	return "\n".join(lines).strip_edges()
+func _looks_like_direct_print(user_code: String, expected_output: String) -> bool:
+	if "print" not in user_code:
+		return false
+	var exp := expected_output.strip_edges()
+	if exp == "":
+		return false
+	if ("\"%s\"" % exp) in user_code or ("'%s'" % exp) in user_code:
+		return true
+	if exp.is_valid_int() and ("print(%s)" % exp) in user_code.replace(" ", ""):
+		return true
+	return false
+func _fail_feedback(msg: String) -> Dictionary:
+	return {"success": false, "feedback": msg, "stdout": "", "stderr": ""}
+func _run_remote_check_async(code_text: String) -> void:
+	if run_button:
+		run_button.disabled = true
+	_running = true
+	RunStats.begin_task_attempt()
+	var result: Dictionary = await AiCheckerSingleton.check_task_async(
+		current_task, code_text, _task_difficulty()
+)
+	if not is_inside_tree() or not visible:
+		_running = false
+		return
+	if AiChecker.is_network_failure(result):
+		_running = false
+		_local_check_pending = false
+		_set_output("Сервер недоступен — проверяем на этом ПК (Python)…")
+		await get_tree().process_frame
+		_run_local_check_async(code_text)
+		return
+	_finish_check(result)
+func _finish_check(result: Dictionary) -> void:
+	if not output_label:
+		_running = false
+		if run_button:
+			run_button.disabled = false
+		return
+	var success: bool = bool(result.get("success", false))
+	var feedback: String = str(result.get("feedback", ""))
+	if success:
+		RunStats.record_task_success()
+		_set_output("Задание выполнено!\n" + feedback)
+		_play_result_sfx(true)
+		var computer = _host_parent if _host_parent != null else get_parent()
+		if computer and computer.has_method("unassign_task_if_completed"):
+			computer.unassign_task_if_completed()
+	else:
+		RunStats.record_task_failure()
+		_set_output(feedback)
+		_play_result_sfx(false)
+	_running = false
+	if run_button:
+		run_button.disabled = false
+func _play_result_sfx(success: bool) -> void:
+	if sfx_player == null:
+		return
+	var stream: AudioStream = _yes_sfx if success else _no_sfx
+	if stream == null:
+		return
+	sfx_player.stream = stream
+	sfx_player.play()
+func _apply_readability_scale() -> void:
+	if code_edit:
+		code_edit.add_theme_font_size_override("font_size", 22)
+		code_edit.add_theme_color_override("font_color", TERM_GREEN)
+		code_edit.add_theme_color_override("font_readonly_color", TERM_GREEN)
+		code_edit.add_theme_color_override("background_color", Color(0.02, 0.05, 0.02, 1.0))
+		code_edit.add_theme_color_override("current_line_color", Color(0.08, 0.14, 0.08, 1.0))
+	if task_label:
+		task_label.add_theme_font_size_override("font_size", 22)
+		task_label.add_theme_color_override("font_color", TERM_TEXT)
+	if hint_label:
+		hint_label.add_theme_font_size_override("font_size", 18)
+		hint_label.add_theme_color_override("font_color", TERM_GREEN)
+	if run_button:
+		run_button.add_theme_font_size_override("font_size", 22)
+		run_button.add_theme_color_override("font_color", TERM_TEXT)
+	if output_label:
+		output_label.modulate = Color(1, 1, 1, 1)
+		output_label.bbcode_enabled = true
+		output_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		output_label.scroll_active = false
+		output_label.fit_content = true
+		output_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		output_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		output_label.add_theme_font_size_override("normal_font_size", 30)
+		output_label.add_theme_color_override("default_color", TERM_GREEN)
+	if close_button:
+		close_button.add_theme_font_size_override("font_size", 22)
+		close_button.add_theme_color_override("font_color", TERM_TEXT)
+func _set_output(text: String) -> void:
+	if output_label == null:
+		return
+	output_label.text = text
+	output_label.queue_redraw()
+func _mount_to_root() -> void:
+	var root := get_tree().root
+	if get_parent() == root:
+		return
+	if _host_parent == null or not is_instance_valid(_host_parent):
+		_host_parent = get_parent()
+	var parent := get_parent()
+	if parent:
+		parent.remove_child(self)
+	root.add_child(self)
+func _restore_parent() -> void:
+	if _host_parent == null or not is_instance_valid(_host_parent):
+		return
+	if get_parent() == _host_parent:
+		return
+	var parent := get_parent()
+	if parent:
+		parent.remove_child(self)
+	_host_parent.add_child(self)
+func _release_ui_focus() -> void:
+	if code_edit:
+		code_edit.release_focus()
+	var vp := get_viewport()
+	if vp:
+		vp.gui_release_focus()
+func set_pause_input_passthrough(enabled: bool) -> void:
+	if not visible and not _suppressed_for_pause:
+		return
+	if enabled:
+		_suppressed_for_pause = true
+		if panel_root:
+			panel_root.visible = false
+		_release_ui_focus()
+	elif _suppressed_for_pause:
+		_suppressed_for_pause = false
+		if visible and panel_root:
+			panel_root.visible = true
+	if panel_root:
+		panel_root.mouse_filter = (
+			Control.MOUSE_FILTER_IGNORE if enabled else Control.MOUSE_FILTER_STOP
+)
+func _unhandled_input(event: InputEvent) -> void:
+	# Allow pause menu while terminal is focused/open.
+	if not visible or _suppressed_for_pause:
+		return
+	if event.is_action_pressed("pause_menu"):
+		var root: Node = get_tree().current_scene
+		if root == null:
+			return
+		var pause_menu: Node = root.find_child("PauseMenu", true, false)
+		if pause_menu and pause_menu.has_method("is_open") and pause_menu.is_open():
+			return
+		_release_ui_focus()
+		set_pause_input_passthrough(true)
+		if pause_menu and pause_menu.has_method("toggle_menu"):
+			pause_menu.toggle_menu()
+			get_viewport().set_input_as_handled()
+
+#scripts/code_runner.gd
+extends Node
+signal run_finished(result: Dictionary)
+# Можно оставить "py", но лучше пусть сам определит
+@export var python_cmd: String = ""  # если пусто -> auto detect
+@export var tmp_dir: String = "user://user_code_tmp"  # лучше user:// чем res://
+@export var timeout_sec: float = 4.0
+@export var keep_tmp_files: bool = true
+@export var max_output_chars: int = 12000
+@export var debug_logs: bool = false
+var thread: Thread = null
+var _queue: Array[Dictionary] = []
+var _running: bool = false
+func _ready() -> void:
+	# Работает при открытом терминале (gameplay freeze / paused tree).
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	randomize()
+	var abs_tmp_dir := ProjectSettings.globalize_path(tmp_dir)
+	if not DirAccess.dir_exists_absolute(abs_tmp_dir):
+		var err := DirAccess.make_dir_recursive_absolute(abs_tmp_dir)
+		if err != OK:
+			push_error("CodeRunner: cannot create tmp dir: %s (err=%d)" % [abs_tmp_dir, err])
+	if python_cmd.strip_edges() == "":
+		python_cmd = _detect_python_command()
+		if debug_logs:
+			print("CodeRunner: detected python_cmd =", python_cmd)
+# ---------------- PUBLIC API ----------------
+func run_code_async(code_text: String, filename_hint: String = "user_code.py") -> void:
+	# Добавляем в очередь
+	_queue.append({
+		"code_text": code_text,
+		"filename_hint": filename_hint
+	})
+	# Если уже идёт выполнение — просто ждём
+	if _running:
+		return
+	_start_next_job()
+# ---------------- INTERNAL: queue/thread ----------------
+func _start_next_job() -> void:
+	if _queue.is_empty():
+		return
+	_running = true
+	var job: Dictionary = _queue.pop_front()
+	# Стартуем новый поток
+	if thread:
+		# Если вдруг старый поток не очищен — не блокируем main thread
+		thread = null
+	thread = Thread.new()
+	var callable := Callable(self, "_thread_run_code").bind(job)
+	thread.start(callable)
+func _thread_run_code(args: Dictionary) -> void:
+	var start_time := Time.get_ticks_msec()
+	var code_text: String = args.get("code_text", "")
+	var filename_hint: String = args.get("filename_hint", "user_code.py")
+	# --------- prepare file paths ----------
+	var uid := str(Time.get_unix_time_from_system()) + "_" + str(randi())
+	var safe_hint := _sanitize_filename(filename_hint)
+	if not safe_hint.ends_with(".py"):
+		safe_hint += ".py"
+	var abs_tmp_dir := ProjectSettings.globalize_path(tmp_dir)
+	if not DirAccess.dir_exists_absolute(abs_tmp_dir):
+		var err := DirAccess.make_dir_recursive_absolute(abs_tmp_dir)
+		if err != OK:
+			_emit_from_thread({
+				"exit_code": -1,
+				"stdout": "",
+				"stderr": "Cannot create tmp dir: " + abs_tmp_dir,
+				"duration": 0.0,
+				"tmp_path": tmp_dir + "/" + uid + "_" + safe_hint,
+				"abs_path": ""
+			})
+			return
+	var abs_path := abs_tmp_dir
+	if not abs_path.ends_with("/") and not abs_path.ends_with("\\"):
+		abs_path += "/"
+	abs_path += uid + "_" + safe_hint
+	var logical_path := tmp_dir.rstrip("/") + "/" + uid + "_" + safe_hint
+	# --------- write file ----------
+	var f := FileAccess.open(abs_path, FileAccess.WRITE)
+	if f == null:
+		_emit_from_thread({
+			"exit_code": -1,
+			"stdout": "",
+			"stderr": "Cannot open temp file: " + abs_path,
+			"duration": 0.0,
+			"tmp_path": logical_path,
+			"abs_path": abs_path
+		})
+		return
+	f.store_buffer(code_text.to_utf8_buffer())
+	f.close()
+	# --------- execute python ----------
+	if python_cmd.strip_edges() == "":
+		_emit_from_thread({
+			"exit_code": -1,
+			"stdout": "",
+			"stderr": "python_cmd is empty and auto-detect failed",
+			"duration": 0.0,
+			"tmp_path": logical_path,
+			"abs_path": abs_path
+		})
+		return
+	var exec_result := _run_python_with_timeout(abs_path, timeout_sec)
+	var duration := float(Time.get_ticks_msec() - start_time) / 1000.0
+	var stdout_text: String = exec_result.get("stdout", "")
+	var stderr_text: String = exec_result.get("stderr", "")
+	var exit_code: int = int(exec_result.get("exit_code", -1))
+	var timed_out: bool = bool(exec_result.get("timed_out", false))
+	# Ограничим объём вывода
+	stdout_text = _clip_text(stdout_text, max_output_chars)
+	stderr_text = _clip_text(stderr_text, max_output_chars)
+	var result := {
+		"exit_code": exit_code,
+		"stdout": stdout_text,
+		"stderr": stderr_text,
+		"duration": duration,
+		"tmp_path": logical_path,
+		"abs_path": abs_path,
+		"timed_out": timed_out
+	}
+	# удаление файла при желании
+	if not keep_tmp_files:
+		_try_delete(abs_path)
+	_emit_from_thread(result)
+func _emit_from_thread(result: Dictionary) -> void:
+	call_deferred("_emit_result", result)
+func _emit_result(result: Dictionary) -> void:
+	emit_signal("run_finished", result)
+	# завершаем поток аккуратно
+	if thread:
+		thread.wait_to_finish()
+		thread = null
+	_running = false
+	_start_next_job()
+# ---------------- EXECUTION ----------------
+func _run_python_with_timeout(abs_py_file: String, timeout: float) -> Dictionary:
+	# Предпочитаем create_process, чтобы можно было делать таймаут.
+	# Если create_process недоступен в твоей версии, будет fallback на OS.execute.
+	if OS.has_method("create_process"):
+		return _run_with_process(abs_py_file, timeout)
+	else:
+		return _run_with_execute(abs_py_file)
+func _run_with_execute(abs_py_file: String) -> Dictionary:
+	var out_lines: Array = []
+	var exit_code := OS.execute(python_cmd, _python_args(abs_py_file), out_lines, true)
+	var joined := "\n".join(out_lines)
+	# OS.execute не умеет разделять stdout/stderr, поэтому кладём всё в stderr при ошибке
+	if exit_code == 0:
+		return {"exit_code": exit_code, "stdout": joined, "stderr": "", "timed_out": false}
+	return {"exit_code": exit_code, "stdout": "", "stderr": joined, "timed_out": false}
+func _run_with_process(abs_py_file: String, timeout: float) -> Dictionary:
+	# 1) запускаем процесс
+	var pid := OS.create_process(python_cmd, _python_args(abs_py_file), false)
+	if pid == 0:
+		return {"exit_code": -1, "stdout": "", "stderr": "Failed to start python process", "timed_out": false}
+	# 2) ждём завершение или таймаут
+	var start := Time.get_ticks_msec()
+	while true:
+		var status := OS.is_process_running(pid)
+		if not status:
+			break
+		var elapsed := float(Time.get_ticks_msec() - start) / 1000.0
+		if elapsed >= timeout:
+			OS.kill(pid)
+			return {
+				"exit_code": -2,
+				"stdout": "",
+				"stderr": "⏱ Timeout: program exceeded " + str(timeout) + " sec",
+				"timed_out": true
+			}
+		OS.delay_msec(25)
+	# 3) на этом этапе процесс завершился, но Godot не даёт stdout/stderr напрямую из create_process.
+	# Поэтому используем редирект в файлы через оболочку.
+	# Если ты на Windows — проще сразу запускать через cmd /c с редиректом.
+	return _run_with_redirect_files(abs_py_file, timeout)
+func _run_with_redirect_files(abs_py_file: String, timeout: float) -> Dictionary:
+	var abs_tmp_dir := ProjectSettings.globalize_path(tmp_dir)
+	var uid := str(Time.get_unix_time_from_system()) + "_" + str(randi())
+	var out_path := abs_tmp_dir.rstrip("/\\") + "/out_" + uid + ".txt"
+	var err_path := abs_tmp_dir.rstrip("/\\") + "/err_" + uid + ".txt"
+	var cmd: String
+	var args: Array
+	if OS.get_name() == "Windows":
+		# cmd /c python file 1>out 2>err (UTF-8 для кириллицы в stdout)
+		cmd = "cmd"
+		var py_exe := python_cmd.replace("\"", "")
+		var py_file := abs_py_file.replace("\"", "")
+		var py_line := '%s -X utf8 -B -u "%s"' % [py_exe, py_file]
+		args = [
+			"/c",
+			"set PYTHONIOENCODING=utf-8&& set PYTHONUTF8=1&& %s 1>\"%s\" 2>\"%s\""
+			% [py_line, out_path.replace("\"", ""), err_path.replace("\"", "")]
+		]
+	else:
+		# sh -lc 'python file 1>out 2>err'
+		cmd = "sh"
+		var quoted = _shell_quote(python_cmd) + " " + _shell_quote(abs_py_file) + " 1>" + _shell_quote(out_path) + " 2>" + _shell_quote(err_path)
+		args = ["-lc", quoted]
+	var out_lines: Array = []
+	var exit_code := OS.execute(cmd, args, out_lines, true)
+	var stdout_text := _read_text_file(out_path)
+	var stderr_text := _read_text_file(err_path)
+	_try_delete(out_path)
+	_try_delete(err_path)
+	return {"exit_code": exit_code, "stdout": stdout_text, "stderr": stderr_text, "timed_out": false}
+# ---------------- UTIL ----------------
+func _python_args(abs_py_file: String) -> Array:
+	# -B не пишет .pyc, -u — unbuffered, -X utf8 — кириллица в print() на Windows
+	return ["-X", "utf8", "-B", "-u", abs_py_file]
+func _detect_python_command() -> String:
+	# Windows: лучше py -3 (почти всегда есть), fallback python
+	if OS.get_name() == "Windows":
+		if _can_run("py", ["-3", "--version"]):
+			return "py"
+		if _can_run("python", ["--version"]):
+			return "python"
+		return "py"  # последняя попытка
+	# Linux/macOS: python3 обычно
+	if _can_run("python3", ["--version"]):
+		return "python3"
+	if _can_run("python", ["--version"]):
+		return "python"
+	return "python3"
+func _can_run(cmd: String, args: Array) -> bool:
+	var out: Array = []
+	var code := OS.execute(cmd, args, out, true)
+	return code == 0
+func _sanitize_filename(name: String) -> String:
+	var s := name.strip_edges()
+	if s == "":
+		return "user_code.py"
+	# вырежем опасные символы
+	var bad := ["..", "/", "\\", ":", "*", "?", "\"", "<", ">", "|"]
+	for b in bad:
+		s = s.replace(b, "_")
+	return s
+func _clip_text(s: String, limit: int) -> String:
+	if limit <= 0:
+		return s
+	if s.length() <= limit:
+		return s
+	return s.substr(0, limit) + "\n... (output clipped) ..."
+func _read_text_file(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return ""
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return ""
+	var raw: PackedByteArray = f.get_buffer(f.get_length())
+	f.close()
+	if raw.is_empty():
+		return ""
+	if raw.size() >= 3 and raw[0] == 0xEF and raw[1] == 0xBB and raw[2] == 0xBF:
+		raw = raw.slice(3)
+	return raw.get_string_from_utf8()
+func _try_delete(path: String) -> void:
+	if FileAccess.file_exists(path):
+		DirAccess.remove_absolute(path)
+func _shell_quote(s: String) -> String:
+	# простая кавычка для sh
+	return "'" + s.replace("'", "'\"'\"'") + "'"
+
+#scripts/AiChecker.gd
+extends Node
+class_name AiChecker
+## Если пусто — берётся BackendUrls + /check_task (тот же хост, что и /generate_tasks).
+@export var api_url: String = ""
+const CHECK_TIMEOUT_S: float = 12.0
+func _ready() -> void:
+	# Терминал ставит get_tree().paused — без ALWAYS HTTP не завершится до выхода.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+static func is_network_failure(result: Dictionary) -> bool:
+	return bool(result.get("network_error", false))
+func _network_fail(feedback: String) -> Dictionary:
+	if typeof(BackendUrls) != TYPE_NIL:
+		BackendUrls.mark_server_offline()
+	return {
+		"success": false,
+		"feedback": feedback,
+		"stdout": "",
+		"stderr": "",
+		"network_error": true,
+	}
+# Асинхронная проверка решения через Python backend.
+func check_task_async(task: Dictionary, user_code: String, level: int = 1) -> Dictionary:
+	var url: String = api_url.strip_edges()
+	if url.is_empty():
+		url = BackendUrls.url("/check_task")
+	var http: HTTPRequest = HTTPRequest.new()
+	http.timeout = CHECK_TIMEOUT_S
+	http.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(http)
+	var payload: Dictionary = {
+		"description": str(task.get("description", "")),
+		"expected_output": str(task.get("expected_output", "")),
+		"user_code": user_code,
+		"required_patterns": str(task.get("required_patterns", "")),
+		"allow_direct_print": int(task.get("allow_direct_print", 0)),
+		"level": level
+	}
+	var json_body: String = JSON.stringify(payload)
+	var headers: PackedStringArray = PackedStringArray([
+		"Content-Type: application/json"
+	])
+	var err: int = http.request(url, headers, HTTPClient.METHOD_POST, json_body)
+	if err != OK:
+		http.queue_free()
+		return _network_fail(
+			"❌ Не удалось отправить запрос на сервер проверки (код %d)" % err
+)
+	var result: Array = await http.request_completed
+	http.queue_free()
+	if result.size() < 4:
+		return _network_fail("❌ Некорректный ответ от HTTPRequest")
+	var request_result: int = int(result[0])
+	var status_code: int = int(result[1])
+	var body_bytes: PackedByteArray = result[3]
+	var response_body: String = body_bytes.get_string_from_utf8()
+	if request_result != HTTPRequest.RESULT_SUCCESS:
+		var net_msg := "❌ Сервер проверки недоступен (нет сети или таймаут)"
+		if request_result == HTTPRequest.RESULT_TIMEOUT:
+			net_msg = "❌ Таймаут проверки. Сервер не отвечает."
+		return _network_fail(net_msg)
+	if status_code != 200:
+		return {
+			"success": false,
+			"feedback": "❌ Ошибка сервера проверки HTTP %d" % status_code,
+			"stdout": "",
+			"stderr": response_body,
+			"network_error": false,
+		}
+	var parsed: Variant = JSON.parse_string(response_body)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return {
+			"success": false,
+			"feedback": "❌ Некорректный JSON от сервера проверки",
+			"stdout": "",
+			"stderr": response_body,
+			"network_error": false,
+		}
+	if typeof(BackendUrls) != TYPE_NIL:
+		BackendUrls.mark_server_online()
+	return {
+		"success": bool(parsed.get("success", false)),
+		"feedback": str(parsed.get("feedback", "")),
+		"stdout": str(parsed.get("stdout", "")),
+		"stderr": str(parsed.get("stderr", "")),
+		"network_error": false,
+	}
+
+#scripts/GameState.gd
+# res://scripts/GameState.gd
+extends Node
+# --- Статистика текущей попытки ---
+var hits_taken: int = 0
+var start_time: float = 0.0
+var death_count: int = 0
+# --- Дополнительные метрики (по желанию) ---
+var pickups_collected: int = 0
+var distance_traveled: float = 0.0
+var _world_input_blockers: int = 0
+var _gameplay_freeze_depth: int = 0
+# --------------------
+# Вспомогательная функция получения текущего времени в секундах
+# --------------------
+func _now_seconds() -> float:
+	# Попробуем несколько вариантов динамически, чтобы избежать ошибок компиляции
+	# 1) Engine.get_time_in_seconds (если доступен)
+	if Engine.has_method("get_time_in_seconds"):
+		var v = Engine.call("get_time_in_seconds")
+		if typeof(v) in [TYPE_INT, TYPE_FLOAT]:
+			return float(v)
+	# 2) OS.get_unix_time (секунды)
+	if OS.has_method("get_unix_time"):
+		var v2 = OS.call("get_unix_time")
+		if typeof(v2) in [TYPE_INT, TYPE_FLOAT]:
+			return float(v2)
+	# 3) OS.get_ticks_msec (миллисекунды)
+	if OS.has_method("get_ticks_msec"):
+		var v3 = OS.call("get_ticks_msec")
+		if typeof(v3) in [TYPE_INT, TYPE_FLOAT]:
+			return float(v3) / 1000.0
+	# 4) Time.get_ticks_msec (если класс Time доступен)
+	if typeof(Time) != TYPE_NIL and Time.has_method("get_ticks_msec"):
+		var v4 = Time.call("get_ticks_msec")
+		if typeof(v4) in [TYPE_INT, TYPE_FLOAT]:
+			return float(v4) / 1000.0
+	# 5) fallback: попытаться получить unix time через Engine singleton динамически
+	if Engine.has_method("get_unix_time"):
+		var v5 = Engine.call("get_unix_time")
+		if typeof(v5) in [TYPE_INT, TYPE_FLOAT]:
+			return float(v5)
+	# Если ничего не доступно — вернуть 0.0 (без падения)
+	return 0.0
+# --------------------
+# API для управления попыткой
+# --------------------
+func start_run() -> void:
+	#"""Вызывать при старте уровня/попытки."""
+	hits_taken = 0
+	start_time = _now_seconds()
+	pickups_collected = 0
+	distance_traveled = 0.0
+func record_hit() -> void:
+	hits_taken += 1
+func record_death() -> void:
+	death_count += 1
+func add_pickup(count: int = 1) -> void:
+	pickups_collected += count
+func add_distance(delta: float) -> void:
+	distance_traveled += delta
+# --------------------
+# Получение статистики
+# --------------------
+func get_time_survived() -> float:
+	if start_time == 0.0:
+		return 0.0
+	return _now_seconds() - start_time
+func get_summary() -> Dictionary:
+	return {
+		"hits_taken": hits_taken,
+		"time_survived": get_time_survived(),
+		"death_count": death_count,
+		"pickups_collected": pickups_collected,
+		"distance_traveled": distance_traveled
+	}
+# --------------------
+# Утилиты
+# --------------------
+func reset_all() -> void:
+	hits_taken = 0
+	start_time = 0.0
+	death_count = 0
+	pickups_collected = 0
+	distance_traveled = 0.0
+	_world_input_blockers = 0
+	_gameplay_freeze_depth = 0
+func push_world_input_block() -> void:
+	_world_input_blockers += 1
+func pop_world_input_block() -> void:
+	_world_input_blockers = max(_world_input_blockers - 1, 0)
+func is_world_input_blocked() -> bool:
+	return _world_input_blockers > 0
+func push_gameplay_freeze() -> void:
+	_gameplay_freeze_depth += 1
+	if _gameplay_freeze_depth == 1:
+		get_tree().paused = true
+func pop_gameplay_freeze() -> void:
+	_gameplay_freeze_depth = maxi(_gameplay_freeze_depth - 1, 0)
+	if _gameplay_freeze_depth == 0:
+		get_tree().paused = false
+func is_gameplay_frozen() -> bool:
+	return _gameplay_freeze_depth > 0
+func clear_gameplay_freeze() -> void:
+	_gameplay_freeze_depth = 0
+	_world_input_blockers = 0
+	get_tree().paused = false
+
+#scripts/save_manager.gd
+# res://scripts/SaveManager.gd
+extends Node
+class_name SaveManager
+# Сохраняет текущую сцену, позицию игрока, HP игрока и позиции всех маньяков
+func save_now() -> void:
+	var player := get_tree().get_first_node_in_group("player")
+	if player == null:
+		push_warning("SaveManager: player not found in group 'player'")
+		return
+	var scene := get_tree().current_scene
+	if scene == null:
+		push_warning("SaveManager: current_scene is null")
+		return
+	var scene_path := scene.scene_file_path
+	if scene_path == "":
+		push_warning("SaveManager: scene_file_path is empty (scene not saved as .tscn?)")
+		return
+	# Получаем HP игрока безопасно
+	var player_hp = _read_player_hp(player)
+	# Позиция игрока
+	var player_pos: Vector2 = player.global_position
+	# Собираем позиции всех маньяков (узлы в группе "maniac")
+	var maniacs_positions: Array = []
+	for m in get_tree().get_nodes_in_group("maniac"):
+		if m and m is Node2D:
+			maniacs_positions.append([m.global_position.x, m.global_position.y])
+	# Формируем структуру сохранения
+	var save_data := {
+		"scene_path": scene_path,
+		"player_pos": player_pos,
+		"player_hp": player_hp,
+		"maniacs": maniacs_positions
+	}
+	# Сохраняем через DbManager (модуль db_save.gd ожидает словарь)
+	DbManager.set_save(save_data)
+	print("✅ SAVE OK:", scene_path, player_pos, " hp=", player_hp, " maniacs=", maniacs_positions)
+func has_save() -> bool:
+	return DbManager.has_save()
+# Загружает сохранение: смена сцены, установка позиции игрока, HP и позиций маньяков
+func continue_game() -> void:
+	# Диагностика: покажем объекты DbManager/DbSave
+	print("DBG: DbManager ->", DbManager, " DbManager.db ->", DbManager.db)
+	print("DBG: calling DbManager.get_save() now...")
+	var data := DbManager.get_save()
+	print("DBG: DbManager.get_save() returned ->", data)
+	# fallback: прямое чтение из таблицы, если data пустой
+	if data == null or typeof(data) != TYPE_DICTIONARY or data.is_empty():
+		print("DBG: DbManager.get_save empty, trying direct DB read...")
+		if DbManager.db:
+			DbManager.db.query("SELECT scene_path, data_json FROM save_state WHERE id=1 LIMIT 1;")
+			print("DBG: direct DB query result ->", DbManager.db.query_result)
+			if DbManager.db.query_result.size() > 0:
+				var row = DbManager.db.query_result[0]
+				var scene_path_db = str(row.get("scene_path", ""))
+				var json_text = str(row.get("data_json", "{}"))
+				var parsed_ok = JSON.parse_string(json_text)
+				if parsed_ok.get("error", null) == OK:
+					data = parsed_ok.get("result", {})
+					print("DBG: parsed direct data ->", data)
+				else:
+					print("DBG: JSON parse error ->", parsed_ok)
+	# дальше — как раньше, но с проверками
+	if data == null or typeof(data) != TYPE_DICTIONARY or data.is_empty():
+		push_warning("SaveManager: no save data after direct read")
+		return
+	var scene_path: String = ""
+	if data.has("scene_path"):
+		scene_path = data["scene_path"]
+	elif data.has("scene"):
+		scene_path = data["scene"]
+	if scene_path == "":
+		push_warning("SaveManager: saved data missing scene_path")
+		return
+	# Нормализуем позицию игрока — поддерживаем Vector2, [x,y], "x,y" и старый ключ pos
+	var raw_pos = null
+	if data.has("player_pos"):
+		raw_pos = data["player_pos"]
+	elif data.has("pos"):
+		raw_pos = data["pos"]
+	var pos: Vector2 = Vector2.ZERO
+	if raw_pos != null:
+		if typeof(raw_pos) == TYPE_VECTOR2:
+			pos = raw_pos
+		elif typeof(raw_pos) == TYPE_ARRAY and raw_pos.size() >= 2:
+			pos = Vector2(float(raw_pos[0]), float(raw_pos[1]))
+		elif typeof(raw_pos) == TYPE_STRING:
+			# формат "x,y"
+			var parts = raw_pos.split(",")
+			if parts.size() >= 2:
+				pos = Vector2(float(parts[0]), float(parts[1]))
+	var saved_hp = null
+	if data.has("player_hp"):
+		saved_hp = data["player_hp"]
+	elif data.has("hp"):
+		saved_hp = data["hp"]
+	var maniacs_positions: Array = []
+	if data.has("maniacs") and typeof(data["maniacs"]) == TYPE_ARRAY:
+		maniacs_positions = data["maniacs"]
+	# Логируем то, что собираемся загрузить
+	print("SaveManager: loading scene=", scene_path, " pos_raw=", raw_pos, " pos_norm=", pos, " hp=", saved_hp, " maniacs=", maniacs_positions)
+	# Меняем сцену
+	var err := get_tree().change_scene_to_file(scene_path)
+	if err != OK:
+		push_error("SaveManager: change_scene_to_file failed: %s" % scene_path)
+		return
+	# ждём, чтобы сцена и узлы инстансились
+	await get_tree().process_frame
+	await get_tree().process_frame
+	# Восстанавливаем игрока
+	var player := get_tree().get_first_node_in_group("player")
+	if not player:
+		print("SaveManager: player not found after scene load")
+	else:
+		# Устанавливаем позицию отложенно, чтобы не конфликтовать с _ready() игрока
+		player.set_deferred("global_position", pos)
+		# Немного логов для отладки: проверим позицию сразу и через кадр
+		print("SaveManager: set_deferred global_position ->", pos, " node=", player.get_path())
+		await get_tree().process_frame
+		print("SaveManager: player.global_position after 1 frame ->", player.global_position)
+		await get_tree().process_frame
+		print("SaveManager: player.global_position after 2 frames ->", player.global_position)
+		# hp
+		if saved_hp != null:
+			_write_player_hp(player, saved_hp)
+			print("SaveManager: player HP set to", saved_hp)
+	# Восстанавливаем позиции маньяков: если сохранено N позиций, применяем их к первым N маньякам в сцене
+	if maniacs_positions.size() > 0:
+		var maniacs := get_tree().get_nodes_in_group("maniac")
+		for i in range(min(maniacs_positions.size(), maniacs.size())):
+			var m = maniacs[i]
+			if m and m is Node2D:
+				var p = maniacs_positions[i]
+				var mp = Vector2.ZERO
+				if typeof(p) == TYPE_VECTOR2:
+					mp = p
+				elif typeof(p) == TYPE_ARRAY and p.size() >= 2:
+					mp = Vector2(float(p[0]), float(p[1]))
+				elif typeof(p) == TYPE_STRING:
+					var parts = p.split(",")
+					if parts.size() >= 2:
+						mp = Vector2(float(parts[0]), float(parts[1]))
+				# Отложенная установка для маньяков тоже безопаснее
+				m.set_deferred("global_position", mp)
+				print("SaveManager: set maniac", i, "->", mp, " node=", m.get_path())
+	print("✅ LOAD OK:", scene_path, " player_pos=", pos, " player_hp=", saved_hp, " maniacs=", maniacs_positions)
+func reset_save() -> void:
+	## Полный сброс БД и служебных кэшей (двери, рычаги, задания, сейв).
+	if DbManager.has_method("new_game_database_wipe"):
+		DbManager.new_game_database_wipe()
+	elif DbManager.has_method("reset_all"):
+		DbManager.reset_all()
+	elif DbManager.has_method("clear_save"):
+		DbManager.clear_save()
+	print("SaveManager: reset_save done")
+const _LOCAL_TASKS_PATH := "res://db/task_data.gd"
+func reset_run_after_death() -> void:
+	## После смерти: прогресс/двери/сейв сбрасываются, **задания из БД с префиксом AI: остаются**;
+	## заново подставятся на компы через `assign_task` (случайный выбор из свободных id).
+	if DbManager.has_method("new_game_database_wipe_keep_ai_tasks"):
+		DbManager.new_game_database_wipe_keep_ai_tasks()
+		if DbManager.has_method("tasks_row_count") and DbManager.tasks_row_count() <= 0:
+			push_warning("SaveManager: в БД не осталось заданий AI: — подгружаем task_data.gd")
+			if DbManager.tasks and DbManager.tasks.has_method("load_default_tasks_from_file"):
+				DbManager.tasks.load_default_tasks_from_file(_LOCAL_TASKS_PATH)
+	else:
+		reset_save()
+		if DbManager.tasks and DbManager.tasks.has_method("load_default_tasks_from_file"):
+			DbManager.tasks.load_default_tasks_from_file(_LOCAL_TASKS_PATH)
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("reset_all"):
+		GameState.reset_all()
+	if typeof(RunStats) != TYPE_NIL and RunStats.has_method("reset_session"):
+		RunStats.reset_session()
+	print("SaveManager: reset_run_after_death done")
+func _erase_user_snapshot(user_path: String) -> void:
+	if not FileAccess.file_exists(user_path):
+		return
+	var err := DirAccess.remove_absolute(ProjectSettings.globalize_path(user_path))
+	if err != OK:
+		push_warning("SaveManager: could not remove %s (err=%d)" % [user_path, err])
+func load_game() -> void:
+	## Вызывается LevelManager при входе на уровень; реальная загрузка — через continue_game().
+	pass
+# --------------------
+# Вспомогательные: чтение/запись HP игрока (совместимость)
+# --------------------
+func _read_player_hp(player: Node) -> Variant:
+	if player == null:
+		return null
+	if player.has_method("get_hp"):
+		return player.call("get_hp")
+	if player.has_method("get_health"):
+		return player.call("get_health")
+	if player.has("hp"):
+		return player.get("hp")
+	if player.has("health"):
+		return player.get("health")
+	# Если ничего не найдено — возвращаем null
+	return null
+func _write_player_hp(player: Node, hp_value: Variant) -> void:
+	if player == null or hp_value == null:
+		return
+	if player.has_method("set_hp"):
+		player.call("set_hp", hp_value)
+		return
+	if player.has_method("set_health"):
+		player.call("set_health", hp_value)
+		return
+	if player.has("hp"):
+		player.set("hp", hp_value)
+		return
+	if player.has("health"):
+		player.set("health", hp_value)
+		return
+	# Если ничего не доступно — запишем в мета, чтобы не потерять значение
+	player.set_meta("hp", hp_value)
+
+#db/db_meneger.gd
+extends Node
+# Autoload: DbMeneger.gd
+# Monolithic core that initializes DB and delegates to modules.
+var save = null
+var db: SQLite = null
+var tasks = null
+var levers = null
+var doors = null
+var terminal_code = null
+var debug = null
+var _completed_computers := {} # key: "%d:%d" % [level, computer_id] -> true
+var _assigned_tasks := {} # key: "%d:%d" % [level, computer_id] -> Dictionary task
+func _ready() -> void:
+	randomize()
+	# Миграция (копирование шаблона в user:// если нужно)
+	var migr = preload("res://db/db_migration.gd").new()
+	migr.run_migration()
+	# Открываем DB
+	db = SQLite.new()
+	db.path = "user://tasks.db"
+	if not db.open_db():
+		push_error("DbMeneger: cannot open DB at %s" % db.path)
+		db = null
+		return
+	# Загружаем модули
+	_load_modules()
+	# Создаём таблицы (модули сами создают свои таблицы в init)
+	if debug and debug.has_method("debug_dump_all"):
+		# опционально: debug.debug_dump_all()
+		pass
+	print("DbMeneger: ready, DB path:", db.path)
+func _load_modules() -> void:
+	# Путь к модулям — поправьте при необходимости
+	tasks = preload("res://db/db_tasks.gd").new()
+	levers = preload("res://db/db_levers.gd").new()
+	doors = preload("res://db/db_doors.gd").new()
+	terminal_code = preload("res://db/db_terminal_code.gd").new()
+	debug = preload("res://db/db_debug.gd").new()
+	# Инициализируем модули, передаём ссылку на этот singleton
+	if tasks and tasks.has_method("init"):
+		tasks.init(self)
+	if levers and levers.has_method("init"):
+		levers.init(self)
+	if doors and doors.has_method("init"):
+		doors.init(self)
+	if terminal_code and terminal_code.has_method("init"):
+		terminal_code.init(self)
+	if debug and debug.has_method("init"):
+		debug.init(self)
+	save = preload("res://db/db_save.gd").new()
+	if save and save.has_method("init"):
+		save.init(self)
+# -----------------------
+# Внутренняя "память" завершённых компьютеров
+# -----------------------
+func mark_computer_done(level: int, computer_id: int) -> void:
+	var key := "%d:%d" % [level, computer_id]
+	_completed_computers[key] = true
+func is_computer_done(level: int, computer_id: int) -> bool:
+	var key := "%d:%d" % [level, computer_id]
+	return _completed_computers.has(key)
+func set_assigned_task(level: int, computer_id: int, task: Dictionary) -> void:
+	if task.is_empty():
+		return
+	var key := "%d:%d" % [level, computer_id]
+	_assigned_tasks[key] = task
+func get_assigned_task(level: int, computer_id: int) -> Dictionary:
+	var key := "%d:%d" % [level, computer_id]
+	if not _assigned_tasks.has(key):
+		return {}
+	var t: Variant = _assigned_tasks[key]
+	if typeof(t) != TYPE_DICTIONARY:
+		return {}
+	return t as Dictionary
+# -----------------------
+# Общие помощники
+# -----------------------
+func _ensure_db() -> bool:
+	if db == null:
+		push_error("DbMeneger: DB is not initialized")
+		return false
+	return true
+# -----------------------
+# Делегирующие методы (используются в проекте)
+# -----------------------
+# Tasks
+func assign_task(level: int, computer_id: int) -> Dictionary:
+	if tasks and tasks.has_method("assign_task"):
+		return tasks.assign_task(level, computer_id)
+	return {}
+func get_current_task(level: int, computer_id: int) -> Dictionary:
+	if tasks and tasks.has_method("get_current_task"):
+		return tasks.get_current_task(level, computer_id)
+	return {}
+func unassign_task(level: int, computer_id: int) -> void:
+	if tasks and tasks.has_method("unassign_task"):
+		tasks.unassign_task(level, computer_id)
+# Levers
+func set_lever_state(lever_id: int, is_down: bool) -> void:
+	if levers and levers.has_method("set_lever_state"):
+		levers.set_lever_state(lever_id, is_down)
+func get_lever_state(lever_id: int) -> Variant:
+	if levers and levers.has_method("get_lever_state"):
+		return levers.get_lever_state(lever_id)
+	return null
+func link_lever_to_computer(lever_id: int, computer_id: int) -> void:
+	if levers and levers.has_method("link_lever_to_computer"):
+		levers.link_lever_to_computer(lever_id, computer_id)
+func link_lever_to_door(lever_id: int, door_id: int) -> void:
+	if levers and levers.has_method("link_lever_to_door"):
+		levers.link_lever_to_door(lever_id, door_id)
+func is_computer_accessible(computer_id: int) -> bool:
+	if TutorialManager.is_active() and TutorialManager.allows_tutorial_computer(computer_id):
+		return true
+	if levers and levers.has_method("is_computer_accessible"):
+		return levers.is_computer_accessible(computer_id)
+	# fallback: доступ открыт
+	return true
+# Doors
+func link_computer_to_door(computer_id: int, door_id: int) -> void:
+	if doors and doors.has_method("link_computer_to_door"):
+		doors.link_computer_to_door(computer_id, door_id)
+func get_doors_for_computer(computer_id: int) -> Array:
+	if doors and doors.has_method("get_doors_for_computer"):
+		return doors.get_doors_for_computer(computer_id)
+	return []
+func get_terminal_code(level: int, computer_id: int) -> String:
+	if terminal_code and terminal_code.has_method("get_code"):
+		return terminal_code.get_code(level, computer_id)
+	return ""
+func set_terminal_code(level: int, computer_id: int, code_text: String) -> void:
+	if terminal_code and terminal_code.has_method("set_code"):
+		terminal_code.set_code(level, computer_id, code_text)
+func is_door_accessible(door_id: int) -> bool:
+	if TutorialManager.is_active() and TutorialManager.allows_tutorial_door(door_id):
+		return true
+	if doors and doors.has_method("is_door_accessible"):
+		return doors.is_door_accessible(door_id)
+	# fallback: доступ открыт
+	return true
+# Debug
+func debug_dump_all() -> void:
+	if debug and debug.has_method("debug_dump_all"):
+		debug.debug_dump_all()
+func debug_insert_sample_tasks() -> void:
+	if debug and debug.has_method("debug_insert_sample_tasks"):
+		debug.debug_insert_sample_tasks()
+# Save
+func has_save() -> bool:
+	if save and save.has_method("has_save"):
+		return save.has_save()
+	return false
+# set_save: поддерживает старую сигнатуру и новый словарь
+func set_save(a, b = null) -> void:
+	# debug: лог входящих аргументов
+	print("DbMeneger.set_save called with:", a, b)
+	if save == null or not save.has_method("set_save"):
+		print("DbMeneger.set_save: save module missing")
+		return
+	if typeof(a) == TYPE_DICTIONARY:
+		print("DbMeneger.set_save: passing dictionary to save.set_save")
+		save.set_save(a)
+		return
+	if typeof(a) == TYPE_STRING and (b == null or typeof(b) == TYPE_VECTOR2):
+		var scene_path: String = a
+		var pos: Vector2 = b if b != null else Vector2.ZERO
+		var payload := {
+			"scene_path": scene_path,
+			"player_pos": pos,
+			"player_hp": null,
+			"maniacs": []
+		}
+		print("DbMeneger.set_save: converted legacy args ->", payload)
+		save.set_save(payload)
+		return
+	print("DbMeneger.set_save: unsupported args, ignoring")
+func get_save() -> Dictionary:
+	var s = save.get_save()
+	print("DbMeneger.get_save: proxy ->", s)
+	return s
+func clear_save() -> void:
+	if save and save.has_method("clear_save"):
+		save.clear_save()
+## Полная очистка БД и RAM-кэша для «Новая игра»: задания, прогресс, рычаги, двери, сейв.
+func new_game_database_wipe() -> void:
+	if not _ensure_db():
+		return
+	print("DbMeneger: NEW GAME full wipe")
+	_completed_computers.clear()
+	_assigned_tasks.clear()
+	# Таблицы по фактической схеме проекта (старые имена lever_to_* / save были ошибкой)
+	db.query("DELETE FROM progress")
+	db.query("DELETE FROM tasks")
+	db.query("DELETE FROM lever_states")
+	db.query("DELETE FROM lever_links")
+	db.query("DELETE FROM lever_doors")
+	db.query("DELETE FROM door_states")
+	db.query("DELETE FROM computer_doors")
+	db.query("DELETE FROM save_state")
+	db.query("DELETE FROM terminal_code")
+	db.query("VACUUM")
+	print("DbMeneger: wipe complete")
+## После смерти / «ещё раз»: очистить прогресс и связи, но **оставить** в `tasks` только строки с `AI:`
+## (как после /generate_tasks). Без повторной вставки из `task_data.gd` — новые назначения даст `assign_task`.
+func new_game_database_wipe_keep_ai_tasks() -> void:
+	if not _ensure_db():
+		return
+	print("DbMeneger: run wipe KEEP AI tasks (death / retry run)")
+	_completed_computers.clear()
+	_assigned_tasks.clear()
+	db.query("DELETE FROM progress")
+	db.query("DELETE FROM tasks WHERE description IS NULL OR description NOT LIKE 'AI:%'")
+	db.query("DELETE FROM lever_states")
+	db.query("DELETE FROM lever_links")
+	db.query("DELETE FROM lever_doors")
+	db.query("DELETE FROM door_states")
+	db.query("DELETE FROM computer_doors")
+	db.query("DELETE FROM save_state")
+	db.query("DELETE FROM terminal_code")
+	db.query("VACUUM")
+	print("DbMeneger: wipe_keep_ai_tasks complete (tasks rows=", _count_tasks_rows(), ")")
+func _count_tasks_rows() -> int:
+	db.query("SELECT COUNT(*) AS cnt FROM tasks")
+	if db.query_result.size() > 0:
+		return int(db.query_result[0].get("cnt", db.query_result[0].get("COUNT(*)", 0)))
+	return 0
+func tasks_row_count() -> int:
+	if not _ensure_db():
+		return 0
+	return _count_tasks_rows()
+func reset_all() -> void:
+	# Совместимость: старые вызовы → полный сброс
+	new_game_database_wipe()
+## После ответа /generate_tasks: вставить задачи в пустую (уже очищенную) БД.
+func apply_generated_tasks(rows: Array) -> int:
+	if not _ensure_db():
+		return 0
+	if tasks == null or not tasks.has_method("insert_tasks_from_backend_payload"):
+		push_error("DbMeneger: db_tasks.insert_tasks_from_backend_payload missing")
+		return 0
+	return int(tasks.call("insert_tasks_from_backend_payload", rows))
+# Doors state (нужно, чтобы двери сохранялись)
+func set_door_state(door_id: int, opened: bool) -> void:
+	if doors and doors.has_method("set_door_state"):
+		doors.set_door_state(door_id, opened)
+func get_door_state(door_id: int) -> Variant:
+	if doors and doors.has_method("get_door_state"):
+		return doors.get_door_state(door_id)
+	return null
+
+#db/db_save.gd
+# res://db/db_save.gd
+extends Node
+class_name DbSave
+var core: Node = null
+var db = null
+const DEBUG_SAVE := true
+func init(core_singleton: Node) -> void:
+	core = core_singleton
+	db = core.db
+	_ensure_tables()
+	_try_migrate_old_row()
+func _ensure_tables() -> void:
+	if core == null or core.db == null:
+		if DEBUG_SAVE:
+			print("DbSave._ensure_tables: core or db is null")
+		return
+	core.db.query("""
+		CREATE TABLE IF NOT EXISTS save_state (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			scene_path TEXT NOT NULL,
+			data_json TEXT NOT NULL,
+			saved_at TEXT DEFAULT (datetime('now'))
+		);
+	""")
+	if DEBUG_SAVE:
+		print("DbSave._ensure_tables: ensured save_state table")
+func _try_migrate_old_row() -> void:
+	if core == null or core.db == null:
+		return
+	core.db.query("SELECT name FROM sqlite_master WHERE type='table' AND name='save_state';")
+	if core.db.query_result.size() == 0:
+		return
+	core.db.query("PRAGMA table_info('save_state');")
+	var cols: Array = []
+	for r in core.db.query_result:
+		cols.append(str(r.get("name", "")))
+	if "px" in cols and "py" in cols and not ("data_json" in cols):
+		core.db.query("SELECT scene_path, px, py FROM save_state WHERE id=1 LIMIT 1;")
+		if core.db.query_result.size() == 0:
+			return
+		var row = core.db.query_result[0]
+		var scene_path = str(row.get("scene_path", ""))
+		var px = float(row.get("px", 0.0))
+		var py = float(row.get("py", 0.0))
+		var payload = {
+			"player_pos": [px, py],
+			"player_hp": null,
+			"maniacs": []
+		}
+		var json_text = JSON.stringify(payload)
+		core.db.query("DELETE FROM save_state;")
+		if core.db.has_method("insert_row"):
+			var insert_row_data := {
+				"id": 1,
+				"scene_path": scene_path,
+				"data_json": json_text
+			}
+			core.db.insert_row("save_state", insert_row_data)
+		else:
+			var scene_esc = scene_path.replace("'", "''")
+			var json_esc = json_text.replace("'", "''")
+			core.db.query("INSERT INTO save_state (id, scene_path, data_json, saved_at) VALUES (1, '%s', '%s', datetime('now'));" % [scene_esc, json_esc])
+		core.db.query("SELECT scene_path, data_json FROM save_state LIMIT 1;")
+		if DEBUG_SAVE:
+			print("DbSave._try_migrate_old_row: migrated old px/py -> JSON, db row ->", core.db.query_result)
+func set_save(save_data: Dictionary) -> void:
+	if DEBUG_SAVE:
+		print("DbSave.set_save called with:", save_data)
+	if core == null or core.db == null:
+		if DEBUG_SAVE:
+			print("DbSave.set_save: core or db is null, abort")
+		return
+	if typeof(save_data) != TYPE_DICTIONARY:
+		if DEBUG_SAVE:
+			print("DbSave.set_save: expected Dictionary, got", typeof(save_data))
+		return
+	var scene_path: String = str(save_data.get("scene_path", ""))
+	var raw_pos = save_data.get("player_pos", Vector2.ZERO)
+	var px: float = 0.0
+	var py: float = 0.0
+	if typeof(raw_pos) == TYPE_VECTOR2:
+		px = raw_pos.x
+		py = raw_pos.y
+	elif typeof(raw_pos) == TYPE_ARRAY and raw_pos.size() >= 2:
+		px = float(raw_pos[0])
+		py = float(raw_pos[1])
+	elif typeof(raw_pos) == TYPE_STRING:
+		var s = raw_pos.strip_edges()
+		if s.begins_with("[") and s.ends_with("]"):
+			s = s.substr(1, s.length() - 2)
+		var parts = s.split(",")
+		if parts.size() >= 2:
+			px = float(parts[0])
+			py = float(parts[1])
+	else:
+		px = 0.0
+		py = 0.0
+	var player_hp = save_data.get("player_hp", null)
+	var maniacs = save_data.get("maniacs", [])
+	var maniacs_serial: Array = []
+	for m in maniacs:
+		if typeof(m) == TYPE_VECTOR2:
+			maniacs_serial.append([m.x, m.y])
+		else:
+			maniacs_serial.append(m)
+	var payload = {
+		"player_pos": [px, py],
+		"player_hp": player_hp,
+		"maniacs": maniacs_serial
+	}
+	var json_text: String = JSON.stringify(payload)
+	if DEBUG_SAVE:
+		print("DbSave.set_save: scene_path=", scene_path, " payload=", payload)
+		print("DbSave.set_save: json_text =", json_text)
+	core.db.query("DELETE FROM save_state;")
+	if core.db.has_method("insert_row"):
+		var insert_row_data := {
+			"id": 1,
+			"scene_path": scene_path,
+			"data_json": json_text
+		}
+		core.db.insert_row("save_state", insert_row_data)
+		if DEBUG_SAVE:
+			print("DbSave.set_save: inserted via insert_row, db.query_result =", core.db.query_result)
+	else:
+		var scene_esc = scene_path.replace("'", "''")
+		var json_esc = json_text.replace("'", "''")
+		core.db.query("INSERT INTO save_state (id, scene_path, data_json, saved_at) VALUES (1, '%s', '%s', datetime('now'));" % [scene_esc, json_esc])
+		if DEBUG_SAVE:
+			print("DbSave.set_save: fallback insert executed, db.query_result =", core.db.query_result)
+	core.db.query("SELECT scene_path, data_json, saved_at FROM save_state LIMIT 1;")
+	if DEBUG_SAVE:
+		print("DbSave.set_save: DB row after insert ->", core.db.query_result)
+func has_save() -> bool:
+	if core == null or core.db == null:
+		return false
+	core.db.query("SELECT 1 FROM save_state WHERE id=1 LIMIT 1;")
+	return core.db.query_result.size() > 0
+func get_save() -> Dictionary:
+	if core == null or core.db == null:
+		if DEBUG_SAVE:
+			print("DbSave.get_save: core or db is null")
+		return {}
+	# Получаем строку из БД
+	core.db.query("SELECT scene_path, data_json FROM save_state WHERE id=1 LIMIT 1;")
+	if DEBUG_SAVE:
+		print("DbSave.get_save: raw query_result ->", core.db.query_result)
+	if core.db.query_result.size() == 0:
+		if DEBUG_SAVE:
+			print("DbSave.get_save: no rows")
+		return {}
+	var row = core.db.query_result[0]
+	# Извлекаем data_json безопасно
+	var json_text: String = "{}"
+	if typeof(row) == TYPE_DICTIONARY:
+		if row.has("data_json"):
+			json_text = str(row.get("data_json", "{}"))
+		elif row.has("datajson"):
+			json_text = str(row.get("datajson", "{}"))
+		else:
+			json_text = str(row)
+	else:
+		json_text = str(row)
+	if DEBUG_SAVE:
+		print("DbSave.get_save: data_json raw ->", json_text)
+	# Определяем версию движка (Godot 4 использует JSON.parse_string)
+	var engine_info = Engine.get_version_info()
+	var is_godot4 := false
+	if engine_info.has("major"):
+		is_godot4 = int(engine_info["major"]) >= 4
+	var parsed: Dictionary = {}
+	# Попытка парсинга для Godot 4 (JSON.parse_string)
+	if is_godot4:
+		var res4 = JSON.parse_string(json_text)
+		# Если вернулся wrapper { "error":..., "result":... }
+		if typeof(res4) == TYPE_DICTIONARY and res4.has("error"):
+			if res4.get("error", 1) == OK:
+				parsed = res4.get("result", {})
+				if DEBUG_SAVE:
+					print("DbSave.get_save: parsed via JSON.parse_string (wrapper) ->", parsed)
+			else:
+				if DEBUG_SAVE:
+					print("DbSave.get_save: JSON.parse_string returned error ->", res4.get("error"))
+		# Или parse_string мог вернуть уже распарсенный словарь напрямую
+		elif typeof(res4) == TYPE_DICTIONARY:
+			parsed = res4
+			if DEBUG_SAVE:
+				print("DbSave.get_save: parsed via JSON.parse_string (direct) ->", parsed)
+	# Попытка парсинга для Godot 3 (JSON.new().parse) или если Godot4 не дал результата
+	if parsed.size() == 0:
+		var json_inst = JSON.new()
+		var err_code = json_inst.parse(json_text)
+		if err_code == OK:
+			var data = json_inst.get_data()
+			if typeof(data) == TYPE_DICTIONARY:
+				parsed = data
+				if DEBUG_SAVE:
+					print("DbSave.get_save: parsed via JSON.new().parse ->", parsed)
+			else:
+				if DEBUG_SAVE:
+					print("DbSave.get_save: JSON.new().parse returned non-dictionary ->", data)
+		else:
+			if DEBUG_SAVE:
+				print("DbSave.get_save: JSON.new().parse error code ->", err_code)
+	# Крайний случай: возможна двойная сериализация (строка внутри строки)
+	if parsed.size() == 0:
+		var s = json_text.strip_edges()
+		if s.begins_with('"') and s.ends_with('"'):
+			s = s.substr(1, s.length() - 2)
+			s = s.replace('\\"', '"')
+			if is_godot4:
+				var r4 = JSON.parse_string(s)
+				if typeof(r4) == TYPE_DICTIONARY and r4.has("error") and r4.get("error", 1) == OK:
+					parsed = r4.get("result", {})
+				elif typeof(r4) == TYPE_DICTIONARY:
+					parsed = r4
+			if parsed.size() == 0:
+				var json_inst2 = JSON.new()
+				var err2 = json_inst2.parse(s)
+				if err2 == OK:
+					var d2 = json_inst2.get_data()
+					if typeof(d2) == TYPE_DICTIONARY:
+						parsed = d2
+	if parsed.size() == 0:
+		if DEBUG_SAVE:
+			print("DbSave.get_save: parsed is empty after all attempts")
+		return {
+			"scene_path": str(row.get("scene_path", "")),
+			"player_pos": Vector2.ZERO,
+			"player_hp": null,
+			"maniacs": []
+		}
+	# Нормализуем player_pos
+	var player_pos = Vector2.ZERO
+	var raw_pos = parsed.get("player_pos", null)
+	if raw_pos != null:
+		if typeof(raw_pos) == TYPE_ARRAY and raw_pos.size() >= 2:
+			player_pos = Vector2(float(raw_pos[0]), float(raw_pos[1]))
+		elif typeof(raw_pos) == TYPE_VECTOR2:
+			player_pos = raw_pos
+		elif typeof(raw_pos) == TYPE_STRING:
+			var s2 = raw_pos.strip_edges()
+			if s2.begins_with("[") and s2.ends_with("]"):
+				s2 = s2.substr(1, s2.length() - 2)
+			var parts = s2.split(",")
+			if parts.size() >= 2:
+				player_pos = Vector2(float(parts[0]), float(parts[1]))
+	var out := {
+		"scene_path": str(row.get("scene_path", parsed.get("scene_path", ""))),
+		"player_pos": player_pos,
+		"player_hp": parsed.get("player_hp", null),
+		"maniacs": parsed.get("maniacs", [])
+	}
+	if DEBUG_SAVE:
+		print("DbSave.get_save: returning ->", out)
+	return out
+func clear_save() -> void:
+	if core == null or core.db == null:
+		if DEBUG_SAVE:
+			print("DbSave.clear_save: core or db is null")
+		return
+	core.db.query("DELETE FROM save_state WHERE id=1;")
+	if DEBUG_SAVE:
+		print("DbSave.clear_save: deleted save_state row")
+
+#db/db_tasks.gd
+# res://scripts/db/db_tasks.gd
+extends Node
+class_name DbTasks
+var dbm: Node = null
+func init(db_manager: Node) -> void:
+	dbm = db_manager
+	if dbm and dbm._ensure_db():
+		_create_tables()
+		# На всякий случай проверяем схему progress повторно:
+		# если где-то миграция не применилась (шаблонная БД/особенности gdsqlite),
+		# пересоздадим прогресс принудительно.
+		_ensure_progress_schema(true)
+		# Безопасно чистим только если колонка `status` реально существует.
+		var db = dbm.db
+		db.query("PRAGMA table_info(progress)")
+		var progress_cols: Array = []
+		for row in db.query_result:
+			var name := str(row.get("name", ""))
+			if name != "":
+				progress_cols.append(name)
+		if not progress_cols.has("status"):
+			print("DbTasks.init: progress.status column missing. cols=", progress_cols)
+		# Важно для UX:
+		# загружаем задания из task_data.gd только на "пустой" БД.
+		# При последующих запусках оставляем уже закреплённые задания и прогресс как есть.
+		dbm.db.query("SELECT COUNT(*) AS cnt FROM tasks")
+		var task_count := 0
+		if dbm.db.query_result.size() > 0:
+			task_count = int(dbm.db.query_result[0].get("cnt", dbm.db.query_result[0].get("COUNT(*)", 0)))
+		if task_count == 0:
+			print("DbTasks.init: tasks table is empty -> loading defaults once")
+			load_default_tasks_from_file("res://db/task_data.gd")
+		else:
+			print("DbTasks.init: tasks already exist -> keep existing tasks/progress. count=", task_count)
+func _create_tables() -> void:
+	var db = dbm.db
+	db.query("""
+		CREATE TABLE IF NOT EXISTS tasks (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			level INTEGER,
+			category TEXT,
+			description TEXT UNIQUE,
+			expected_code TEXT,
+			expected_output TEXT,
+			required_patterns TEXT,
+			check_type TEXT,
+			required_keywords TEXT,
+			allow_direct_print INTEGER
+)
+	""")
+	db.query("""
+		CREATE TABLE IF NOT EXISTS progress (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			level INTEGER,
+			computer_id INTEGER,
+			task_id INTEGER,
+			status TEXT
+)
+	""")
+func _ensure_tasks_schema() -> void:
+	var db = dbm.db
+	db.query("PRAGMA table_info(tasks)")
+	var cols: Array = []
+	for row in db.query_result:
+		var name := str(row.get("name", ""))
+		if name != "":
+			cols.append(name)
+	# Если схема задач не совпадает с тем, что ожидает игра/вставка,
+	# то ALTER TABLE может не сработать в gdsqlite.
+	# В этом случае безопаснее пересоздать таблицу и потом заново загрузить tasks из task_data.gd.
+	var required := {
+		"level": "INTEGER",
+		"category": "TEXT",
+		"description": "TEXT",
+		"expected_code": "TEXT",
+		"expected_output": "TEXT",
+		"required_patterns": "TEXT",
+		"check_type": "TEXT",
+		"required_keywords": "TEXT",
+		"allow_direct_print": "INTEGER",
+	}
+	var missing: Array = []
+	for k in required.keys():
+		if not cols.has(k):
+			missing.append(k)
+	if missing.size() > 0:
+		print("DbTasks._ensure_tasks_schema: schema mismatch, missing=", missing, " recreating tasks table...")
+		db.query("DROP TABLE IF EXISTS tasks")
+		db.query("""
+			CREATE TABLE IF NOT EXISTS tasks (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				level INTEGER,
+				category TEXT,
+				description TEXT UNIQUE,
+				expected_code TEXT,
+				expected_output TEXT,
+				required_patterns TEXT,
+				check_type TEXT,
+				required_keywords TEXT,
+				allow_direct_print INTEGER
+)
+		""")
+		# Проверяем результат миграции.
+		db.query("PRAGMA table_info(tasks)")
+		var cols_after: Array = []
+		for row2 in db.query_result:
+			var n2 := str(row2.get("name", ""))
+			if n2 != "":
+				cols_after.append(n2)
+		print("DbTasks._ensure_tasks_schema: after cols=", cols_after)
+func _ensure_progress_schema(force_recreate_if_broken: bool) -> void:
+	var db = dbm.db
+	db.query("PRAGMA table_info(progress)")
+	var cols: Array = []
+	for row in db.query_result:
+		var name := str(row.get("name", ""))
+		if name != "":
+			cols.append(name)
+	# Ожидаемая схема:
+	var required := {
+		"level": "INTEGER",
+		"computer_id": "INTEGER",
+		"task_id": "INTEGER",
+		"status": "TEXT",
+	}
+	print("DbTasks._ensure_progress_schema: before cols=", cols)
+	var missing: Array = []
+	for k in required.keys():
+		if not cols.has(k):
+			missing.append(k)
+	if missing.size() > 0:
+		print("DbTasks._ensure_progress_schema: schema mismatch, missing=", missing, " recreating progress table...")
+		db.query("DROP TABLE IF EXISTS progress")
+		db.query("""
+			CREATE TABLE IF NOT EXISTS progress (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				level INTEGER,
+				computer_id INTEGER,
+				task_id INTEGER,
+				status TEXT
+)
+		""")
+		# Проверяем результат миграции.
+		db.query("PRAGMA table_info(progress)")
+		var cols_after: Array = []
+		for row2 in db.query_result:
+			var name2 := str(row2.get("name", ""))
+			if name2 != "":
+				cols_after.append(name2)
+		print("DbTasks._ensure_progress_schema: after cols=", cols_after)
+	elif force_recreate_if_broken:
+		# Если всё есть — ничего не делаем.
+		pass
+func load_default_tasks_from_file(path: String = "res://db/task_data.gd") -> void:
+	if not dbm._ensure_db():
+		return
+	var db = dbm.db
+	# Берем реальный набор колонок, чтобы вставлять только то, что существует в схеме
+	# (иногда template DB уже имеет таблицу `tasks` со старой структурой).
+	db.query("PRAGMA table_info(tasks)")
+	var task_cols: Array = []
+	for r in db.query_result:
+		var n := str(r.get("name", ""))
+		if n != "":
+			task_cols.append(n)
+	# Если task_data.gd был сгенерирован AI-скриптом, то перед вставкой
+	# определяем источник только для отладочного лога.
+	var is_autogenerated: bool = false
+	var fa: FileAccess = FileAccess.open(path, FileAccess.READ)
+	if fa:
+		var first_line: String = fa.get_line()
+		is_autogenerated = first_line.begins_with("# AUTOGENERATED")
+		fa.close()
+	else:
+		print("DbTasks.load_default_tasks_from_file: FileAccess.open failed for:", path)
+	var script_res = load(path)
+	if script_res == null:
+		print("DbTasks.load_default_tasks_from_file: load(path) failed for:", path)
+		return
+	var td = script_res if not (script_res is Script) else script_res.new()
+	if td == null:
+		print("DbTasks.load_default_tasks_from_file: td is null for:", path)
+		return
+	var tasks_arr = null
+	if "default_tasks" in td:
+		tasks_arr = td.default_tasks
+	elif td.has_method("get"):
+		tasks_arr = td.get("default_tasks")
+	if typeof(tasks_arr) != TYPE_ARRAY:
+		print("DbTasks.load_default_tasks_from_file: tasks_arr is not array. type=", typeof(tasks_arr), " path=", path)
+		return
+	var inserted_count: int = 0
+	for t in tasks_arr:
+		if typeof(t) != TYPE_DICTIONARY:
+			continue
+		var desc = str(t.get("description", "")).replace("'", "''")
+		if desc == "":
+			continue
+		db.query("SELECT id FROM tasks WHERE description = '%s'" % desc)
+		if db.query_result.size() == 0:
+			var row: Dictionary = {}
+			if task_cols.has("level"):
+				row["level"] = int(t.get("level", 0))
+			if task_cols.has("category"):
+				row["category"] = str(t.get("category", ""))
+			if task_cols.has("description"):
+				row["description"] = str(t.get("description", ""))
+			if task_cols.has("expected_output"):
+				row["expected_output"] = str(t.get("expected_output", ""))
+			if task_cols.has("required_patterns"):
+				row["required_patterns"] = str(t.get("required_patterns", ""))
+			if task_cols.has("check_type"):
+				row["check_type"] = str(t.get("check_type", "stdout_exact"))
+			if task_cols.has("required_keywords"):
+				row["required_keywords"] = str(t.get("required_keywords", ""))
+			if task_cols.has("allow_direct_print"):
+				row["allow_direct_print"] = int(t.get("allow_direct_print", 0))
+			db.insert_row("tasks", row)
+			inserted_count += 1
+			# Мини-проверка: убедимся, что хотя бы 1 запись реально появилась.
+			if inserted_count == 1:
+				db.query("SELECT id FROM tasks WHERE description = '%s' LIMIT 1" % desc)
+				if db.query_result.size() == 0:
+					print("DbTasks.load_default_tasks_from_file: INSERT failed for description:", desc)
+	db.query("SELECT COUNT(*) as cnt FROM tasks")
+	var total_tasks: int = 0
+	if db.query_result.size() > 0:
+		var r: Dictionary = db.query_result[0]
+		total_tasks = int(r.get("cnt", r.get("COUNT(*)", 0)))
+	print("DbTasks.load_default_tasks_from_file:", "autogen=", is_autogenerated, "tasks_arr=", tasks_arr.size(), "inserted=", inserted_count, "total_tasks=", total_tasks, "count_row=", db.query_result)
+## Вставка задач из JSON бэкенда /generate_tasks (после new_game_database_wipe).
+## Описания с префиксом AI: — для фильтра в assign_task.
+func insert_tasks_from_backend_payload(items: Array) -> int:
+	if not dbm or not dbm._ensure_db():
+		return 0
+	var db = dbm.db
+	db.query("PRAGMA table_info(tasks)")
+	var task_cols: Array = []
+	for r in db.query_result:
+		var n := str(r.get("name", ""))
+		if n != "":
+			task_cols.append(n)
+	var inserted_count: int = 0
+	for t in items:
+		if typeof(t) != TYPE_DICTIONARY:
+			continue
+		var raw_desc := str(t.get("description", "")).strip_edges()
+		if raw_desc == "":
+			continue
+		var desc := raw_desc
+		if not desc.begins_with("AI:"):
+			desc = "AI: " + desc
+		var desc_esc := desc.replace("'", "''")
+		db.query("SELECT id FROM tasks WHERE description = '%s'" % desc_esc)
+		if db.query_result.size() > 0:
+			continue
+		var row: Dictionary = {}
+		if task_cols.has("level"):
+			row["level"] = int(t.get("level", 0))
+		if task_cols.has("category"):
+			row["category"] = str(t.get("category", ""))
+		if task_cols.has("description"):
+			row["description"] = desc
+		if task_cols.has("expected_code"):
+			row["expected_code"] = str(t.get("expected_code", ""))
+		if task_cols.has("expected_output"):
+			row["expected_output"] = str(t.get("expected_output", ""))
+		if task_cols.has("required_patterns"):
+			row["required_patterns"] = str(t.get("required_patterns", ""))
+		if task_cols.has("check_type"):
+			row["check_type"] = str(t.get("check_type", "stdout_exact"))
+		if task_cols.has("required_keywords"):
+			row["required_keywords"] = str(t.get("required_keywords", ""))
+		if task_cols.has("allow_direct_print"):
+			row["allow_direct_print"] = int(t.get("allow_direct_print", 0))
+		db.insert_row("tasks", row)
+		inserted_count += 1
+	print("DbTasks.insert_tasks_from_backend_payload: inserted=", inserted_count)
+	return inserted_count
+func get_current_task(level: int, computer_id: int) -> Dictionary:
+	if not dbm._ensure_db():
+		return {}
+	var db = dbm.db
+	# Для каждого компьютера держим одну "актуальную" запись прогресса.
+	db.query("SELECT level, task_id, status FROM progress WHERE computer_id = %d ORDER BY id DESC LIMIT 1" % computer_id)
+	if db.query_result.size() == 0:
+		return {}
+	var row: Dictionary = db.query_result[0]
+	var task_id: int = int(row.get("task_id", 0))
+	var status: String = str(row.get("status", ""))
+	if task_id > 0:
+		db.query("SELECT * FROM tasks WHERE id = %d LIMIT 1" % task_id)
+		if db.query_result.size() > 0:
+			var task: Dictionary = db.query_result[0]
+			# При done возвращаем специальное сообщение, но task остается
+			# "прикреплён" к этому компьютеру навсегда.
+			if status == "done":
+				return {
+					"message": "Ты уже выполнил это задание, продвигайся дальше",
+					"id": task_id,
+					"status": "done",
+					"description": str(task.get("description", ""))
+				}
+			task["status"] = status
+			return task
+		# ВАЖНО:
+		# после AI-перегенерации tasks таблица может поменять id,
+		# а progress (особенно status='done') останется. Тогда task по task_id не найдётся.
+		# Для done возвращаем сообщение, чтобы терминал работал корректно.
+		if status == "done":
+			return {
+				"message": "Ты уже выполнил это задание, продвигайся дальше",
+				"id": task_id,
+				"status": "done",
+				"description": ""
+			}
+	return {}
+func assign_task(level: int, computer_id: int) -> Dictionary:
+	if not dbm._ensure_db():
+		return {}
+	var db = dbm.db
+	var current = get_current_task(level, computer_id)
+	if not current.is_empty():
+		return current
+	# Ищем только AI-задачи (описание с префиксом "AI:").
+	db.query("SELECT * FROM tasks WHERE level = %d AND description LIKE 'AI:%'" % level)
+	var rows = db.query_result
+	# fallback, если вдруг AI-задач нет
+	if rows.size() == 0:
+		db.query("SELECT * FROM tasks WHERE level = %d" % level)
+		rows = db.query_result
+	if rows.size() == 0:
+		return {}
+	# Неповторяемость задач:
+	# если задача уже была когда-либо выдана какому-либо компьютеру,
+	# больше её не выдаём.
+	db.query("SELECT task_id FROM progress WHERE task_id > 0")
+	var busy_ids: Array = []
+	for row in db.query_result:
+		busy_ids.append(int(row["task_id"]))
+	var available: Array = []
+	for task in rows:
+		var tid = int(task["id"])
+		if not busy_ids.has(tid):
+			available.append(task)
+	if available.size() == 0:
+		return {"message": "Все задания уровня %d уже назначены" % level}
+	available.shuffle()
+	var task: Dictionary = available[0]
+	# Чистим возможный старый мусор по этому компьютеру и пишем 1 запись assigned.
+	db.query("DELETE FROM progress WHERE computer_id = %d" % computer_id)
+	db.query("INSERT INTO progress (level, computer_id, task_id, status) VALUES (%d, %d, %d, 'assigned')" % [level, computer_id, int(task["id"])])
+	db.query("SELECT level, computer_id, task_id, status FROM progress WHERE computer_id = %d" % computer_id)
+	print("DbTasks.assign_task: rows for computer=%d -> %s" % [computer_id, str(db.query_result)])
+	return task
+func unassign_task(level: int, computer_id: int) -> void:
+	if not dbm._ensure_db():
+		return
+	var db = dbm.db
+	print("DbTasks.unassign_task: marking DONE for level=%d, computer=%d" % [level, computer_id])
+	# Берём прикреплённый task_id, чтобы он навсегда остался за компьютером.
+	db.query("SELECT level, task_id, status FROM progress WHERE computer_id = %d ORDER BY id DESC LIMIT 1" % computer_id)
+	var task_id: int = 0
+	var row_level: int = level
+	if db.query_result.size() > 0:
+		var row: Dictionary = db.query_result[0]
+		task_id = int(row.get("task_id", 0))
+		row_level = int(row.get("level", level))
+	# Нормализуем: по компьютеру одна запись со статусом done.
+	db.query("DELETE FROM progress WHERE computer_id = %d" % computer_id)
+	db.query("INSERT INTO progress (level, computer_id, task_id, status) VALUES (%d, %d, %d, 'done')" % [row_level, computer_id, task_id])
+	db.query("SELECT level, computer_id, task_id, status FROM progress WHERE computer_id = %d" % computer_id)
+	print("DbTasks.unassign_task: rows after DONE normalize -> %s" % str(db.query_result))
+
+#scenes/main_menu/main_menu.gd
+extends Control
+@onready var main_panel: Control = $TextureRect/VBoxContainer
+@onready var settings_menu: Control = $SettingsMenu
+@onready var play_btn: Button = get_node_or_null("TextureRect/VBoxContainer/play")
+@onready var continue_btn: Button = get_node_or_null("TextureRect/VBoxContainer/continue")
+@onready var settings_btn: Button = get_node_or_null("TextureRect/VBoxContainer/settings")
+@onready var exit_btn: Button = get_node_or_null("TextureRect/VBoxContainer/exit")
+@onready var tutorial_toggle: Button = get_node_or_null("TextureRect/VBoxContainer/tutorial_hint")
+@onready var _new_game_confirm: Control = $NewGameConfirmDialog
+const NEW_GAME_LOADING := "res://scenes/new_game_loading/new_game_loading.tscn"
+func _ready() -> void:
+	if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("cleanup_overlays"):
+		TutorialManager.cleanup_overlays()
+	_style_ui()
+	_apply_loop_on_music_player_if_present()
+	if settings_menu:
+		settings_menu.visible = false
+	# --- кнопки (в .tscn уже есть connection; подключаем только если ещё нет) ---
+	if continue_btn:
+		_connect_pressed_once(continue_btn, _on_continue_pressed)
+		_apply_continue_button_state()
+	else:
+		push_warning("MainMenu: button 'continue' not found (TextureRect/VBoxContainer/continue)")
+	if play_btn:
+		_connect_pressed_once(play_btn, _on_play_pressed)
+	else:
+		push_warning("MainMenu: button 'play' not found")
+	if settings_btn:
+		_connect_pressed_once(settings_btn, _on_settings_pressed)
+	else:
+		push_warning("MainMenu: button 'settings' not found")
+	if exit_btn:
+		_connect_pressed_once(exit_btn, _on_exit_pressed)
+	else:
+		push_warning("MainMenu: button 'exit' not found")
+	# назад из настроек
+	if settings_menu and settings_menu.has_signal("back_pressed"):
+		settings_menu.back_pressed.connect(_on_settings_back)
+	if tutorial_toggle:
+		tutorial_toggle.toggled.connect(_on_tutorial_toggled)
+		_refresh_tutorial_toggle()
+func _connect_pressed_once(btn: Button, handler: Callable) -> void:
+	if not btn.pressed.is_connected(handler):
+		btn.pressed.connect(handler)
+func _style_ui() -> void:
+	if GameUiTheme.theme and get_tree().root.theme != GameUiTheme.theme:
+		get_tree().root.theme = GameUiTheme.theme
+	var title: Label = get_node_or_null("TextureRect/VBoxContainer/Label") as Label
+	if title:
+		title.label_settings = GameUiTheme.make_title_settings(40)
+		title.text = "The Last Code"
+	for path in ["play", "continue", "settings", "exit", "tutorial_hint"]:
+		var btn := get_node_or_null("TextureRect/VBoxContainer/%s" % path) as Button
+		if btn:
+			btn.custom_minimum_size = Vector2(280, 54)
+			btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			btn.focus_mode = Control.FOCUS_NONE
+			btn.text = btn.text.strip_edges()
+	if tutorial_toggle:
+		tutorial_toggle.toggle_mode = true
+func _on_tutorial_toggled(_pressed: bool) -> void:
+	_refresh_tutorial_toggle()
+func _refresh_tutorial_toggle() -> void:
+	if tutorial_toggle == null:
+		return
+	var on: bool = tutorial_toggle.button_pressed
+	tutorial_toggle.text = "Обучение: включено" if on else "Обучение: выключено"
+	tutorial_toggle.modulate = Color(0.92, 1.0, 0.95) if on else Color(0.72, 0.72, 0.76)
+func _apply_loop_on_music_player_if_present() -> void:
+	var p: AudioStreamPlayer = get_node_or_null("music_player") as AudioStreamPlayer
+	if p == null or p.stream == null:
+		return
+	var st: AudioStream = p.stream
+	if st is AudioStreamOggVorbis:
+		st.loop = true
+	elif st is AudioStreamWAV:
+		st.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	elif ClassDB.class_exists("AudioStreamMP3") and st is AudioStreamMP3:
+		st.loop = true
+func _on_continue_pressed() -> void:
+	TutorialManager.set_enabled(false)
+	Savemeneger.continue_game()
+func _apply_continue_button_state() -> void:
+	if continue_btn == null:
+		return
+	var has_save: bool = Savemeneger.has_save()
+	continue_btn.disabled = not has_save
+	if has_save:
+		continue_btn.modulate = Color(1.0, 1.0, 1.0, 1.0)
+		continue_btn.tooltip_text = "Продолжить сохранённую игру"
+	else:
+		continue_btn.modulate = Color(0.42, 0.42, 0.48, 1.0)
+		continue_btn.tooltip_text = "Нет сохранения — начните новую игру"
+func _on_play_pressed() -> void:
+	if Savemeneger.has_save() and _new_game_confirm:
+		_new_game_confirm.open(
+			"Новая игра",
+			"Начать новую игру?",
+			"Начать заново",
+			"Отмена",
+			"Текущее сохранение и прогресс будут перезаписаны.",
+			_start_new_game_flow
+)
+		return
+	_start_new_game_flow()
+func _start_new_game_flow() -> void:
+	print("MainMenu: New Game → loading / generation")
+	if play_btn:
+		play_btn.disabled = true
+	var with_tutorial := true
+	if tutorial_toggle:
+		with_tutorial = tutorial_toggle.button_pressed
+	TutorialManager.set_enabled(with_tutorial)
+	get_tree().call_deferred("change_scene_to_file", NEW_GAME_LOADING)
+func _on_settings_pressed() -> void:
+	main_panel.visible = false
+	settings_menu.visible = true
+func _on_settings_back() -> void:
+	settings_menu.visible = false
+	main_panel.visible = true
+func _on_exit_pressed() -> void:
+	get_tree().quit()
+
+#scenes/lever/lever.gd
+extends Node2D
+class_name Lever
+@onready var sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D")
+@onready var area: Area2D = get_node_or_null("InteractionArea")
+var is_on: bool = true
+var player_in_range: bool = false
+var _outline_vis := InteractionOutline.new()
+@export var lever_id: int = 0
+@export var linked_computers: Array[int] = []
+@export var linked_doors: Array[int] = []
+@export var open_doors_on_down: bool = true
+## null — в сцене нет рычагов на эту дверь (используйте DbManager); иначе true/false.
+static func door_lever_requirement_met(tree: SceneTree, door_id: int) -> Variant:
+	if door_id <= 0:
+		return true
+	var found := false
+	var open_on_down := true
+	for node in tree.get_nodes_in_group("levers"):
+		if not (node is Lever):
+			continue
+		var lev := node as Lever
+		if door_id not in lev.linked_doors or lev.lever_id <= 0:
+			continue
+		found = true
+		open_on_down = lev.open_doors_on_down
+		if open_on_down:
+			if lev.is_on:
+				return false
+		elif not lev.is_on:
+			return false
+	if found:
+		return true
+	return null
+func _enter_tree() -> void:
+	if not is_in_group("levers"):
+		add_to_group("levers")
+func _ready() -> void:
+	if area:
+		area.body_entered.connect(_on_body_entered)
+		area.body_exited.connect(_on_body_exited)
+	if sprite == null:
+		push_error("Lever '%s': node 'AnimatedSprite2D' NOT FOUND. Проверь имя узла!" % name)
+	if sprite:
+		_outline_vis.setup(sprite)
+	_outline_vis.set_both(false)
+	# восстановим из БД
+	_restore_from_db()
+	_update_visual()
+	# зарегистрируем связи (если нужно)
+	register_links()
+	# применим к дверям состояние рычага при старте
+	_apply_linked_doors()
+func _process(_delta: float) -> void:
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		return
+	if player_in_range and Input.is_action_just_pressed("interact"):
+		if TutorialManager.is_active():
+			if TutorialManager.try_lesson_then("lever", Callable(self, "toggle")):
+				return
+		toggle()
+# ---------- SAVE/LOAD ----------
+func _restore_from_db() -> void:
+	is_on = true
+	if lever_id > 0 and DbManager.has_method("get_lever_state"):
+		var state = DbManager.get_lever_state(lever_id) # 1 = down, 0 = up
+		if state != null:
+			is_on = (int(state) == 0) # up => on
+# ------------------------------
+func _write_state_to_db() -> void:
+	if lever_id > 0 and DbManager.has_method("set_lever_state"):
+		DbManager.set_lever_state(lever_id, not is_on) # is_down
+func _update_visual() -> void:
+	if not sprite:
+		return
+	sprite.animation = ("up" if is_on else "down")
+	sprite.frame = 0
+	sprite.stop()
+func toggle() -> void:
+	is_on = not is_on
+	_update_visual()
+	_write_state_to_db()
+	# ждём кадр (без таймера)
+	await get_tree().process_frame
+	_apply_linked_doors()
+func register_links() -> void:
+	if lever_id <= 0:
+		return
+	for comp_id in linked_computers:
+		if typeof(comp_id) == TYPE_INT and comp_id > 0:
+			if DbManager.has_method("link_lever_to_computer"):
+				DbManager.link_lever_to_computer(lever_id, comp_id)
+	for did in linked_doors:
+		if typeof(did) == TYPE_INT and did > 0:
+			if DbManager.has_method("link_lever_to_door"):
+				DbManager.link_lever_to_door(lever_id, did)
+func _apply_linked_doors() -> void:
+	# Несколько рычагов на одну дверь: открыть только когда ВСЕ связанные рычаги
+	# в нужном положении (та же логика, что DbManager.is_door_accessible).
+	var seen: Dictionary = {}
+	for raw_id in linked_doors:
+		var door_id := int(raw_id)
+		if door_id <= 0 or seen.has(door_id):
+			continue
+		seen[door_id] = true
+		_sync_linked_door(door_id)
+func sync_visual_from_db() -> void:
+	_restore_from_db()
+	_update_visual()
+func _refresh_sibling_levers_for_door(door_id: int) -> void:
+	for node in get_tree().get_nodes_in_group("levers"):
+		if node == self or not (node is Lever):
+			continue
+		var lev := node as Lever
+		if door_id in lev.linked_doors:
+			lev.sync_visual_from_db()
+func _sync_linked_door(door_id: int) -> void:
+	_refresh_sibling_levers_for_door(door_id)
+	var should_open := _door_should_be_open_by_levers(door_id)
+	for d in get_tree().get_nodes_in_group("doors"):
+		if d is Door and int(d.door_id) == door_id:
+			if should_open:
+				d.open(true)
+			else:
+				d.close(true)
+func _door_should_be_open_by_levers(door_id: int) -> bool:
+	if door_id <= 0:
+		return false
+	var scene_ok: Variant = door_lever_requirement_met(get_tree(), door_id)
+	if scene_ok != null:
+		return bool(scene_ok)
+	if DbManager.has_method("is_door_accessible"):
+		var all_satisfied := DbManager.is_door_accessible(door_id)
+		return all_satisfied if open_doors_on_down else not all_satisfied
+	return (not is_on) if open_doors_on_down else is_on
+func _on_body_entered(body: Node) -> void:
+	if body.is_in_group("player"):
+		player_in_range = true
+		_outline_vis.set_both(true)
+func _on_body_exited(body: Node) -> void:
+	if body.is_in_group("player"):
+		player_in_range = false
+		_outline_vis.set_both(false)
+func set_outline(enabled: bool) -> void:
+	_outline_vis.set_outline(enabled)
+func set_highlight(enabled: bool) -> void:
+	_outline_vis.set_highlight(enabled)
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)
+
+#db/db_doors.gd
+# res://db/db_doors.gd
+extends Node
+class_name DbDoors
+var dbm: Node = null
+func init(db_manager: Node) -> void:
+	dbm = db_manager
+	if dbm and dbm._ensure_db():
+		_create_tables()
+func _create_tables() -> void:
+	var db = dbm.db
+	db.query("""
+		CREATE TABLE IF NOT EXISTS computer_doors (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			computer_id INTEGER,
+			door_id INTEGER
+)
+	""")
+	db.query("""
+		CREATE TABLE IF NOT EXISTS door_states (
+			door_id INTEGER PRIMARY KEY,
+			is_open INTEGER
+)
+	""")
+	print("DbDoors: tables ensured")
+func link_computer_to_door(computer_id: int, door_id: int) -> void:
+	# игнорируем «пустые» объекты
+	if computer_id <= 0 or door_id <= 0:
+		return
+	if not dbm._ensure_db():
+		return
+	var db = dbm.db
+	db.query("SELECT * FROM computer_doors WHERE computer_id = %d AND door_id = %d" % [computer_id, door_id])
+	if db.query_result.size() == 0:
+		db.insert_row("computer_doors", {"computer_id": computer_id, "door_id": door_id})
+		print("DbDoors: linked computer %d -> door %d" % [computer_id, door_id])
+func get_doors_for_computer(computer_id: int) -> Array:
+	if computer_id <= 0:
+		return []
+	if not dbm._ensure_db():
+		return []
+	var db = dbm.db
+	db.query("SELECT door_id FROM computer_doors WHERE computer_id = %d" % computer_id)
+	var doors: Array = []
+	for row in db.query_result:
+		doors.append(int(row["door_id"]))
+	return doors
+func is_door_accessible(door_id: int) -> bool:
+	# пустая дверь всегда доступна (визуально работает, но не участвует в логике)
+	if door_id <= 0:
+		return true
+	if not dbm._ensure_db():
+		return false
+	var db = dbm.db
+	# 1. Проверяем связи рычаг -> дверь
+	db.query("SELECT lever_id FROM lever_doors WHERE door_id = %d" % door_id)
+	if db.query_result.size() > 0:
+		for row in db.query_result:
+			var lid = int(row["lever_id"])
+			db.query("SELECT is_down FROM lever_states WHERE lever_id = %d" % lid)
+			if db.query_result.size() == 0:
+				# если нет состояния — считаем дверь заблокированной
+				return false
+			var is_down = int(db.query_result[0]["is_down"])
+			if is_down == 0:
+				# рычаг поднят → дверь заблокирована
+				return false
+		# все связанные рычаги опущены → дверь доступна
+		return true
+	# 2. Если нет связей рычагов — проверяем связи компьютер -> дверь
+	db.query("SELECT computer_id FROM computer_doors WHERE door_id = %d" % door_id)
+	if db.query_result.size() == 0:
+		# дверь не привязана ни к чему → доступна по умолчанию
+		return true
+	for row in db.query_result:
+		var cid = int(row["computer_id"])
+		if cid <= 0:
+			continue
+		db.query("SELECT status FROM progress WHERE computer_id = %d AND status = 'done'" % cid)
+		if db.query_result.size() > 0:
+			# хотя бы один связанный компьютер завершён → дверь доступна
+			return true
+	# ни один связанный компьютер не завершён → дверь заблокирована
+	return false
+# ---------- Persistent open/close state ----------
+func set_door_state(door_id: int, opened: bool) -> void:
+	if door_id <= 0:
+		# "пустые" двери не пишем в БД
+		return
+	if not dbm._ensure_db():
+		return
+	var db = dbm.db
+	var opened_i := 1 if opened else 0
+	db.query("INSERT OR REPLACE INTO door_states (door_id, is_open) VALUES (%d, %d)" % [door_id, opened_i])
+func get_door_state(door_id: int) -> Variant:
+	if door_id <= 0:
+		return null
+	if not dbm._ensure_db():
+		return null
+	var db = dbm.db
+	db.query("SELECT is_open FROM door_states WHERE door_id = %d" % door_id)
+	if db.query_result.size() == 0:
+		return null
+	return int(db.query_result[0]["is_open"])
+
+#db/db_terminal_code.gd
+extends Node
+class_name DbTerminalCode
+var dbm: Node = null
+const LEGACY_SAVE_PATH := "user://terminal_last_code.txt"
+func init(db_manager: Node) -> void:
+	dbm = db_manager
+	if dbm and dbm._ensure_db():
+		_create_table()
+func _create_table() -> void:
+	var db = dbm.db
+	db.query("""
+		CREATE TABLE IF NOT EXISTS terminal_code (
+			level INTEGER NOT NULL,
+			computer_id INTEGER NOT NULL,
+			code_text TEXT NOT NULL DEFAULT '',
+			updated_at INTEGER NOT NULL DEFAULT 0,
+			PRIMARY KEY (level, computer_id)
+)
+	""")
+func get_code(level: int, computer_id: int) -> String:
+	if computer_id <= 0 or not dbm._ensure_db():
+		return ""
+	var db = dbm.db
+	db.query(
+		"SELECT code_text FROM terminal_code WHERE level = %d AND computer_id = %d"
+		% [int(level), int(computer_id)]
+)
+	if db.query_result.size() > 0:
+		return str(db.query_result[0].get("code_text", ""))
+	return _maybe_import_legacy_file(level, computer_id)
+func set_code(level: int, computer_id: int, code_text: String) -> void:
+	if computer_id <= 0 or not dbm._ensure_db():
+		return
+	var db = dbm.db
+	var ts := int(Time.get_unix_time_from_system())
+	var escaped := _sql_escape(code_text)
+	db.query(
+		"INSERT OR REPLACE INTO terminal_code (level, computer_id, code_text, updated_at) "
+		+ "VALUES (%d, %d, '%s', %d)" % [int(level), int(computer_id), escaped, ts]
+)
+func clear_all() -> void:
+	if not dbm._ensure_db():
+		return
+	dbm.db.query("DELETE FROM terminal_code")
+func _maybe_import_legacy_file(level: int, computer_id: int) -> String:
+	if not FileAccess.file_exists(LEGACY_SAVE_PATH):
+		return ""
+	var db = dbm.db
+	db.query("SELECT COUNT(*) AS cnt FROM terminal_code")
+	var cnt := 0
+	if db.query_result.size() > 0:
+		cnt = int(db.query_result[0].get("cnt", db.query_result[0].get("COUNT(*)", 0)))
+	if cnt > 0:
+		return ""
+	var f := FileAccess.open(LEGACY_SAVE_PATH, FileAccess.READ)
+	if f == null:
+		return ""
+	var legacy := f.get_as_text()
+	f.close()
+	if legacy.strip_edges() != "":
+		set_code(level, computer_id, legacy)
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(LEGACY_SAVE_PATH))
+	return legacy
+func _sql_escape(text: String) -> String:
+	return str(text).replace("'", "''")
+
+#scenes/inventory/inventory.gd
+extends CanvasLayer
+@onready var root: Control = $InventoryRoot
+@onready var slots_container: Node = $InventoryRoot/Slots
+@onready var avatar: AnimatedSprite2D = $InventoryRoot/Avatar
+var is_open := false
+const BASE_RESOLUTION := Vector2(1080, 720)
+func _ready() -> void:
+	add_to_group("inventory")
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	root.visible = false
+	# аватар
+	if avatar and avatar.sprite_frames:
+		if avatar.sprite_frames.has_animation("idle"):
+			avatar.play("idle")
+	# 🔥 ВАЖНО: подписываемся на изменение viewport
+	get_viewport().size_changed.connect(_apply_scale)
+	# первый расчёт
+	call_deferred("_apply_scale")
+func _apply_scale() -> void:
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	var scale_factor: float = min(
+		viewport_size.x / BASE_RESOLUTION.x,
+		viewport_size.y / BASE_RESOLUTION.y
+)
+	root.scale = Vector2(scale_factor, scale_factor)
+	root.position = (viewport_size - root.size * scale_factor) * 0.5
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("inventory"):
+		toggle()
+		get_viewport().set_input_as_handled()
+func toggle() -> void:
+	is_open = !is_open
+	root.visible = is_open
+	if is_open:
+		TutorialManager.notify_inventory_opened()
+func add_item(item_type: String, icon: Texture2D, duration: float, value: float = 0.0) -> bool:
+	for slot in slots_container.get_children():
+		if slot.has_method("is_empty") and slot.is_empty():
+			slot.set_item(item_type, icon, duration, value)
+			TutorialManager.notify_item_added_to_inventory()
+			return true
+	return false
+
+#scenes/inventory/inventory_slot.gd
+extends Control
+@onready var icon: TextureRect = $ItemIcon
+var item_type: String = ""
+var duration: float = 0.0
+var value: float = 0.0
+func _ready() -> void:
+	if icon == null:
+		push_error("%s: ItemIcon not found" % name)
+		return
+	clear()
+func set_item(_type: String, _icon: Texture2D, _duration: float, _value: float = 0.0) -> void:
+	item_type = _type
+	duration = _duration
+	value = _value
+	icon.texture = _icon
+	icon.visible = true
+func clear() -> void:
+	item_type = ""
+	duration = 0.0
+	value = 0.0
+	icon.texture = null
+	icon.visible = false
+func is_empty() -> bool:
+	return item_type == ""
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		if is_empty():
+			return
+		var player := get_tree().get_first_node_in_group("player")
+		if player == null:
+			return
+		match item_type:
+			"speed":
+				if player.has_method("apply_speed_buff"):
+					player.apply_speed_buff(value, duration)
+					clear()
+					TutorialManager.notify_inventory_item_used()
+			"invis":
+				if player.has_method("apply_invisibility"):
+					player.apply_invisibility(duration)
+					clear()
+					TutorialManager.notify_inventory_item_used()
+			"heal":
+				if player.has_method("heal"):
+					if player.heal(int(value)):
+						clear()
+						TutorialManager.notify_inventory_item_used()
+
+#scenes/finish/finish_trigger.gd
+extends Area2D
+@export var win_ui_path: NodePath = "../HUD/WinUI"  # укажи путь до WinUI в инспекторе (например "../HUD/WinUI")
+var _triggered := false
+func _ready() -> void:
+	body_entered.connect(_on_body_entered)
+func _on_body_entered(body: Node) -> void:
+	if _triggered:
+		return
+	if not body.is_in_group("player"):
+		return
+	_triggered = true
+	print("WIN TRIGGERED")
+	var win_ui = get_node_or_null(win_ui_path)
+	if win_ui and win_ui.has_method("show_win"):
+		win_ui.show_win()
+	else:
+		push_warning("FinishTrigger: WinUI not found or no show_win()")
+
+#scenes/screamer/screamer.gd
+extends CanvasLayer
+signal finished
+@export var duration: float = 1.35
+const CREAMER_SFX_PATH := "res://audio/sounds/creamer.mp3"
+@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+@onready var timer: Timer = $Timer
+@onready var bg: ColorRect = $BG
+@onready var sfx_player: AudioStreamPlayer = get_node_or_null("ScreamerSfx")
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_resize_to_screen()
+	get_viewport().size_changed.connect(_resize_to_screen)
+	timer.one_shot = true
+	timer.wait_time = duration
+	timer.timeout.connect(_on_timeout)
+	timer.start()
+	if sprite and sprite.sprite_frames:
+		sprite.play() # проиграет текущую анимацию
+	_play_creamer_sfx()
+func _play_creamer_sfx() -> void:
+	if sfx_player == null:
+		sfx_player = AudioStreamPlayer.new()
+		sfx_player.name = "ScreamerSfx"
+		add_child(sfx_player)
+	if not ResourceLoader.exists(CREAMER_SFX_PATH):
+		push_warning("screamer: missing audio %s" % CREAMER_SFX_PATH)
+		return
+	var stream: AudioStream = load(CREAMER_SFX_PATH)
+	if stream == null:
+		return
+	sfx_player.stream = stream
+	sfx_player.bus = "Master"
+	sfx_player.play()
+func _on_timeout() -> void:
+	if sfx_player and sfx_player.playing:
+		sfx_player.stop()
+	finished.emit()
+func _resize_to_screen() -> void:
+	var size: Vector2 = get_viewport().get_visible_rect().size
+	if bg:
+		bg.size = size
+	if not sprite or sprite.sprite_frames == null:
+		return
+	sprite.position = size * 0.5
+	# берём текущий кадр, чтобы вычислить масштаб "cover"
+	var frames: SpriteFrames = sprite.sprite_frames
+	var anim: StringName = sprite.animation
+	var frame_idx: int = sprite.frame
+	var tex: Texture2D = frames.get_frame_texture(anim, frame_idx)
+	if tex == null:
+		return
+	var tex_size: Vector2 = tex.get_size()
+	if tex_size.x <= 0.0 or tex_size.y <= 0.0:
+		return
+	# покрыть экран полностью
+	var scale_factor: float = max(size.x / tex_size.x, size.y / tex_size.y)
+	sprite.scale = Vector2.ONE * scale_factor
+
+#scripts/death_flow.gd
+extends Node
+enum DeathCause { MANIAC, OTHER }
+@export var screamer_scene: PackedScene = preload("res://scenes/screamer/screamer.tscn")
+@export var stats_scene: PackedScene = preload("res://scenes/death_stats/death_stats.tscn")
+@export var main_menu_scene_path: String = "res://scenes/main_menu/main_menu.tscn"
+var _last_level_scene_path: String = ""
+var _cause: int = DeathCause.OTHER
+func start_death_flow(level_scene_path: String, cause: int) -> void:
+	_last_level_scene_path = level_scene_path
+	_cause = cause
+	RunStats.record_death()
+	# Важно: если смерть наступила внутри терминала/другого world-UI,
+	# закрываем такие окна ДО паузы, иначе death-экран может оказаться "сзади".
+	_close_world_overlays_before_death()
+	_hide_level_hud()
+	if typeof(GameState) != TYPE_NIL and GameState.has_method("clear_gameplay_freeze"):
+		GameState.clear_gameplay_freeze()
+	get_tree().paused = true
+	# если вдруг забыли стартануть уровень — подстрахуемся
+	if RunStats.level_started_ms <= 0:
+		RunStats.start_level()
+	RunStats.refresh_from_db()
+	if _cause == DeathCause.MANIAC:
+		_show_screamer_then_stats()
+	else:
+		_show_stats()
+func _close_world_overlays_before_death() -> void:
+	# 1) Закрываем терминалы через Computer API (снимает блок ввода и контроль игрока).
+	for c in get_tree().get_nodes_in_group("computers"):
+		if c != null and c.has_method("close_terminal"):
+			c.close_terminal()
+	# 2) Fallback: если где-то остался TerminalUI вне standard flow — просто прячем.
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	for n in scene.find_children("TerminalUI", "", true, false):
+		if n == null:
+			continue
+		if n.has_method("close"):
+			n.call("close")
+		elif n is CanvasItem:
+			(n as CanvasItem).hide()
+func _hide_level_hud() -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	var hud := scene.get_node_or_null("HUD")
+	if hud is CanvasItem:
+		(hud as CanvasItem).hide()
+func _show_screamer_then_stats() -> void:
+	var screamer: CanvasLayer = screamer_scene.instantiate() as CanvasLayer
+	get_tree().root.add_child(screamer)
+	screamer.process_mode = Node.PROCESS_MODE_ALWAYS
+	screamer.finished.connect(func():
+		screamer.queue_free()
+		_show_stats()
+)
+func _show_stats() -> void:
+	var ui: CanvasLayer = stats_scene.instantiate() as CanvasLayer
+	get_tree().root.add_child(ui)
+	ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	var stats_text: String = RunStats.build_report_text(false)
+	if ui.has_method("set_stats_text"):
+		ui.call("set_stats_text", stats_text)
+	ui.retry_pressed.connect(func():
+		if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("skip_for_death_retry"):
+			TutorialManager.skip_for_death_retry()
+		if typeof(Savemeneger) != TYPE_NIL and Savemeneger.has_method("reset_run_after_death"):
+			Savemeneger.reset_run_after_death()
+		ui.queue_free()
+		get_tree().paused = false
+		get_tree().change_scene_to_file(_last_level_scene_path)
+)
+	ui.menu_pressed.connect(func():
+		if typeof(TutorialManager) != TYPE_NIL and TutorialManager.has_method("prepare_exit_to_main_menu"):
+			TutorialManager.prepare_exit_to_main_menu()
+		if typeof(Savemeneger) != TYPE_NIL and Savemeneger.has_method("reset_run_after_death"):
+			Savemeneger.reset_run_after_death()
+		ui.queue_free()
+		get_tree().paused = false
+		get_tree().change_scene_to_file(main_menu_scene_path)
+)
+
+#scenes/notes/note.gd
+extends Area2D
+const ICON_SIZE_PX := 16.0
+@export var note_id: String = "note_01"
+@export var text_path: String = "res://docs/notes/note_01.txt"
+@export var tutorial_step: String = ""
+@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+var player_in_range: bool = false
+var _outline_vis := InteractionOutline.new()
+func _ready() -> void:
+	if tutorial_step != "":
+		add_to_group("tutorial_target")
+	# если уже собрана — удалить
+	if JournalData.has_note(note_id):
+		queue_free()
+		return
+	body_entered.connect(_on_body_entered)
+	body_exited.connect(_on_body_exited)
+	_setup_outline()
+	_outline_vis.set_both(false)
+func _setup_outline() -> void:
+	if sprite == null:
+		push_warning("Note: AnimatedSprite2D not found")
+		return
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var tex: Texture2D = sprite.sprite_frames.get_frame_texture(sprite.animation, 0) if sprite.sprite_frames else null
+	if tex:
+		var sz := tex.get_size()
+		if sz.x > 0.0 and sz.y > 0.0:
+			sprite.scale = Vector2(ICON_SIZE_PX / sz.x, ICON_SIZE_PX / sz.y)
+	_outline_vis.setup(sprite, 0.01)
+func _process(_delta: float) -> void:
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		return
+	if player_in_range and Input.is_action_just_pressed("interact"):
+		if TutorialManager.is_active():
+			if TutorialManager.try_lesson_then("note", Callable(self, "_pickup")):
+				return
+		_pickup()
+func _pickup() -> void:
+	_hide_hint()
+	var text := _load_text(text_path)
+	JournalData.add_note(note_id, text)
+	if tutorial_step != "":
+		TutorialManager.notify_note_collected(note_id)
+	queue_free()
+func _load_text(path: String) -> String:
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return "Файл не найден:\n" + path
+	return f.get_as_text()
+func _on_body_entered(body: Node) -> void:
+	if body.is_in_group("player"):
+		player_in_range = true
+		_outline_vis.set_both(true)
+		_show_hint("E — подобрать записку")
+func _on_body_exited(body: Node) -> void:
+	if body.is_in_group("player"):
+		player_in_range = false
+		_outline_vis.set_both(false)
+		_hide_hint()
+func _hud() -> Node:
+	return get_tree().current_scene.get_node_or_null("HUD")
+func _show_hint(text: String) -> void:
+	var hud := _hud()
+	if hud and hud.has_method("show_hint"):
+		hud.show_hint(text, 0.0, self)
+func _hide_hint() -> void:
+	var hud := _hud()
+	if hud and hud.has_method("hide_hint"):
+		hud.hide_hint(self)
+func set_outline(enabled: bool) -> void:
+	_outline_vis.set_outline(enabled)
+func set_highlight(enabled: bool) -> void:
+	_outline_vis.set_highlight(enabled)
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)
+
+#scenes/items/heal_buff.gd
+extends Area2D
+@onready var sprite: Sprite2D = $Sprite2D
+@export var heal_amount: float = 1.0
+var player_in_range := false
+var _outline_vis := InteractionOutline.new()
+func _ready() -> void:
+	add_to_group("tutorial_pickup")
+	body_entered.connect(_on_body_entered)
+	body_exited.connect(_on_body_exited)
+	var mat := PickupBuffCommon.setup_sprite(sprite)
+	if mat:
+		_outline_vis.adopt_existing(mat)
+	_outline_vis.set_both(false)
+func _process(_delta: float) -> void:
+	if GameState.has_method("is_world_input_blocked") and GameState.is_world_input_blocked():
+		return
+	if player_in_range and Input.is_action_just_pressed("interact"):
+		if TutorialManager.is_active():
+			if TutorialManager.try_lesson_then("buff", Callable(self, "_do_pickup")):
+				return
+		_do_pickup()
+func _do_pickup() -> void:
+	var inventory := get_tree().get_first_node_in_group("inventory")
+	if inventory == null:
+		return
+	var icon: Texture2D = sprite.texture if sprite else null
+	if icon == null:
+		return
+	if inventory.add_item("heal", icon, 0.0, heal_amount):
+		queue_free()
+func use(player: Node) -> void:
+	if player and player.has_method("heal"):
+		player.heal(int(heal_amount))
+func _on_body_entered(body: Node) -> void:
+	if body.is_in_group("player"):
+		player_in_range = true
+		_outline_vis.set_both(true)
+func _on_body_exited(body: Node) -> void:
+	if body.is_in_group("player"):
+		player_in_range = false
+		_outline_vis.set_both(false)
+func set_outline(enabled: bool) -> void:
+	_outline_vis.set_outline(enabled)
+func set_highlight(enabled: bool) -> void:
+	_outline_vis.set_highlight(enabled)
+func refresh_interaction_highlight() -> void:
+	_outline_vis.refresh_from_player_in_range(player_in_range)
+
+#scenes/player/camera_2d.gd
+extends Camera2D
+const BASE_RESOLUTION := Vector2(1920, 1080)
+func _ready():
+	update_zoom()
+func _notification(what):
+	if what == NOTIFICATION_WM_SIZE_CHANGED:
+		update_zoom()
+func update_zoom():
+	var window_size = DisplayServer.window_get_size()
+	var scale_x = window_size.x / BASE_RESOLUTION.x
+	var scale_y = window_size.y / BASE_RESOLUTION.y
+	var scale = min(scale_x, scale_y)
+	zoom = Vector2(1.0 / scale, 1.0 / scale)
